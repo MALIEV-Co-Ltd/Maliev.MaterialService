@@ -50,12 +50,22 @@ jobs:
         token: ${{ secrets.GITOPS_PAT }}
         path: maliev-gitops
 
-    - name: Update Kustomization
+    - name: Install Kustomize
+      run: |
+        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+        sudo mv kustomize /usr/local/bin/
+
+    - name: Update image tag in maliev-gitops using Kustomize
       run: |
         cd maliev-gitops/3-apps/maliev-material-service/overlays/development
-        sed -i "s|newTag: .*|newTag: ${{ github.sha }}|" kustomization.yml
-        git config --global user.name "GitHub Actions"
-        git config --global user.email "actions@github.com"
-        git add kustomization.yml
-        git commit -m "Update maliev-material-service development image to ${{ github.sha }}"
+        kustomize edit set image asia-southeast1-docker.pkg.dev/maliev-website/maliev-website-artifact/maliev-material-service=asia-southeast1-docker.pkg.dev/maliev-website/maliev-website-artifact-dev/maliev-material-service:${{ github.sha }}
+        
+    - name: Commit and push changes
+      run: |
+        cd maliev-gitops
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git add .
+        git commit -m "Update material-service image to ${{ github.sha }}" || exit 0
+        git pull --rebase origin $(git branch --show-current) || true
         git push
