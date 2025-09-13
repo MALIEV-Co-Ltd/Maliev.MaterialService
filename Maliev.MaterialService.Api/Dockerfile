@@ -1,5 +1,4 @@
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
-USER 10001
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
@@ -20,8 +19,19 @@ RUN dotnet publish "./Maliev.MaterialService.Api.csproj" -c $BUILD_CONFIGURATION
 
 FROM base AS final
 WORKDIR /app
+
+# Create non-root user for security
+RUN adduser --disabled-password --gecos "" --uid 10001 appuser
+
+# Create logs directory and set permissions
+RUN mkdir -p /app/logs && chown -R appuser:appuser /app
+
+# Copy published app
 COPY --from=publish /app/publish .
-RUN mkdir -p /app/logs && chown 10001:10001 /app/logs
-USER 10001
+
+# Switch to non-root user
+USER appuser
+
+# Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD curl -f http://localhost:8080/materials/liveness || exit 1
 ENTRYPOINT ["dotnet", "Maliev.MaterialService.Api.dll"]
