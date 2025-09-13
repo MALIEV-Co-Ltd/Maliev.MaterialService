@@ -1,0 +1,61 @@
+name: CI - Main
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: '9.x'
+
+    - name: Restore dependencies
+      run: dotnet restore Maliev.MaterialService.sln
+
+    - name: Build
+      run: dotnet build Maliev.MaterialService.sln --no-restore
+
+    - name: Test
+      run: dotnet test Maliev.MaterialService.sln --no-build --verbosity normal
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v3
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v3
+      with:
+        project_id: maliev-website
+
+    - name: Build and push Docker image
+      run: |
+        gcloud auth configure-docker asia-southeast1-docker.pkg.dev
+        docker build -t asia-southeast1-docker.pkg.dev/maliev-website/maliev-website-artifact-prod/maliev-material-service:${{ github.sha }} -f Maliev.MaterialService.Api/Dockerfile .
+        docker push asia-southeast1-docker.pkg.dev/maliev-website/maliev-website-artifact-prod/maliev-material-service:${{ github.sha }}
+
+    - name: Checkout maliev-gitops repository
+      uses: actions/checkout@v5
+      with:
+        repository: MALIEV-Co-Ltd/maliev-gitops
+        token: ${{ secrets.GITOPS_PAT }}
+        path: maliev-gitops
+
+    - name: Update Kustomization
+      run: |
+        cd maliev-gitops/3-apps/maliev-material-service/overlays/production
+        sed -i "s|newTag: .*|newTag: ${{ github.sha }}|" kustomization.yml
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+        git add kustomization.yml
+        git commit -m "Update maliev-material-service production image to ${{ github.sha }}"
+        git push

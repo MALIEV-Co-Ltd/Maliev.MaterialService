@@ -55,3 +55,4 @@ maliev-shared-secrets.yaml
 .gemini/
 gha-creds-*.json
 .vs/
+*.csproj.user

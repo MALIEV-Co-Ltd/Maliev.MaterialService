@@ -1,74 +1,121 @@
-using Maliev.MaterialService.Api.DTOs;
-using Maliev.MaterialService.Api.Services;
-using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Asp.Versioning;
+using Maliev.MaterialService.Api.Models;
+using Maliev.MaterialService.Api.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
-namespace Maliev.MaterialService.Api.Controllers
+namespace Maliev.MaterialService.Api.Controllers;
+
+[ApiController]
+[Route("materials/v{version:apiVersion}/groups")]
+[ApiVersion("1.0")]
+[EnableRateLimiting("MaterialsPolicy")]
+[Authorize]
+public class MaterialGroupsController : ControllerBase
 {
-    [ApiController]
-    [Route("v{version:apiVersion}/materialgroups")]
-    [ApiVersion("1.0")]
-    public class MaterialGroupsController : ControllerBase
+    private readonly IMaterialGroupService _materialGroupService;
+    private readonly ILogger<MaterialGroupsController> _logger;
+
+    public MaterialGroupsController(
+        IMaterialGroupService materialGroupService,
+        ILogger<MaterialGroupsController> logger)
     {
-        private readonly IMaterialServiceService _materialService;
+        _materialGroupService = materialGroupService;
+        _logger = logger;
+    }
 
-        public MaterialGroupsController(IMaterialServiceService materialService)
-        {
-            _materialService = materialService;
-        }
+    [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<MaterialGroupDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    public async Task<ActionResult<IEnumerable<MaterialGroupDto>>> GetAll()
+    {
+        _logger.LogDebug("Getting all material groups");
 
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<MaterialGroupDto>>> GetMaterialGroups()
+        var groups = await _materialGroupService.GetAllGroupsAsync();
+        var groupDtos = groups.Select(g => new MaterialGroupDto
         {
-            var materialGroups = await _materialService.GetAllMaterialGroupsAsync();
-            return Ok(materialGroups);
-        }
-
-        [HttpGet("{id}")]
-        public async Task<ActionResult<MaterialGroupDto>> GetMaterialGroup(int id)
-        {
-            var materialGroup = await _materialService.GetMaterialGroupByIdAsync(id);
-            if (materialGroup == null)
+            Id = g.Id,
+            MaterialFamilyId = g.MaterialFamilyId,
+            Name = g.Name,
+            Description = g.Description,
+            SortOrder = g.SortOrder,
+            MaterialFamily = g.MaterialFamily != null ? new MaterialFamilyDto
             {
-                return NotFound();
-            }
-            return Ok(materialGroup);
-        }
+                Id = g.MaterialFamily.Id,
+                Name = g.MaterialFamily.Name,
+                Description = g.MaterialFamily.Description,
+                SortOrder = g.MaterialFamily.SortOrder
+            } : null
+        });
 
-        [HttpPost]
-        public async Task<ActionResult<MaterialGroupDto>> CreateMaterialGroup(CreateMaterialGroupRequest request)
+        _logger.LogDebug("Retrieved {Count} material groups", groupDtos.Count());
+        return Ok(groupDtos);
+    }
+
+    [HttpGet("{id:int}")]
+    [ProducesResponseType(typeof(MaterialGroupDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    public async Task<ActionResult<MaterialGroupDto>> GetById(int id)
+    {
+        _logger.LogDebug("Getting material group by ID: {Id}", id);
+
+        var group = await _materialGroupService.GetGroupByIdAsync(id);
+
+        if (group == null)
         {
-            var materialGroup = await _materialService.CreateMaterialGroupAsync(request);
-            return CreatedAtAction(nameof(GetMaterialGroup), new { id = materialGroup.Id }, materialGroup);
+            _logger.LogWarning("Material group not found with ID: {Id}", id);
+            return NotFound($"Material group with ID {id} not found");
         }
 
-        [HttpPut("{id}")]
-        public async Task<ActionResult<MaterialGroupDto>> UpdateMaterialGroup(int id, UpdateMaterialGroupRequest request)
+        var groupDto = new MaterialGroupDto
         {
-            if (id != request.Id)
+            Id = group.Id,
+            MaterialFamilyId = group.MaterialFamilyId,
+            Name = group.Name,
+            Description = group.Description,
+            SortOrder = group.SortOrder,
+            MaterialFamily = group.MaterialFamily != null ? new MaterialFamilyDto
             {
-                return BadRequest();
-            }
+                Id = group.MaterialFamily.Id,
+                Name = group.MaterialFamily.Name,
+                Description = group.MaterialFamily.Description,
+                SortOrder = group.MaterialFamily.SortOrder
+            } : null
+        };
 
-            var materialGroup = await _materialService.UpdateMaterialGroupAsync(request);
-            if (materialGroup == null)
-            {
-                return NotFound();
-            }
-            return Ok(materialGroup);
-        }
+        return Ok(groupDto);
+    }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteMaterialGroup(int id)
+    [HttpGet("family/{familyId:int}")]
+    [ProducesResponseType(typeof(IEnumerable<MaterialGroupDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    public async Task<ActionResult<IEnumerable<MaterialGroupDto>>> GetByFamilyId(int familyId)
+    {
+        _logger.LogDebug("Getting material groups by family ID: {FamilyId}", familyId);
+
+        var groups = await _materialGroupService.GetGroupsByFamilyIdAsync(familyId);
+        var groupDtos = groups.Select(g => new MaterialGroupDto
         {
-            var result = await _materialService.DeleteMaterialGroupAsync(id);
-            if (!result)
+            Id = g.Id,
+            MaterialFamilyId = g.MaterialFamilyId,
+            Name = g.Name,
+            Description = g.Description,
+            SortOrder = g.SortOrder,
+            MaterialFamily = g.MaterialFamily != null ? new MaterialFamilyDto
             {
-                return NotFound();
-            }
-            return NoContent();
-        }
+                Id = g.MaterialFamily.Id,
+                Name = g.MaterialFamily.Name,
+                Description = g.MaterialFamily.Description,
+                SortOrder = g.MaterialFamily.SortOrder
+            } : null
+        });
+
+        _logger.LogDebug("Retrieved {Count} material groups for family {FamilyId}", groupDtos.Count(), familyId);
+        return Ok(groupDtos);
     }
 }
