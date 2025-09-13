@@ -21,7 +21,7 @@ RUN dotnet publish "./Maliev.MaterialService.Api.csproj" -c $BUILD_CONFIGURATION
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-USER 10001
 RUN mkdir -p /app/logs && chown 10001:10001 /app/logs
+USER 10001
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD curl -f http://localhost:8080/materials/liveness || exit 1
 ENTRYPOINT ["dotnet", "Maliev.MaterialService.Api.dll"]
