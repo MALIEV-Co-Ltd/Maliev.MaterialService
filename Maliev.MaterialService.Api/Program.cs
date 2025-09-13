@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Prometheus;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -88,10 +89,7 @@ try
     builder.Configuration.GetSection("Cache").Bind(cacheOptions);
     builder.Services.AddSingleton(cacheOptions);
 
-    builder.Services.AddMemoryCache(options =>
-    {
-        options.SizeLimit = cacheOptions.MaxCacheSize;
-    });
+    builder.Services.AddMemoryCache();
 
     // Configure rate limiting
     builder.Services.AddRateLimiter(options =>
@@ -242,6 +240,7 @@ try
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseHttpsRedirection();
 
+    app.UseHttpMetrics();
     app.UseRateLimiter();
     app.UseCors();
 
@@ -259,6 +258,8 @@ try
         Predicate = healthCheck => healthCheck.Tags.Contains("readiness"),
         ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
     });
+
+    app.MapMetrics("/materials/metrics");
 
     // Ensure database is created and seeded
     using (var scope = app.Services.CreateScope())
