@@ -102,6 +102,7 @@ public class MaterialServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
+        result.Should().BeAssignableTo<IEnumerable<Material>>();
         result.Should().HaveCount(1);
         result.First().Name.Should().Be("Test Material 1");
         result.All(m => m.IsActive).Should().BeTrue();
@@ -115,6 +116,7 @@ public class MaterialServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
+        result.Should().BeAssignableTo<IEnumerable<Material>>();
         result.Should().HaveCount(2);
     }
 
@@ -126,6 +128,7 @@ public class MaterialServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
+        result.Should().BeOfType<Material>();
         result!.Id.Should().Be(1);
         result.Name.Should().Be("Test Material 1");
         result.MaterialGroup.Should().NotBeNull();
@@ -150,6 +153,7 @@ public class MaterialServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
+        result.Should().BeAssignableTo<IEnumerable<Material>>();
         result.Should().HaveCount(2);
         result.All(m => m.MaterialGroupId == 1).Should().BeTrue();
     }
@@ -187,12 +191,14 @@ public class MaterialServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
+        result.Should().BeOfType<Material>();
         result.Id.Should().BeGreaterThan(0);
         result.Name.Should().Be("New Test Material");
 
         // Verify it was saved to database
         var savedMaterial = await _context.Materials.FindAsync(result.Id, TestContext.Current.CancellationToken);
         savedMaterial.Should().NotBeNull();
+        savedMaterial.Should().BeOfType<Material>();
         savedMaterial!.Name.Should().Be("New Test Material");
     }
 
@@ -212,11 +218,15 @@ public class MaterialServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
+        result.Should().BeOfType<Material>();
+        result!.Id.Should().Be(1);
         result.Name.Should().Be("Updated Material Name");
         result.Description.Should().Be("Updated description");
 
         // Verify it was updated in database
         var updatedMaterial = await _context.Materials.FindAsync(1, TestContext.Current.CancellationToken);
+        updatedMaterial.Should().NotBeNull();
+        updatedMaterial.Should().BeOfType<Material>();
         updatedMaterial!.Name.Should().Be("Updated Material Name");
         updatedMaterial.Description.Should().Be("Updated description");
     }
