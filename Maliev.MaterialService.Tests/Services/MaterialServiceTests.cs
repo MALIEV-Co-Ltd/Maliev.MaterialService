@@ -232,6 +232,77 @@ public class MaterialServiceTests : IDisposable
         deletedMaterial.Should().BeNull();
     }
 
+    [Fact]
+    public async Task CreateMaterialAsync_WithDuplicateName_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        var newMaterial = new Material
+        {
+            MaterialGroupId = 1,
+            Name = "Test Material 1", // This name already exists in the test data
+            Description = "A duplicate material for testing",
+            IsActive = true,
+            CreatedDate = DateTime.UtcNow,
+            ModifiedDate = DateTime.UtcNow
+        };
+
+        // Act
+        Func<Task> act = async () => await _service.CreateMaterialAsync(newMaterial);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("A material with name 'Test Material 1' already exists in this material group.");
+    }
+
+    [Fact]
+    public async Task UpdateMaterialAsync_WithNonExistentId_ShouldThrowKeyNotFoundException()
+    {
+        // Arrange
+        var nonExistentMaterial = new Material
+        {
+            Id = 999, // This ID doesn't exist
+            MaterialGroupId = 1,
+            Name = "Non-existent Material",
+            Description = "A non-existent material for testing",
+            IsActive = true,
+            ModifiedDate = DateTime.UtcNow
+        };
+
+        // Act
+        Func<Task> act = async () => await _service.UpdateMaterialAsync(nonExistentMaterial);
+
+        // Assert
+        await act.Should().ThrowAsync<KeyNotFoundException>()
+            .WithMessage("Material with ID 999 not found.");
+    }
+
+    [Fact]
+    public async Task UpdateMaterialAsync_WithDuplicateName_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        // First, get an existing material (ID 1)
+        var existingMaterial = await _context.Materials.FindAsync(1, TestContext.Current.CancellationToken);
+        existingMaterial.Should().NotBeNull();
+
+        // Try to update it with the name of another existing material (ID 2)
+        var materialToUpdate = new Material
+        {
+            Id = 1,
+            MaterialGroupId = existingMaterial!.MaterialGroupId,
+            Name = "Test Material 2", // This name already exists
+            Description = "Updated description",
+            IsActive = true,
+            ModifiedDate = DateTime.UtcNow
+        };
+
+        // Act
+        Func<Task> act = async () => await _service.UpdateMaterialAsync(materialToUpdate);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("A material with name 'Test Material 2' already exists in this material group.");
+    }
+
     public void Dispose()
     {
         _context.Dispose();
