@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Maliev.MaterialService.Api.Constants;
 using Maliev.MaterialService.Api.Models;
 using Maliev.MaterialService.Api.Services;
 using Maliev.MaterialService.Data.DbContexts;
@@ -163,7 +164,8 @@ public class MaterialServiceTests : IDisposable
         await _service.GetAllMaterialsAsync();
 
         // Assert - Verify cache was used by checking only one database call was made
-        _cache.TryGetValue("materials_all_False", out _).Should().BeTrue();
+        var expectedCacheKey = string.Format(MaterialServiceCacheKeys.AllMaterials, false);
+        _cache.TryGetValue(expectedCacheKey, out _).Should().BeTrue();
     }
 
     [Fact]

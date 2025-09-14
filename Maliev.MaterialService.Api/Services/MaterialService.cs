@@ -1,3 +1,4 @@
+using Maliev.MaterialService.Api.Constants;
 using Maliev.MaterialService.Api.Models;
 using Maliev.MaterialService.Data.DbContexts;
 using Maliev.MaterialService.Data.Entities;
@@ -27,7 +28,7 @@ public class MaterialService : IMaterialService
 
     public async Task<IEnumerable<Material>> GetAllMaterialsAsync(bool includeInactive = false)
     {
-        var cacheKey = $"materials_all_{includeInactive}";
+        var cacheKey = string.Format(MaterialServiceCacheKeys.AllMaterials, includeInactive);
 
         if (_cache.TryGetValue(cacheKey, out IEnumerable<Material>? cachedMaterials))
         {
@@ -58,7 +59,7 @@ public class MaterialService : IMaterialService
 
     public async Task<Material?> GetMaterialByIdAsync(int id)
     {
-        var cacheKey = $"material_{id}";
+        var cacheKey = string.Format(MaterialServiceCacheKeys.MaterialById, id);
 
         if (_cache.TryGetValue(cacheKey, out Material? cachedMaterial))
         {
@@ -93,7 +94,7 @@ public class MaterialService : IMaterialService
 
     public async Task<IEnumerable<Material>> GetMaterialsByGroupIdAsync(int groupId, bool includeInactive = false)
     {
-        var cacheKey = $"materials_group_{groupId}_{includeInactive}";
+        var cacheKey = string.Format(MaterialServiceCacheKeys.MaterialsByGroupId, groupId, includeInactive);
 
         if (_cache.TryGetValue(cacheKey, out IEnumerable<Material>? cachedMaterials))
         {
@@ -119,7 +120,7 @@ public class MaterialService : IMaterialService
 
     public async Task<IEnumerable<Material>> GetMaterialsByFamilyIdAsync(int familyId, bool includeInactive = false)
     {
-        var cacheKey = $"materials_family_{familyId}_{includeInactive}";
+        var cacheKey = string.Format(MaterialServiceCacheKeys.MaterialsByFamilyId, familyId, includeInactive);
 
         if (_cache.TryGetValue(cacheKey, out IEnumerable<Material>? cachedMaterials))
         {
@@ -152,7 +153,7 @@ public class MaterialService : IMaterialService
         }
 
         var normalizedSearchTerm = searchTerm.Trim().ToLowerInvariant();
-        var cacheKey = $"materials_search_{normalizedSearchTerm}_{includeInactive}";
+        var cacheKey = string.Format(MaterialServiceCacheKeys.MaterialSearch, normalizedSearchTerm, includeInactive);
 
         if (_cache.TryGetValue(cacheKey, out IEnumerable<Material>? cachedMaterials))
         {
