@@ -17,7 +17,7 @@ public class MaterialDto
     public decimal? ShearModulusGigaPascal { get; set; }
     public decimal? ThermalConductivityWattPerMeterKelvin { get; set; }
     public decimal? PricePerKilogram { get; set; }
-    public int? CurrencyId { get; set; }
+    public string? CurrencyCode { get; set; }
     public string? Url { get; set; }
     public string? Comment { get; set; }
     public bool IsActive { get; set; }
@@ -178,7 +178,7 @@ public class CreateMaterialRequest
     public decimal? ShearModulusGigaPascal { get; set; }
     public decimal? ThermalConductivityWattPerMeterKelvin { get; set; }
     public decimal? PricePerKilogram { get; set; }
-    public int? CurrencyId { get; set; }
+    public string? CurrencyCode { get; set; }
 
     [MaxLength(500)]
     public string? Url { get; set; }
@@ -212,7 +212,7 @@ public class UpdateMaterialRequest
     public decimal? ShearModulusGigaPascal { get; set; }
     public decimal? ThermalConductivityWattPerMeterKelvin { get; set; }
     public decimal? PricePerKilogram { get; set; }
-    public int? CurrencyId { get; set; }
+    public string? CurrencyCode { get; set; }
 
     [MaxLength(500)]
     public string? Url { get; set; }

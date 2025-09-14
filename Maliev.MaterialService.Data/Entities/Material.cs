@@ -46,7 +46,8 @@ public class Material
     [Column(TypeName = "decimal(18,6)")]
     public decimal? PricePerKilogram { get; set; }
 
-    public int? CurrencyId { get; set; } // References CurrencyService
+    [MaxLength(3)]
+    public string? CurrencyCode { get; set; } // ISO 4217 currency code (e.g., "USD", "EUR")
 
     [MaxLength(500)]
     public string? Url { get; set; }

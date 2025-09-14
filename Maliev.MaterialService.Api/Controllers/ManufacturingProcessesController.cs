@@ -143,7 +143,7 @@ public class ManufacturingProcessesController : ControllerBase
             ShearModulusGigaPascal = m.ShearModulusGigaPascal,
             ThermalConductivityWattPerMeterKelvin = m.ThermalConductivityWattPerMeterKelvin,
             PricePerKilogram = m.PricePerKilogram,
-            CurrencyId = m.CurrencyId,
+            CurrencyCode = m.CurrencyCode,
             Url = m.Url,
             Comment = m.Comment,
             IsActive = m.IsActive,
