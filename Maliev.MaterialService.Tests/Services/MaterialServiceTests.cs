@@ -94,7 +94,7 @@ public class MaterialServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetAllMaterialsAsync_ShouldReturnActiveMaterials_WhenIncludeInactiveIsFalse()
+    public async Task GetAllMaterialsAsync_WithIncludeInactiveFalse_ShouldReturnOnlyActiveMaterials()
     {
         // Act
         var result = await _service.GetAllMaterialsAsync(includeInactive: false);
@@ -107,7 +107,7 @@ public class MaterialServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetAllMaterialsAsync_ShouldReturnAllMaterials_WhenIncludeInactiveIsTrue()
+    public async Task GetAllMaterialsAsync_WithIncludeInactiveTrue_ShouldReturnAllMaterials()
     {
         // Act
         var result = await _service.GetAllMaterialsAsync(includeInactive: true);
@@ -118,7 +118,7 @@ public class MaterialServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetMaterialByIdAsync_ShouldReturnMaterial_WhenExists()
+    public async Task GetMaterialByIdAsync_WithValidId_ShouldReturnMaterial()
     {
         // Act
         var result = await _service.GetMaterialByIdAsync(1);
@@ -132,7 +132,7 @@ public class MaterialServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetMaterialByIdAsync_ShouldReturnNull_WhenNotExists()
+    public async Task GetMaterialByIdAsync_WithInvalidId_ShouldReturnNull()
     {
         // Act
         var result = await _service.GetMaterialByIdAsync(999);
@@ -142,7 +142,7 @@ public class MaterialServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetMaterialsByGroupIdAsync_ShouldReturnMaterialsInGroup()
+    public async Task GetMaterialsByGroupIdAsync_WithValidGroupId_ShouldReturnMaterialsInGroup()
     {
         // Act
         var result = await _service.GetMaterialsByGroupIdAsync(1, includeInactive: true);
@@ -167,7 +167,7 @@ public class MaterialServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateMaterialAsync_ShouldCreateNewMaterial()
+    public async Task CreateMaterialAsync_WithValidMaterial_ShouldCreateNewMaterial()
     {
         // Arrange
         var newMaterial = new Material
@@ -195,7 +195,7 @@ public class MaterialServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateMaterialAsync_ShouldUpdateExistingMaterial()
+    public async Task UpdateMaterialAsync_WithValidMaterial_ShouldUpdateExistingMaterial()
     {
         // Arrange
         var existingMaterial = await _context.Materials.FindAsync(1, TestContext.Current.CancellationToken);
@@ -220,7 +220,7 @@ public class MaterialServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteMaterialAsync_ShouldRemoveMaterial()
+    public async Task DeleteMaterialAsync_WithValidId_ShouldRemoveMaterial()
     {
         // Act
         await _service.DeleteMaterialAsync(1);
