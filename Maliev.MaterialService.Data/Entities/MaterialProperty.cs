@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Maliev.MaterialService.Data.Constants;
 
 namespace Maliev.MaterialService.Data.Entities;
 
@@ -15,10 +16,10 @@ public class MaterialProperty
     [MaxLength(100)]
     public required string Value { get; set; } // Could be "150-200" for ranges
 
-    [Column(TypeName = "decimal(18,6)")]
+    [Column(TypeName = DatabaseConstants.DecimalPrecisionScaleGeneral)]
     public decimal? MinValue { get; set; }
 
-    [Column(TypeName = "decimal(18,6)")]
+    [Column(TypeName = DatabaseConstants.DecimalPrecisionScaleGeneral)]
     public decimal? MaxValue { get; set; }
 
     [MaxLength(200)]

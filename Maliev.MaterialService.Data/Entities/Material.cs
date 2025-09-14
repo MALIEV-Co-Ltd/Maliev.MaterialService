@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Maliev.MaterialService.Data.Constants;
 
 namespace Maliev.MaterialService.Data.Entities;
 
@@ -48,44 +49,44 @@ public class Material
     /// <summary>
     /// Gets or sets the density of the material in kg/m³.
     /// </summary>
-    [Column(TypeName = "decimal(18,6)")]
+    [Column(TypeName = DatabaseConstants.DecimalPrecisionScaleGeneral)]
     public decimal? DensityKilogramPerCubicMeter { get; set; }
 
     /// <summary>
     /// Gets or sets the ultimate tensile strength of the material in GPa.
     /// </summary>
-    [Column(TypeName = "decimal(18,6)")]
+    [Column(TypeName = DatabaseConstants.DecimalPrecisionScaleGeneral)]
     public decimal? TensileStrengthUltimateGigaPascal { get; set; }
 
     /// <summary>
     /// Gets or sets the yield tensile strength of the material in MPa.
     /// </summary>
-    [Column(TypeName = "decimal(18,6)")]
+    [Column(TypeName = DatabaseConstants.DecimalPrecisionScaleGeneral)]
     public decimal? TensileStrengthYieldMegaPascal { get; set; }
 
     /// <summary>
     /// Gets or sets the machinability percentage of the material.
     /// </summary>
-    [Column(TypeName = "decimal(18,6)")]
+    [Column(TypeName = DatabaseConstants.DecimalPrecisionScaleGeneral)]
     public decimal? MachinabilityPercent { get; set; }
 
     /// <summary>
     /// Gets or sets the shear modulus of the material in GPa.
     /// </summary>
-    [Column(TypeName = "decimal(18,6)")]
+    [Column(TypeName = DatabaseConstants.DecimalPrecisionScaleGeneral)]
     public decimal? ShearModulusGigaPascal { get; set; }
 
     /// <summary>
     /// Gets or sets the thermal conductivity of the material in W/(m·K).
     /// </summary>
-    [Column(TypeName = "decimal(18,6)")]
+    [Column(TypeName = DatabaseConstants.DecimalPrecisionScaleGeneral)]
     public decimal? ThermalConductivityWattPerMeterKelvin { get; set; }
 
     // Pricing information (reference pricing)
     /// <summary>
     /// Gets or sets the price per kilogram of the material.
     /// </summary>
-    [Column(TypeName = "decimal(18,6)")]
+    [Column(TypeName = DatabaseConstants.DecimalPrecisionScaleGeneral)]
     public decimal? PricePerKilogram { get; set; }
 
     /// <summary>

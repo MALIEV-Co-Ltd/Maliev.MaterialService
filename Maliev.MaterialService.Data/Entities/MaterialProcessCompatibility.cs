@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Maliev.MaterialService.Data.Constants;
 
 namespace Maliev.MaterialService.Data.Entities;
 
@@ -18,10 +19,10 @@ public class MaterialProcessCompatibility
 
     public int? TypicalLeadDays { get; set; }
 
-    [Column(TypeName = "decimal(10,3)")]
+    [Column(TypeName = DatabaseConstants.DecimalPrecisionScaleThickness)]
     public decimal? MinimumThickness { get; set; }
 
-    [Column(TypeName = "decimal(10,3)")]
+    [Column(TypeName = DatabaseConstants.DecimalPrecisionScaleThickness)]
     public decimal? MaximumThickness { get; set; }
 
     [MaxLength(20)]
