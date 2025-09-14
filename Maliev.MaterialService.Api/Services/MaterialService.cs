@@ -92,6 +92,41 @@ public class MaterialService : IMaterialService
         return material;
     }
 
+    public async Task<PagedResult<Material>> GetAllMaterialsPagedAsync(PaginationParameters pagination, bool includeInactive = false)
+    {
+        var query = _context.Materials
+            .Include(m => m.MaterialGroup)
+                .ThenInclude(mg => mg.MaterialFamily)
+            .AsQueryable();
+
+        if (!includeInactive)
+        {
+            query = query.Where(m => m.IsActive);
+        }
+
+        var totalCount = await query.CountAsync();
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize);
+
+        var materials = await query
+            .OrderBy(m => m.MaterialGroup.SortOrder)
+            .ThenBy(m => m.Name)
+            .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .ToListAsync();
+
+        _logger.LogDebug("Retrieved paginated materials - Page {PageNumber}, Size {PageSize}, Total {TotalCount}", 
+            pagination.PageNumber, pagination.PageSize, totalCount);
+
+        return new PagedResult<Material>
+        {
+            Items = materials,
+            PageNumber = pagination.PageNumber,
+            PageSize = pagination.PageSize,
+            TotalItems = totalCount,
+            TotalPages = totalPages
+        };
+    }
+
     public async Task<IEnumerable<Material>> GetMaterialsByGroupIdAsync(int groupId, bool includeInactive = false)
     {
         var cacheKey = string.Format(MaterialServiceCacheKeys.MaterialsByGroupId, groupId, includeInactive);
@@ -116,6 +151,39 @@ public class MaterialService : IMaterialService
 
         _cache.Set(cacheKey, materials, _cacheOptions.DefaultExpiration);
         return materials;
+    }
+
+    public async Task<PagedResult<Material>> GetMaterialsByGroupIdPagedAsync(int groupId, PaginationParameters pagination, bool includeInactive = false)
+    {
+        var query = _context.Materials
+            .Include(m => m.MaterialGroup)
+            .Where(m => m.MaterialGroupId == groupId);
+
+        if (!includeInactive)
+        {
+            query = query.Where(m => m.IsActive);
+        }
+
+        var totalCount = await query.CountAsync();
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize);
+
+        var materials = await query
+            .OrderBy(m => m.Name)
+            .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .ToListAsync();
+
+        _logger.LogDebug("Retrieved paginated materials for group {GroupId} - Page {PageNumber}, Size {PageSize}, Total {TotalCount}", 
+            groupId, pagination.PageNumber, pagination.PageSize, totalCount);
+
+        return new PagedResult<Material>
+        {
+            Items = materials,
+            PageNumber = pagination.PageNumber,
+            PageSize = pagination.PageSize,
+            TotalItems = totalCount,
+            TotalPages = totalPages
+        };
     }
 
     public async Task<IEnumerable<Material>> GetMaterialsByFamilyIdAsync(int familyId, bool includeInactive = false)

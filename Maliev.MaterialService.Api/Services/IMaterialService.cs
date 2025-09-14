@@ -1,3 +1,4 @@
+using Maliev.MaterialService.Api.Models;
 using Maliev.MaterialService.Data.Entities;
 
 namespace Maliev.MaterialService.Api.Services;
@@ -5,8 +6,10 @@ namespace Maliev.MaterialService.Api.Services;
 public interface IMaterialService
 {
     Task<IEnumerable<Material>> GetAllMaterialsAsync(bool includeInactive = false);
+    Task<PagedResult<Material>> GetAllMaterialsPagedAsync(PaginationParameters pagination, bool includeInactive = false);
     Task<Material?> GetMaterialByIdAsync(int id);
     Task<IEnumerable<Material>> GetMaterialsByGroupIdAsync(int groupId, bool includeInactive = false);
+    Task<PagedResult<Material>> GetMaterialsByGroupIdPagedAsync(int groupId, PaginationParameters pagination, bool includeInactive = false);
     Task<IEnumerable<Material>> GetMaterialsByFamilyIdAsync(int familyId, bool includeInactive = false);
     Task<IEnumerable<Material>> SearchMaterialsAsync(string searchTerm, bool includeInactive = false);
     Task<IEnumerable<Material>> GetMaterialsByProcessCompatibilityAsync(int processId, bool includeInactive = false);

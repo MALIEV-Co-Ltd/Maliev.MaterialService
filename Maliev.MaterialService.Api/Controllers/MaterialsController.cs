@@ -33,15 +33,48 @@ public class MaterialsController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<MaterialDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult<IEnumerable<MaterialDto>>> GetAll([FromQuery] bool includeInactive = false)
+    public async Task<ActionResult<IEnumerable<MaterialDto>>> GetAll(
+        [FromQuery] bool includeInactive = false,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20)
     {
-        _logger.LogDebug("Getting all materials, includeInactive: {IncludeInactive}", includeInactive);
+        _logger.LogDebug("Getting all materials, includeInactive: {IncludeInactive}, Page: {PageNumber}, Size: {PageSize}", 
+            includeInactive, pageNumber, pageSize);
 
-        var materials = await _materialService.GetAllMaterialsAsync(includeInactive);
-        var materialDtos = materials.Select(MapToDto);
+        // If default pagination parameters, return all materials (backward compatibility)
+        if (pageNumber == 1 && pageSize == 20)
+        {
+            var materials = await _materialService.GetAllMaterialsAsync(includeInactive);
+            var allMaterialDtos = materials.Select(MapToDto);
 
-        _logger.LogDebug("Retrieved {Count} materials", materialDtos.Count());
-        return Ok(materialDtos);
+            _logger.LogDebug("Retrieved {Count} materials", allMaterialDtos.Count());
+            return Ok(allMaterialDtos);
+        }
+
+        // Otherwise, use pagination
+        var pagination = new PaginationParameters
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+
+        var pagedResult = await _materialService.GetAllMaterialsPagedAsync(pagination, includeInactive);
+        var pagedMaterialDtos = pagedResult.Items.Select(MapToDto);
+
+        _logger.LogDebug("Retrieved {Count} materials for page {PageNumber}", pagedMaterialDtos.Count(), pageNumber);
+
+        // Add pagination headers
+        Response.Headers["X-Pagination"] = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            pagedResult.PageNumber,
+            pagedResult.PageSize,
+            pagedResult.TotalItems,
+            pagedResult.TotalPages,
+            pagedResult.HasPreviousPage,
+            pagedResult.HasNextPage
+        });
+
+        return Ok(pagedMaterialDtos);
     }
 
     [HttpGet("{id:int}")]
@@ -69,15 +102,50 @@ public class MaterialsController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<MaterialDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult<IEnumerable<MaterialDto>>> GetByGroupId(int groupId, [FromQuery] bool includeInactive = false)
+    public async Task<ActionResult<IEnumerable<MaterialDto>>> GetByGroupId(
+        int groupId, 
+        [FromQuery] bool includeInactive = false,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20)
     {
-        _logger.LogDebug("Getting materials by group ID: {GroupId}, includeInactive: {IncludeInactive}", groupId, includeInactive);
+        _logger.LogDebug("Getting materials by group ID: {GroupId}, includeInactive: {IncludeInactive}, Page: {PageNumber}, Size: {PageSize}", 
+            groupId, includeInactive, pageNumber, pageSize);
 
-        var materials = await _materialService.GetMaterialsByGroupIdAsync(groupId, includeInactive);
-        var materialDtos = materials.Select(MapToDto);
+        // If default pagination parameters, return all materials (backward compatibility)
+        if (pageNumber == 1 && pageSize == 20)
+        {
+            var materials = await _materialService.GetMaterialsByGroupIdAsync(groupId, includeInactive);
+            var allMaterialDtos = materials.Select(MapToDto);
 
-        _logger.LogDebug("Retrieved {Count} materials for group {GroupId}", materialDtos.Count(), groupId);
-        return Ok(materialDtos);
+            _logger.LogDebug("Retrieved {Count} materials for group {GroupId}", allMaterialDtos.Count(), groupId);
+            return Ok(allMaterialDtos);
+        }
+
+        // Otherwise, use pagination
+        var pagination = new PaginationParameters
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+
+        var pagedResult = await _materialService.GetMaterialsByGroupIdPagedAsync(groupId, pagination, includeInactive);
+        var pagedMaterialDtos = pagedResult.Items.Select(MapToDto);
+
+        _logger.LogDebug("Retrieved {Count} materials for group {GroupId} on page {PageNumber}", 
+            pagedMaterialDtos.Count(), groupId, pageNumber);
+
+        // Add pagination headers
+        Response.Headers["X-Pagination"] = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            pagedResult.PageNumber,
+            pagedResult.PageSize,
+            pagedResult.TotalItems,
+            pagedResult.TotalPages,
+            pagedResult.HasPreviousPage,
+            pagedResult.HasNextPage
+        });
+
+        return Ok(pagedMaterialDtos);
     }
 
     [HttpGet("family/{familyId:int}")]
