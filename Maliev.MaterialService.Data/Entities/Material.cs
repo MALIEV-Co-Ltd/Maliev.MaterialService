@@ -7,7 +7,8 @@ public class Material
 {
     public int Id { get; set; }
 
-    public int MaterialGroupId { get; set; }
+    [Required]
+    public required int MaterialGroupId { get; set; }
 
     [Required]
     [MaxLength(100)]
