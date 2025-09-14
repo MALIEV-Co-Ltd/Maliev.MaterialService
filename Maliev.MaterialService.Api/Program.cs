@@ -140,6 +140,7 @@ try
         .ValidateDataAnnotations();
 
     // Configure Swagger
+    builder.Services.Configure<SwaggerOptions>(builder.Configuration.GetSection(SwaggerOptions.SectionName));
     builder.Services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
     builder.Services.AddSwaggerGen();
 
@@ -245,11 +246,13 @@ try
     app.UseSwaggerUI(c =>
     {
         var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+        var swaggerOptions = app.Services.GetRequiredService<IOptions<SwaggerOptions>>().Value;
+        
         foreach (var description in provider.ApiVersionDescriptions)
         {
             c.SwaggerEndpoint($"/materials/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
         }
-        c.RoutePrefix = "materials/swagger";
+        c.RoutePrefix = swaggerOptions.RoutePrefix;
     });
 
     app.UseMiddleware<ExceptionHandlingMiddleware>();

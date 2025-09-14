@@ -8,10 +8,12 @@ namespace Maliev.MaterialService.Api.Configurations;
 public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
 {
     private readonly IApiVersionDescriptionProvider _provider;
+    private readonly SwaggerOptions _swaggerOptions;
 
-    public ConfigureSwaggerOptions(IApiVersionDescriptionProvider provider)
+    public ConfigureSwaggerOptions(IApiVersionDescriptionProvider provider, IOptions<SwaggerOptions> swaggerOptions)
     {
         _provider = provider;
+        _swaggerOptions = swaggerOptions.Value;
     }
 
     public void Configure(SwaggerGenOptions options)
@@ -50,23 +52,23 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
         });
     }
 
-    private static OpenApiInfo CreateInfoForApiVersion(ApiVersionDescription description)
+    private OpenApiInfo CreateInfoForApiVersion(ApiVersionDescription description)
     {
         var info = new OpenApiInfo
         {
-            Title = "Maliev Material Service API",
+            Title = _swaggerOptions.Title,
             Version = description.ApiVersion.ToString(),
-            Description = "A comprehensive material management API for rapid prototyping and manufacturing operations.",
+            Description = _swaggerOptions.Description,
             Contact = new OpenApiContact
             {
-                Name = "Maliev Co. Ltd.",
-                Email = "api@maliev.com",
-                Url = new Uri("https://maliev.com")
+                Name = _swaggerOptions.Contact.Name,
+                Email = _swaggerOptions.Contact.Email,
+                Url = !string.IsNullOrEmpty(_swaggerOptions.Contact.Url) ? new Uri(_swaggerOptions.Contact.Url) : null
             },
             License = new OpenApiLicense
             {
-                Name = "Proprietary",
-                Url = new Uri("https://maliev.com/license")
+                Name = _swaggerOptions.License.Name,
+                Url = !string.IsNullOrEmpty(_swaggerOptions.License.Url) ? new Uri(_swaggerOptions.License.Url) : null
             }
         };
 
