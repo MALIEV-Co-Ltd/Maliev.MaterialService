@@ -15,12 +15,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Prometheus;
+using System;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
+using System.Threading.RateLimiting;
 using Serilog;
 using Swashbuckle.AspNetCore.SwaggerGen;
-using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -92,6 +93,9 @@ try
     builder.Services.AddMemoryCache();
 
     // Configure rate limiting
+    var rateLimitOptions = new RateLimitOptions();
+    builder.Configuration.GetSection(RateLimitOptions.SectionName).Bind(rateLimitOptions);
+    
     builder.Services.AddRateLimiter(options =>
     {
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -102,11 +106,11 @@ try
                 partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                 factory: _ => new SlidingWindowRateLimiterOptions
                 {
-                    PermitLimit = 1000,
-                    Window = TimeSpan.FromMinutes(1),
-                    SegmentsPerWindow = 2,
+                    PermitLimit = rateLimitOptions.GlobalPolicy.PermitLimit,
+                    Window = TimeSpan.Parse(rateLimitOptions.GlobalPolicy.Window),
+                    SegmentsPerWindow = rateLimitOptions.GlobalPolicy.SegmentsPerWindow,
                     QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                    QueueLimit = 100
+                    QueueLimit = rateLimitOptions.GlobalPolicy.QueueLimit
                 }));
 
         // Materials endpoint specific rate limit
@@ -115,11 +119,11 @@ try
                 partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                 factory: _ => new SlidingWindowRateLimiterOptions
                 {
-                    PermitLimit = 100,
-                    Window = TimeSpan.FromMinutes(1),
-                    SegmentsPerWindow = 2,
+                    PermitLimit = rateLimitOptions.MaterialsPolicy.PermitLimit,
+                    Window = TimeSpan.Parse(rateLimitOptions.MaterialsPolicy.Window),
+                    SegmentsPerWindow = rateLimitOptions.MaterialsPolicy.SegmentsPerWindow,
                     QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                    QueueLimit = 50
+                    QueueLimit = rateLimitOptions.MaterialsPolicy.QueueLimit
                 }));
     });
 
