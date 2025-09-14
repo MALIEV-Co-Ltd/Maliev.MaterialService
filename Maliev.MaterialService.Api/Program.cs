@@ -145,13 +145,24 @@ try
         options.AddDefaultPolicy(
             policy =>
             {
-                policy.WithOrigins(
-                    "https://maliev.com",
-                    "https://*.maliev.com",
-                    "http://maliev.com",
-                    "http://*.maliev.com")
-                .AllowAnyHeader()
-                .AllowAnyMethod();
+                var corsOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>();
+                if (corsOrigins != null && corsOrigins.Length > 0)
+                {
+                    policy.WithOrigins(corsOrigins)
+                    .AllowAnyHeader()
+                    .AllowAnyMethod();
+                }
+                else
+                {
+                    // Fallback to hardcoded origins if not configured
+                    policy.WithOrigins(
+                        "https://maliev.com",
+                        "https://*.maliev.com",
+                        "http://maliev.com",
+                        "http://*.maliev.com")
+                    .AllowAnyHeader()
+                    .AllowAnyMethod();
+                }
             });
     });
 
