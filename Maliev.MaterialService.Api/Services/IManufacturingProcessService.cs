@@ -13,4 +13,8 @@ public interface IManufacturingProcessService
     Task<IEnumerable<ManufacturingProcessCategory>> GetAllCategoriesAsync();
     Task<ManufacturingProcessCategory?> GetCategoryByIdAsync(int id);
     Task<IEnumerable<Material>> GetCompatibleMaterialsAsync(int processId, int? compatibilityLevel = null);
+    Task<ManufacturingProcess> CreateProcessAsync(ManufacturingProcess process);
+    Task<ManufacturingProcess> UpdateProcessAsync(ManufacturingProcess process);
+    Task DeleteProcessAsync(int id);
+    Task<bool> ProcessExistsAsync(int id);
 }

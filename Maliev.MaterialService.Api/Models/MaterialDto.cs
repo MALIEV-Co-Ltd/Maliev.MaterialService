@@ -2,6 +2,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Maliev.MaterialService.Api.Models;
 
+/// <summary>
+/// DTO for Material entity.
+/// </summary>
 public class MaterialDto
 {
     public int Id { get; set; }
