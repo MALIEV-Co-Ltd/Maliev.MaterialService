@@ -34,8 +34,33 @@ public class DatabaseInitializationService
 
             if (_context.Database.IsRelational())
             {
+                // Log connection information (without password)
+                var connectionString = _context.Database.GetConnectionString();
+                if (!string.IsNullOrEmpty(connectionString))
+                {
+                    var safeConnectionString = System.Text.RegularExpressions.Regex.Replace(connectionString, @"Password=[^;]+", "Password=****");
+                    _logger.LogInformation("Using connection string: {ConnectionString}", safeConnectionString);
+                }
+
+                // Check if we can connect to the database
+                var canConnect = await _context.Database.CanConnectAsync();
+                if (canConnect)
+                {
+                    _logger.LogInformation("Successfully connected to the database");
+                }
+                else
+                {
+                    _logger.LogError("Failed to connect to the database");
+                    throw new InvalidOperationException("Cannot connect to the database");
+                }
+
                 await _context.Database.MigrateAsync();
                 _logger.LogInformation("Database migrations applied successfully");
+
+                // Check if there's any data in the tables
+                var materialGroupCount = await _context.MaterialGroups.CountAsync();
+                var materialCount = await _context.Materials.CountAsync();
+                _logger.LogInformation("Database contains {MaterialGroupCount} material groups and {MaterialCount} materials", materialGroupCount, materialCount);
             }
             else
             {

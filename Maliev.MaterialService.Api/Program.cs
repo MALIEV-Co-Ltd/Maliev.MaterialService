@@ -74,9 +74,21 @@ try
     }
     else
     {
+        var connectionString = builder.Configuration.GetConnectionString("MaterialDbContext");
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            // Try to get connection string from environment variable directly
+            connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__MaterialDbContext");
+        }
+        
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            throw new InvalidOperationException("No connection string found for MaterialDbContext. Please configure ConnectionStrings:MaterialDbContext in appsettings or environment variables.");
+        }
+        
         builder.Services.AddDbContext<MaterialDbContext>(options =>
         {
-            options.UseNpgsql(builder.Configuration.GetConnectionString("MaterialDbContext"));
+            options.UseNpgsql(connectionString);
         });
     }
 
