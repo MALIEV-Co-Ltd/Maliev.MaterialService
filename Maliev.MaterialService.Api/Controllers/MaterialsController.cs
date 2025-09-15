@@ -1,10 +1,12 @@
 using Asp.Versioning;
+using Maliev.MaterialService.Api.Helpers;
 using Maliev.MaterialService.Api.Models;
 using Maliev.MaterialService.Api.Services;
 using Maliev.MaterialService.Data.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Maliev.MaterialService.Api.Controllers;
 
@@ -67,15 +69,7 @@ public class MaterialsController : ControllerBase
         _logger.LogDebug("Retrieved {Count} materials for page {PageNumber}", pagedMaterialDtos.Count(), pageNumber);
 
         // Add pagination headers
-        Response.Headers["X-Pagination"] = System.Text.Json.JsonSerializer.Serialize(new
-        {
-            pagedResult.PageNumber,
-            pagedResult.PageSize,
-            pagedResult.TotalItems,
-            pagedResult.TotalPages,
-            pagedResult.HasPreviousPage,
-            pagedResult.HasNextPage
-        });
+        PaginationHelper.AddPaginationHeaders(Response, pagedResult);
 
         return Ok(pagedMaterialDtos);
     }
@@ -138,15 +132,7 @@ public class MaterialsController : ControllerBase
             pagedMaterialDtos.Count(), groupId, pageNumber);
 
         // Add pagination headers
-        Response.Headers["X-Pagination"] = System.Text.Json.JsonSerializer.Serialize(new
-        {
-            pagedResult.PageNumber,
-            pagedResult.PageSize,
-            pagedResult.TotalItems,
-            pagedResult.TotalPages,
-            pagedResult.HasPreviousPage,
-            pagedResult.HasNextPage
-        });
+        PaginationHelper.AddPaginationHeaders(Response, pagedResult);
 
         return Ok(pagedMaterialDtos);
     }
@@ -188,15 +174,7 @@ public class MaterialsController : ControllerBase
             pagedMaterialDtos.Count(), familyId, pageNumber);
 
         // Add pagination headers
-        Response.Headers["X-Pagination"] = System.Text.Json.JsonSerializer.Serialize(new
-        {
-            pagedResult.PageNumber,
-            pagedResult.PageSize,
-            pagedResult.TotalItems,
-            pagedResult.TotalPages,
-            pagedResult.HasPreviousPage,
-            pagedResult.HasNextPage
-        });
+        PaginationHelper.AddPaginationHeaders(Response, pagedResult);
 
         return Ok(pagedMaterialDtos);
     }
