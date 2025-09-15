@@ -31,4 +31,18 @@ public class ManufacturingProcessMappingService : IManufacturingProcessMappingSe
     {
         return _mapper.Map<IEnumerable<ManufacturingProcessDto>>(processes);
     }
+
+    /// <inheritdoc/>
+    public ManufacturingProcess MapFromCreateRequest(CreateManufacturingProcessRequest request)
+    {
+        return _mapper.Map<ManufacturingProcess>(request);
+    }
+
+    /// <inheritdoc/>
+    public ManufacturingProcess MapFromUpdateRequest(UpdateManufacturingProcessRequest request, int id)
+    {
+        var process = _mapper.Map<ManufacturingProcess>(request);
+        process.Id = id;
+        return process;
+    }
 }

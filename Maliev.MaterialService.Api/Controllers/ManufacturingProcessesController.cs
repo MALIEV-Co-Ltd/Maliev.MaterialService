@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Maliev.MaterialService.Api.Helpers;
 using Maliev.MaterialService.Api.Models;
 using Maliev.MaterialService.Api.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -57,13 +58,13 @@ public class ManufacturingProcessesController : ControllerBase
             }
 
             var processes = await _processService.GetAllProcessesAsync();
-            var allProcessDtos = _mappingService.MapToDtos(processes);
+            var processDtos = _mappingService.MapToDtos(processes);
 
             // Cache the result
-            _cache.Set(cacheKey, allProcessDtos, _cacheOptions.DefaultExpiration);
-            _logger.LogDebug("Retrieved and cached {Count} manufacturing processes", allProcessDtos.Count());
+            _cache.Set(cacheKey, processDtos, _cacheOptions.DefaultExpiration);
+            _logger.LogDebug("Retrieved and cached {Count} manufacturing processes", processDtos.Count());
 
-            return Ok(allProcessDtos);
+            return Ok(processDtos);
         }
 
         // Otherwise, use pagination
@@ -79,17 +80,34 @@ public class ManufacturingProcessesController : ControllerBase
         _logger.LogDebug("Retrieved {Count} manufacturing processes for page {PageNumber}", pagedProcessDtos.Count(), pageNumber);
 
         // Add pagination headers
-        Response.Headers["X-Pagination"] = System.Text.Json.JsonSerializer.Serialize(new
-        {
-            pagedResult.PageNumber,
-            pagedResult.PageSize,
-            pagedResult.TotalItems,
-            pagedResult.TotalPages,
-            pagedResult.HasPreviousPage,
-            pagedResult.HasNextPage
-        });
+        PaginationHelper.AddPaginationHeaders(Response, pagedResult);
 
         return Ok(pagedProcessDtos);
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Admin,Manager")]
+    [ProducesResponseType(typeof(ManufacturingProcessDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    public async Task<ActionResult<ManufacturingProcessDto>> Create([FromBody] CreateManufacturingProcessRequest request)
+    {
+        _logger.LogInformation("Creating new manufacturing process: {Name}", request.Name);
+
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var process = _mappingService.MapFromCreateRequest(request);
+        var createdProcess = await _processService.CreateProcessAsync(process);
+
+        var processDto = _mappingService.MapToDto(createdProcess);
+        _logger.LogInformation("Created manufacturing process with ID: {Id}", createdProcess.Id);
+
+        return CreatedAtAction(nameof(GetById), new { id = createdProcess.Id }, processDto);
     }
 
     [HttpGet("{id:int}")]
@@ -124,6 +142,63 @@ public class ManufacturingProcessesController : ControllerBase
         _logger.LogDebug("Retrieved and cached manufacturing process {Id}", id);
 
         return Ok(processDto);
+    }
+
+    [HttpPut("{id:int}")]
+    [Authorize(Roles = "Admin,Manager")]
+    [ProducesResponseType(typeof(ManufacturingProcessDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    public async Task<ActionResult<ManufacturingProcessDto>> Update(int id, [FromBody] UpdateManufacturingProcessRequest request)
+    {
+        _logger.LogInformation("Updating manufacturing process ID: {Id}", id);
+
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var existingProcess = await _processService.GetProcessByIdAsync(id);
+        if (existingProcess == null)
+        {
+            _logger.LogWarning("Manufacturing process not found for update with ID: {Id}", id);
+            return NotFound($"Manufacturing process with ID {id} not found");
+        }
+
+        var process = _mappingService.MapFromUpdateRequest(request, id);
+        var updatedProcess = await _processService.UpdateProcessAsync(process);
+
+        var processDto = _mappingService.MapToDto(updatedProcess);
+        _logger.LogInformation("Updated manufacturing process with ID: {Id}", id);
+
+        return Ok(processDto);
+    }
+
+    [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    public async Task<ActionResult> Delete(int id)
+    {
+        _logger.LogInformation("Deleting manufacturing process ID: {Id}", id);
+
+        var existingProcess = await _processService.GetProcessByIdAsync(id);
+        if (existingProcess == null)
+        {
+            _logger.LogWarning("Manufacturing process not found for deletion with ID: {Id}", id);
+            return NotFound($"Manufacturing process with ID {id} not found");
+        }
+
+        await _processService.DeleteProcessAsync(id);
+
+        _logger.LogInformation("Deleted manufacturing process with ID: {Id}", id);
+        return NoContent();
     }
 
     [HttpGet("category/{categoryId:int}")]

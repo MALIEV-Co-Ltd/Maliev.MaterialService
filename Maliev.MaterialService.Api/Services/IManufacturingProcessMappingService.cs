@@ -21,4 +21,19 @@ public interface IManufacturingProcessMappingService
     /// <param name="processes">The collection of ManufacturingProcess entities to map.</param>
     /// <returns>The mapped collection of ManufacturingProcessDtos.</returns>
     IEnumerable<ManufacturingProcessDto> MapToDtos(IEnumerable<ManufacturingProcess> processes);
+
+    /// <summary>
+    /// Maps a CreateManufacturingProcessRequest to a ManufacturingProcess entity.
+    /// </summary>
+    /// <param name="request">The CreateManufacturingProcessRequest to map.</param>
+    /// <returns>The mapped ManufacturingProcess entity.</returns>
+    ManufacturingProcess MapFromCreateRequest(CreateManufacturingProcessRequest request);
+
+    /// <summary>
+    /// Maps an UpdateManufacturingProcessRequest to a ManufacturingProcess entity.
+    /// </summary>
+    /// <param name="request">The UpdateManufacturingProcessRequest to map.</param>
+    /// <param name="id">The ID of the ManufacturingProcess entity to update.</param>
+    /// <returns>The mapped ManufacturingProcess entity.</returns>
+    ManufacturingProcess MapFromUpdateRequest(UpdateManufacturingProcessRequest request, int id);
 }

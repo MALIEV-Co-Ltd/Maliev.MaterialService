@@ -31,4 +31,18 @@ public class MaterialGroupMappingService : IMaterialGroupMappingService
     {
         return _mapper.Map<IEnumerable<MaterialGroupDto>>(groups);
     }
+
+    /// <inheritdoc/>
+    public MaterialGroup MapFromCreateRequest(CreateMaterialGroupRequest request)
+    {
+        return _mapper.Map<MaterialGroup>(request);
+    }
+
+    /// <inheritdoc/>
+    public MaterialGroup MapFromUpdateRequest(UpdateMaterialGroupRequest request, int id)
+    {
+        var group = _mapper.Map<MaterialGroup>(request);
+        group.Id = id;
+        return group;
+    }
 }

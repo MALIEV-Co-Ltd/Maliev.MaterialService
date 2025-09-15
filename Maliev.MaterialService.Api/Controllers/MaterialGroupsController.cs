@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Maliev.MaterialService.Api.Helpers;
 using Maliev.MaterialService.Api.Models;
 using Maliev.MaterialService.Api.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -57,13 +58,13 @@ public class MaterialGroupsController : ControllerBase
             }
 
             var groups = await _materialGroupService.GetAllGroupsAsync();
-            var allGroupDtos = _mappingService.MapToDtos(groups);
+            var groupDtos = _mappingService.MapToDtos(groups);
 
             // Cache the result
-            _cache.Set(cacheKey, allGroupDtos, _cacheOptions.DefaultExpiration);
-            _logger.LogDebug("Retrieved and cached {Count} material groups", allGroupDtos.Count());
+            _cache.Set(cacheKey, groupDtos, _cacheOptions.DefaultExpiration);
+            _logger.LogDebug("Retrieved and cached {Count} material groups", groupDtos.Count());
 
-            return Ok(allGroupDtos);
+            return Ok(groupDtos);
         }
 
         // Otherwise, use pagination
@@ -79,17 +80,34 @@ public class MaterialGroupsController : ControllerBase
         _logger.LogDebug("Retrieved {Count} material groups for page {PageNumber}", pagedGroupDtos.Count(), pageNumber);
 
         // Add pagination headers
-        Response.Headers["X-Pagination"] = System.Text.Json.JsonSerializer.Serialize(new
-        {
-            pagedResult.PageNumber,
-            pagedResult.PageSize,
-            pagedResult.TotalItems,
-            pagedResult.TotalPages,
-            pagedResult.HasPreviousPage,
-            pagedResult.HasNextPage
-        });
+        PaginationHelper.AddPaginationHeaders(Response, pagedResult);
 
         return Ok(pagedGroupDtos);
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Admin,Manager")]
+    [ProducesResponseType(typeof(MaterialGroupDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    public async Task<ActionResult<MaterialGroupDto>> Create([FromBody] CreateMaterialGroupRequest request)
+    {
+        _logger.LogInformation("Creating new material group: {Name}", request.Name);
+
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var group = _mappingService.MapFromCreateRequest(request);
+        var createdGroup = await _materialGroupService.CreateGroupAsync(group);
+
+        var groupDto = _mappingService.MapToDto(createdGroup);
+        _logger.LogInformation("Created material group with ID: {Id}", createdGroup.Id);
+
+        return CreatedAtAction(nameof(GetById), new { id = createdGroup.Id }, groupDto);
     }
 
     [HttpGet("{id:int}")]
@@ -126,6 +144,63 @@ public class MaterialGroupsController : ControllerBase
         return Ok(groupDto);
     }
 
+    [HttpPut("{id:int}")]
+    [Authorize(Roles = "Admin,Manager")]
+    [ProducesResponseType(typeof(MaterialGroupDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    public async Task<ActionResult<MaterialGroupDto>> Update(int id, [FromBody] UpdateMaterialGroupRequest request)
+    {
+        _logger.LogInformation("Updating material group ID: {Id}", id);
+
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var existingGroup = await _materialGroupService.GetGroupByIdAsync(id);
+        if (existingGroup == null)
+        {
+            _logger.LogWarning("Material group not found for update with ID: {Id}", id);
+            return NotFound($"Material group with ID {id} not found");
+        }
+
+        var group = _mappingService.MapFromUpdateRequest(request, id);
+        var updatedGroup = await _materialGroupService.UpdateGroupAsync(group);
+
+        var groupDto = _mappingService.MapToDto(updatedGroup);
+        _logger.LogInformation("Updated material group with ID: {Id}", id);
+
+        return Ok(groupDto);
+    }
+
+    [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    public async Task<ActionResult> Delete(int id)
+    {
+        _logger.LogInformation("Deleting material group ID: {Id}", id);
+
+        var existingGroup = await _materialGroupService.GetGroupByIdAsync(id);
+        if (existingGroup == null)
+        {
+            _logger.LogWarning("Material group not found for deletion with ID: {Id}", id);
+            return NotFound($"Material group with ID {id} not found");
+        }
+
+        await _materialGroupService.DeleteGroupAsync(id);
+
+        _logger.LogInformation("Deleted material group with ID: {Id}", id);
+        return NoContent();
+    }
+
     [HttpGet("family/{familyId:int}")]
     [ProducesResponseType(typeof(IEnumerable<MaterialGroupDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -149,13 +224,13 @@ public class MaterialGroupsController : ControllerBase
             }
 
             var groups = await _materialGroupService.GetGroupsByFamilyIdAsync(familyId);
-            var allGroupDtos = _mappingService.MapToDtos(groups);
+            var groupDtos = _mappingService.MapToDtos(groups);
 
             // Cache the result
-            _cache.Set(cacheKey, allGroupDtos, _cacheOptions.DefaultExpiration);
-            _logger.LogDebug("Retrieved and cached {Count} material groups for family {FamilyId}", allGroupDtos.Count(), familyId);
+            _cache.Set(cacheKey, groupDtos, _cacheOptions.DefaultExpiration);
+            _logger.LogDebug("Retrieved and cached {Count} material groups for family {FamilyId}", groupDtos.Count(), familyId);
 
-            return Ok(allGroupDtos);
+            return Ok(groupDtos);
         }
 
         // Otherwise, use pagination
@@ -171,15 +246,7 @@ public class MaterialGroupsController : ControllerBase
         _logger.LogDebug("Retrieved {Count} material groups for family {FamilyId} on page {PageNumber}", pagedGroupDtos.Count(), familyId, pageNumber);
 
         // Add pagination headers
-        Response.Headers["X-Pagination"] = System.Text.Json.JsonSerializer.Serialize(new
-        {
-            pagedResult.PageNumber,
-            pagedResult.PageSize,
-            pagedResult.TotalItems,
-            pagedResult.TotalPages,
-            pagedResult.HasPreviousPage,
-            pagedResult.HasNextPage
-        });
+        PaginationHelper.AddPaginationHeaders(Response, pagedResult);
 
         return Ok(pagedGroupDtos);
     }

@@ -221,4 +221,82 @@ public class ManufacturingProcessService : IManufacturingProcessService
 
         return materials;
     }
+
+    /// <summary>
+    /// Creates a new manufacturing process.
+    /// </summary>
+    /// <param name="process">The manufacturing process to create.</param>
+    /// <returns>The created manufacturing process.</returns>
+    public async Task<ManufacturingProcess> CreateProcessAsync(ManufacturingProcess process)
+    {
+        _logger.LogInformation("Creating new manufacturing process: {Name}", process.Name);
+
+        process.CreatedDate = DateTime.UtcNow;
+        process.ModifiedDate = DateTime.UtcNow;
+
+        _context.ManufacturingProcesses.Add(process);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Created manufacturing process with ID: {Id}", process.Id);
+
+        return process;
+    }
+
+    /// <summary>
+    /// Updates an existing manufacturing process.
+    /// </summary>
+    /// <param name="process">The manufacturing process to update.</param>
+    /// <returns>The updated manufacturing process.</returns>
+    public async Task<ManufacturingProcess> UpdateProcessAsync(ManufacturingProcess process)
+    {
+        _logger.LogInformation("Updating manufacturing process ID: {Id}", process.Id);
+
+        var existingProcess = await _context.ManufacturingProcesses.FindAsync(process.Id);
+        if (existingProcess == null)
+        {
+            _logger.LogWarning("Manufacturing process not found for update with ID: {Id}", process.Id);
+            throw new KeyNotFoundException($"Manufacturing process with ID {process.Id} not found");
+        }
+
+        // Update the properties
+        _context.Entry(existingProcess).CurrentValues.SetValues(process);
+        existingProcess.ModifiedDate = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Updated manufacturing process with ID: {Id}", process.Id);
+
+        return existingProcess;
+    }
+
+    /// <summary>
+    /// Deletes a manufacturing process by ID.
+    /// </summary>
+    /// <param name="id">The ID of the manufacturing process to delete.</param>
+    public async Task DeleteProcessAsync(int id)
+    {
+        _logger.LogInformation("Deleting manufacturing process ID: {Id}", id);
+
+        var process = await _context.ManufacturingProcesses.FindAsync(id);
+        if (process == null)
+        {
+            _logger.LogWarning("Manufacturing process not found for deletion with ID: {Id}", id);
+            throw new KeyNotFoundException($"Manufacturing process with ID {id} not found");
+        }
+
+        _context.ManufacturingProcesses.Remove(process);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Deleted manufacturing process with ID: {Id}", id);
+    }
+
+    /// <summary>
+    /// Checks if a manufacturing process exists by ID.
+    /// </summary>
+    /// <param name="id">The ID of the manufacturing process to check.</param>
+    /// <returns>True if the manufacturing process exists, false otherwise.</returns>
+    public async Task<bool> ProcessExistsAsync(int id)
+    {
+        return await _context.ManufacturingProcesses.AnyAsync(p => p.Id == id);
+    }
 }

@@ -21,4 +21,19 @@ public interface IMaterialGroupMappingService
     /// <param name="groups">The collection of MaterialGroup entities to map.</param>
     /// <returns>The mapped collection of MaterialGroupDtos.</returns>
     IEnumerable<MaterialGroupDto> MapToDtos(IEnumerable<MaterialGroup> groups);
+
+    /// <summary>
+    /// Maps a CreateMaterialGroupRequest to a MaterialGroup entity.
+    /// </summary>
+    /// <param name="request">The CreateMaterialGroupRequest to map.</param>
+    /// <returns>The mapped MaterialGroup entity.</returns>
+    MaterialGroup MapFromCreateRequest(CreateMaterialGroupRequest request);
+
+    /// <summary>
+    /// Maps an UpdateMaterialGroupRequest to a MaterialGroup entity.
+    /// </summary>
+    /// <param name="request">The UpdateMaterialGroupRequest to map.</param>
+    /// <param name="id">The ID of the MaterialGroup entity to update.</param>
+    /// <returns>The mapped MaterialGroup entity.</returns>
+    MaterialGroup MapFromUpdateRequest(UpdateMaterialGroupRequest request, int id);
 }
