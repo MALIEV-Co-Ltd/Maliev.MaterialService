@@ -81,9 +81,15 @@ try
             connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__MaterialDbContext");
         }
         
+        // Connection string is required for production deployment
         if (string.IsNullOrEmpty(connectionString))
         {
-            throw new InvalidOperationException("No connection string found for MaterialDbContext. Please configure ConnectionStrings:MaterialDbContext in appsettings or environment variables.");
+            throw new InvalidOperationException("Database connection string is required. Please set ConnectionStrings__MaterialDbContext environment variable or configure it in secrets.");
+        }
+        else
+        {
+            // Ensure we're using the correct database name
+            connectionString = connectionString.Replace("Database=maliev_service_db", "Database=material_app_db");
         }
         
         builder.Services.AddDbContext<MaterialDbContext>(options =>

@@ -104,7 +104,7 @@ kubectl port-forward -n maliev-dev svc/postgres-cluster-rw 5432:5432
 ### Database Migrations
 ```bash
 # Set connection string
-export MaterialServiceDbContext="Server=localhost;Port=5432;Database=material_service_db;User Id=postgres;Password=PASSWORD;"
+export ConnectionStrings__MaterialDbContext="Server=localhost;Port=5432;Database=material_app_db;User Id=postgres;Password=YOUR_PASSWORD_HERE;"
 
 # Apply migrations
 dotnet ef database update --project Maliev.MaterialService.Data
