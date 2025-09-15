@@ -120,13 +120,14 @@ try
                 }));
     });
 
-    // Register services
-    builder.Services.AddScoped<IMaterialService, Maliev.MaterialService.Api.Services.MaterialService>();
-    builder.Services.AddScoped<IMaterialGroupService, MaterialGroupService>();
-    builder.Services.AddScoped<IManufacturingProcessService, ManufacturingProcessService>();
-    builder.Services.AddScoped<IMaterialSearchService, MaterialSearchService>();
+    // Configure mapping services
+    builder.Services.AddScoped<IManufacturingProcessMappingService, ManufacturingProcessMappingService>();
+    builder.Services.AddScoped<IMaterialGroupMappingService, MaterialGroupMappingService>();
 
-    // Configure cache options
+    // Configure database initialization service
+    builder.Services.AddScoped<DatabaseInitializationService>();
+
+    // Configure Swagger
     builder.Services.Configure<CacheOptions>(builder.Configuration.GetSection(CacheOptions.SectionName));
     builder.Services.AddOptions<CacheOptions>()
         .Bind(builder.Configuration.GetSection(CacheOptions.SectionName))
@@ -305,18 +306,10 @@ try
     // Ensure database is created and seeded
     using (var scope = app.Services.CreateScope())
     {
-        var context = scope.ServiceProvider.GetRequiredService<MaterialDbContext>();
+        var databaseInitializationService = scope.ServiceProvider.GetRequiredService<DatabaseInitializationService>();
         try
         {
-            if (context.Database.IsRelational())
-            {
-                context.Database.Migrate();
-            }
-            else
-            {
-                context.Database.EnsureCreated();
-            }
-            Log.Information("Database initialization completed");
+            await databaseInitializationService.InitializeDatabaseAsync();
         }
         catch (Exception ex)
         {
