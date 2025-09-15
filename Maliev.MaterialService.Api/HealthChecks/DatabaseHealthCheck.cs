@@ -4,17 +4,31 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Maliev.MaterialService.Api.HealthChecks;
 
+/// <summary>
+/// Health check for database connectivity and data integrity.
+/// </summary>
 public class DatabaseHealthCheck : IHealthCheck
 {
     private readonly MaterialDbContext _context;
     private readonly ILogger<DatabaseHealthCheck> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DatabaseHealthCheck"/> class.
+    /// </summary>
+    /// <param name="context">The database context.</param>
+    /// <param name="logger">The logger.</param>
     public DatabaseHealthCheck(MaterialDbContext context, ILogger<DatabaseHealthCheck> logger)
     {
         _context = context;
         _logger = logger;
     }
 
+    /// <summary>
+    /// Checks the health of the database by verifying connectivity and data integrity.
+    /// </summary>
+    /// <param name="context">The health check context.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task that represents the asynchronous health check operation.</returns>
     public async Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
         CancellationToken cancellationToken = default)

@@ -335,30 +335,57 @@ finally
     Log.CloseAndFlush();
 }
 
-// JWT Options with validation
+/// <summary>
+/// JWT configuration options.
+/// </summary>
 public class JwtOptions
 {
+    /// <summary>
+    /// The configuration section name for JWT options.
+    /// </summary>
     public const string SectionName = "Jwt";
 
+    /// <summary>
+    /// Gets or sets the JWT issuer.
+    /// </summary>
     [Required]
     public required string Issuer { get; set; }
 
+    /// <summary>
+    /// Gets or sets the JWT audience.
+    /// </summary>
     [Required]
     public required string Audience { get; set; }
 
+    /// <summary>
+    /// Gets or sets the JWT security key.
+    /// </summary>
     [Required]
     public required string SecurityKey { get; set; }
 }
 
-// Development authentication handler that allows all requests
+/// <summary>
+/// Development authentication handler that allows all requests.
+/// This handler is used in development environments to bypass authentication.
+/// </summary>
 public class DevelopmentAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DevelopmentAuthenticationHandler"/> class.
+    /// </summary>
+    /// <param name="options">The options monitor.</param>
+    /// <param name="logger">The logger factory.</param>
+    /// <param name="encoder">The URL encoder.</param>
     public DevelopmentAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger, UrlEncoder encoder)
         : base(options, logger, encoder)
     {
     }
 
+    /// <summary>
+    /// Handles the authentication process by creating a fake identity for development.
+    /// </summary>
+    /// <returns>An authentication result with a fake identity.</returns>
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         // Create a fake identity for development
@@ -377,15 +404,28 @@ public class DevelopmentAuthenticationHandler : AuthenticationHandler<Authentica
     }
 }
 
-// Test authentication handler for unit tests
+/// <summary>
+/// Test authentication handler for unit tests.
+/// This handler is used in testing environments to provide a consistent test identity.
+/// </summary>
 public class TestAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestAuthenticationHandler"/> class.
+    /// </summary>
+    /// <param name="options">The options monitor.</param>
+    /// <param name="logger">The logger factory.</param>
+    /// <param name="encoder">The URL encoder.</param>
     public TestAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger, UrlEncoder encoder)
         : base(options, logger, encoder)
     {
     }
 
+    /// <summary>
+    /// Handles the authentication process by creating a test identity.
+    /// </summary>
+    /// <returns>An authentication result with a test identity.</returns>
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         // Create a test identity
