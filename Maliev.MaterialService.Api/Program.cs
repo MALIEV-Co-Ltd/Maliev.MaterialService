@@ -131,6 +131,8 @@ try
 
     // Configure business services
     builder.Services.AddScoped<IMaterialService, MaterialService>();
+    builder.Services.AddScoped<IMaterialGroupService, MaterialGroupService>();
+    builder.Services.AddScoped<IManufacturingProcessService, ManufacturingProcessService>();
 
     // Configure database initialization service
     builder.Services.AddScoped<DatabaseInitializationService>();
