@@ -239,7 +239,7 @@ public class MaterialGroupServiceTests : IDisposable
         };
 
         // Act
-        Func<Task> act = async () => await _service.UpdateGroupAsync(nonExistentGroup);
+        Func<Task> act = async () => await _service.UpdateGroupAsync(nonExistentGroup, TestContext.Current.CancellationToken);
 
         // Assert
         await act.Should().ThrowAsync<KeyNotFoundException>()

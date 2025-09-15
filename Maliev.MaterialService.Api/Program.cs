@@ -126,6 +126,11 @@ try
     builder.Services.AddAutoMapper(typeof(Program));
     builder.Services.AddScoped<IManufacturingProcessMappingService, ManufacturingProcessMappingService>();
     builder.Services.AddScoped<IMaterialGroupMappingService, MaterialGroupMappingService>();
+    builder.Services.AddScoped<IMaterialMappingService, MaterialMappingService>();
+    builder.Services.AddScoped<IMaterialSearchService, MaterialSearchService>();
+
+    // Configure business services
+    builder.Services.AddScoped<IMaterialService, MaterialService>();
 
     // Configure database initialization service
     builder.Services.AddScoped<DatabaseInitializationService>();
