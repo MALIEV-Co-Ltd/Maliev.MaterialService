@@ -17,15 +17,18 @@ public class MaterialsController : ControllerBase
 {
     private readonly IMaterialService _materialService;
     private readonly IMaterialSearchService _searchService;
+    private readonly IMaterialMappingService _mappingService;
     private readonly ILogger<MaterialsController> _logger;
 
     public MaterialsController(
         IMaterialService materialService,
         IMaterialSearchService searchService,
+        IMaterialMappingService mappingService,
         ILogger<MaterialsController> logger)
     {
         _materialService = materialService;
         _searchService = searchService;
+        _mappingService = mappingService;
         _logger = logger;
     }
 
@@ -45,7 +48,7 @@ public class MaterialsController : ControllerBase
         if (pageNumber == 1 && pageSize == 20)
         {
             var materials = await _materialService.GetAllMaterialsAsync(includeInactive);
-            var allMaterialDtos = materials.Select(MapToDto);
+            var allMaterialDtos = _mappingService.MapToDtos(materials);
 
             _logger.LogDebug("Retrieved {Count} materials", allMaterialDtos.Count());
             return Ok(allMaterialDtos);
@@ -59,7 +62,7 @@ public class MaterialsController : ControllerBase
         };
 
         var pagedResult = await _materialService.GetAllMaterialsPagedAsync(pagination, includeInactive);
-        var pagedMaterialDtos = pagedResult.Items.Select(MapToDto);
+        var pagedMaterialDtos = _mappingService.MapToDtos(pagedResult.Items);
 
         _logger.LogDebug("Retrieved {Count} materials for page {PageNumber}", pagedMaterialDtos.Count(), pageNumber);
 
@@ -94,7 +97,7 @@ public class MaterialsController : ControllerBase
             return NotFound($"Material with ID {id} not found");
         }
 
-        var materialDto = MapToDetailedDto(material);
+        var materialDto = _mappingService.MapToDetailedDto(material);
         return Ok(materialDto);
     }
 
@@ -115,10 +118,10 @@ public class MaterialsController : ControllerBase
         if (pageNumber == 1 && pageSize == 20)
         {
             var materials = await _materialService.GetMaterialsByGroupIdAsync(groupId, includeInactive);
-            var allMaterialDtos = materials.Select(MapToDto);
+            var materialDtos = _mappingService.MapToDtos(materials);
 
-            _logger.LogDebug("Retrieved {Count} materials for group {GroupId}", allMaterialDtos.Count(), groupId);
-            return Ok(allMaterialDtos);
+            _logger.LogDebug("Retrieved {Count} materials for group {GroupId}", materialDtos.Count(), groupId);
+            return Ok(materialDtos);
         }
 
         // Otherwise, use pagination
@@ -129,7 +132,7 @@ public class MaterialsController : ControllerBase
         };
 
         var pagedResult = await _materialService.GetMaterialsByGroupIdPagedAsync(groupId, pagination, includeInactive);
-        var pagedMaterialDtos = pagedResult.Items.Select(MapToDto);
+        var pagedMaterialDtos = _mappingService.MapToDtos(pagedResult.Items);
 
         _logger.LogDebug("Retrieved {Count} materials for group {GroupId} on page {PageNumber}", 
             pagedMaterialDtos.Count(), groupId, pageNumber);
@@ -152,15 +155,50 @@ public class MaterialsController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<MaterialDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult<IEnumerable<MaterialDto>>> GetByFamilyId(int familyId, [FromQuery] bool includeInactive = false)
+    public async Task<ActionResult<IEnumerable<MaterialDto>>> GetByFamilyId(
+        int familyId, 
+        [FromQuery] bool includeInactive = false,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20)
     {
-        _logger.LogDebug("Getting materials by family ID: {FamilyId}, includeInactive: {IncludeInactive}", familyId, includeInactive);
+        _logger.LogDebug("Getting materials by family ID: {FamilyId}, includeInactive: {IncludeInactive}, Page: {PageNumber}, Size: {PageSize}", 
+            familyId, includeInactive, pageNumber, pageSize);
 
-        var materials = await _materialService.GetMaterialsByFamilyIdAsync(familyId, includeInactive);
-        var materialDtos = materials.Select(MapToDto);
+        // If default pagination parameters, return all materials (backward compatibility)
+        if (pageNumber == 1 && pageSize == 20)
+        {
+            var materials = await _materialService.GetMaterialsByFamilyIdAsync(familyId, includeInactive);
+            var materialDtos = _mappingService.MapToDtos(materials);
 
-        _logger.LogDebug("Retrieved {Count} materials for family {FamilyId}", materialDtos.Count(), familyId);
-        return Ok(materialDtos);
+            _logger.LogDebug("Retrieved {Count} materials for family {FamilyId}", materialDtos.Count(), familyId);
+            return Ok(materialDtos);
+        }
+
+        // Otherwise, use pagination
+        var pagination = new PaginationParameters
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+
+        var pagedResult = await _materialService.GetMaterialsByFamilyIdPagedAsync(familyId, pagination, includeInactive);
+        var pagedMaterialDtos = _mappingService.MapToDtos(pagedResult.Items);
+
+        _logger.LogDebug("Retrieved {Count} materials for family {FamilyId} on page {PageNumber}", 
+            pagedMaterialDtos.Count(), familyId, pageNumber);
+
+        // Add pagination headers
+        Response.Headers["X-Pagination"] = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            pagedResult.PageNumber,
+            pagedResult.PageSize,
+            pagedResult.TotalItems,
+            pagedResult.TotalPages,
+            pagedResult.HasPreviousPage,
+            pagedResult.HasNextPage
+        });
+
+        return Ok(pagedMaterialDtos);
     }
 
     [HttpPost]
@@ -179,10 +217,10 @@ public class MaterialsController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        var material = MapFromCreateRequest(request);
+        var material = _mappingService.MapFromCreateRequest(request);
         var createdMaterial = await _materialService.CreateMaterialAsync(material);
 
-        var materialDto = MapToDto(createdMaterial);
+        var materialDto = _mappingService.MapToDto(createdMaterial);
         _logger.LogInformation("Created material with ID: {Id}", createdMaterial.Id);
 
         return CreatedAtAction(nameof(GetById), new { id = createdMaterial.Id }, materialDto);
@@ -212,10 +250,10 @@ public class MaterialsController : ControllerBase
             return NotFound($"Material with ID {id} not found");
         }
 
-        var material = MapFromUpdateRequest(request, id);
+        var material = _mappingService.MapFromUpdateRequest(request, id);
         var updatedMaterial = await _materialService.UpdateMaterialAsync(material);
 
-        var materialDto = MapToDto(updatedMaterial);
+        var materialDto = _mappingService.MapToDto(updatedMaterial);
         _logger.LogInformation("Updated material with ID: {Id}", id);
 
         return Ok(materialDto);
@@ -254,7 +292,7 @@ public class MaterialsController : ControllerBase
         _logger.LogDebug("Searching materials with query: {Query}", query);
 
         var materials = await _searchService.SearchAsync(query ?? "", filters);
-        var materialDtos = materials.Select(MapToDto);
+        var materialDtos = _mappingService.MapToDtos(materials);
 
         _logger.LogDebug("Found {Count} materials matching search criteria", materialDtos.Count());
         return Ok(materialDtos);
@@ -274,196 +312,9 @@ public class MaterialsController : ControllerBase
         }
 
         var materials = await _searchService.GetRecommendationsAsync(request);
-        var materialDtos = materials.Select(MapToDto);
+        var materialDtos = _mappingService.MapToDtos(materials);
 
         _logger.LogDebug("Found {Count} recommended materials", materialDtos.Count());
         return Ok(materialDtos);
-    }
-
-    private static MaterialDto MapToDto(Material material)
-    {
-        return new MaterialDto
-        {
-            Id = material.Id,
-            MaterialGroupId = material.MaterialGroupId,
-            Name = material.Name,
-            Description = material.Description,
-            MaterialNumber = material.MaterialNumber,
-            ManufacturerReference = material.ManufacturerReference,
-            DensityKilogramPerCubicMeter = material.DensityKilogramPerCubicMeter,
-            TensileStrengthUltimateGigaPascal = material.TensileStrengthUltimateGigaPascal,
-            TensileStrengthYieldMegaPascal = material.TensileStrengthYieldMegaPascal,
-            MachinabilityPercent = material.MachinabilityPercent,
-            ShearModulusGigaPascal = material.ShearModulusGigaPascal,
-            ThermalConductivityWattPerMeterKelvin = material.ThermalConductivityWattPerMeterKelvin,
-            PricePerKilogram = material.PricePerKilogram,
-            CurrencyCode = material.CurrencyCode,
-            Url = material.Url,
-            Comment = material.Comment,
-            IsActive = material.IsActive,
-            CreatedDate = material.CreatedDate,
-            ModifiedDate = material.ModifiedDate,
-            MaterialGroup = material.MaterialGroup != null ? new MaterialGroupDto
-            {
-                Id = material.MaterialGroup.Id,
-                MaterialFamilyId = material.MaterialGroup.MaterialFamilyId,
-                Name = material.MaterialGroup.Name,
-                Description = material.MaterialGroup.Description,
-                SortOrder = material.MaterialGroup.SortOrder,
-                MaterialFamily = material.MaterialGroup.MaterialFamily != null ? new MaterialFamilyDto
-                {
-                    Id = material.MaterialGroup.MaterialFamily.Id,
-                    Name = material.MaterialGroup.MaterialFamily.Name,
-                    Description = material.MaterialGroup.MaterialFamily.Description,
-                    SortOrder = material.MaterialGroup.MaterialFamily.SortOrder
-                } : null
-            } : null
-        };
-    }
-
-    private static MaterialDto MapToDetailedDto(Material material)
-    {
-        var dto = MapToDto(material);
-
-        // Add detailed navigation properties
-        dto.MaterialStandards = material.MaterialStandards?.Select(ms => new MaterialStandardDto
-        {
-            Id = ms.Id,
-            MaterialId = ms.MaterialId,
-            StandardTypeId = ms.StandardTypeId,
-            StandardValue = ms.StandardValue,
-            StandardType = ms.StandardType != null ? new MaterialStandardTypeDto
-            {
-                Id = ms.StandardType.Id,
-                Name = ms.StandardType.Name,
-                Description = ms.StandardType.Description
-            } : null
-        }).ToList();
-
-        dto.MaterialProperties = material.MaterialProperties?.Select(mp => new MaterialPropertyDto
-        {
-            Id = mp.Id,
-            MaterialId = mp.MaterialId,
-            PropertySubtypeId = mp.PropertySubtypeId,
-            Value = mp.Value,
-            PropertySubtype = mp.PropertySubtype != null ? new PropertySubtypeDto
-            {
-                Id = mp.PropertySubtype.Id,
-                PropertyTypeId = mp.PropertySubtype.PropertyTypeId,
-                Name = mp.PropertySubtype.Name,
-                Description = mp.PropertySubtype.Description,
-                Unit = mp.PropertySubtype.Unit,
-                PropertyType = mp.PropertySubtype.PropertyType != null ? new PropertyTypeDto
-                {
-                    Id = mp.PropertySubtype.PropertyType.Id,
-                    Name = mp.PropertySubtype.PropertyType.Name,
-                    Description = mp.PropertySubtype.PropertyType.Description
-                } : null
-            } : null
-        }).ToList();
-
-        dto.ProcessCompatibilities = material.ProcessCompatibilities?.Select(pc => new MaterialProcessCompatibilityDto
-        {
-            Id = pc.Id,
-            MaterialId = pc.MaterialId,
-            ProcessId = pc.ProcessId,
-            CompatibilityScore = pc.CompatibilityLevel,
-            Notes = pc.ProcessingNotes,
-            Process = pc.Process != null ? new ManufacturingProcessDto
-            {
-                Id = pc.Process.Id,
-                CategoryId = pc.Process.CategoryId,
-                Name = pc.Process.Name,
-                Description = pc.Process.Description,
-                SortOrder = pc.Process.SortOrder,
-                Category = pc.Process.Category != null ? new ManufacturingProcessCategoryDto
-                {
-                    Id = pc.Process.Category.Id,
-                    Name = pc.Process.Category.Name,
-                    Description = pc.Process.Category.Description,
-                    SortOrder = pc.Process.Category.SortOrder
-                } : null
-            } : null
-        }).ToList();
-
-        dto.MaterialColors = material.MaterialColors?.Select(mc => new MaterialColorDto
-        {
-            Id = mc.Id,
-            MaterialId = mc.MaterialId,
-            ColorId = mc.ColorId,
-            Color = mc.Color != null ? new ColorDto
-            {
-                Id = mc.Color.Id,
-                Name = mc.Color.Name,
-                HexCode = mc.Color.HexCode,
-                Description = mc.Color.Description
-            } : null
-        }).ToList();
-
-        dto.MaterialSurfaceFinishes = material.MaterialSurfaceFinishes?.Select(msf => new MaterialSurfaceFinishDto
-        {
-            Id = msf.Id,
-            MaterialId = msf.MaterialId,
-            SurfaceFinishId = msf.SurfaceFinishId,
-            SurfaceFinish = msf.SurfaceFinish != null ? new SurfaceFinishDto
-            {
-                Id = msf.SurfaceFinish.Id,
-                Name = msf.SurfaceFinish.Name,
-                Description = msf.SurfaceFinish.Description,
-                RoughnessRa = null
-            } : null
-        }).ToList();
-
-        return dto;
-    }
-
-    private static Material MapFromCreateRequest(CreateMaterialRequest request)
-    {
-        return new Material
-        {
-            MaterialGroupId = request.MaterialGroupId,
-            Name = request.Name,
-            Description = request.Description,
-            MaterialNumber = request.MaterialNumber,
-            ManufacturerReference = request.ManufacturerReference,
-            DensityKilogramPerCubicMeter = request.DensityKilogramPerCubicMeter,
-            TensileStrengthUltimateGigaPascal = request.TensileStrengthUltimateGigaPascal,
-            TensileStrengthYieldMegaPascal = request.TensileStrengthYieldMegaPascal,
-            MachinabilityPercent = request.MachinabilityPercent,
-            ShearModulusGigaPascal = request.ShearModulusGigaPascal,
-            ThermalConductivityWattPerMeterKelvin = request.ThermalConductivityWattPerMeterKelvin,
-            PricePerKilogram = request.PricePerKilogram,
-            CurrencyCode = request.CurrencyCode,
-            Url = request.Url,
-            Comment = request.Comment,
-            IsActive = true,
-            CreatedDate = DateTime.UtcNow,
-            ModifiedDate = DateTime.UtcNow
-        };
-    }
-
-    private static Material MapFromUpdateRequest(UpdateMaterialRequest request, int id)
-    {
-        return new Material
-        {
-            Id = id,
-            MaterialGroupId = request.MaterialGroupId,
-            Name = request.Name,
-            Description = request.Description,
-            MaterialNumber = request.MaterialNumber,
-            ManufacturerReference = request.ManufacturerReference,
-            DensityKilogramPerCubicMeter = request.DensityKilogramPerCubicMeter,
-            TensileStrengthUltimateGigaPascal = request.TensileStrengthUltimateGigaPascal,
-            TensileStrengthYieldMegaPascal = request.TensileStrengthYieldMegaPascal,
-            MachinabilityPercent = request.MachinabilityPercent,
-            ShearModulusGigaPascal = request.ShearModulusGigaPascal,
-            ThermalConductivityWattPerMeterKelvin = request.ThermalConductivityWattPerMeterKelvin,
-            PricePerKilogram = request.PricePerKilogram,
-            CurrencyCode = request.CurrencyCode,
-            Url = request.Url,
-            Comment = request.Comment,
-            IsActive = request.IsActive,
-            ModifiedDate = DateTime.UtcNow
-        };
     }
 }

@@ -213,6 +213,42 @@ public class MaterialService : IMaterialService
         return materials;
     }
 
+    public async Task<PagedResult<Material>> GetMaterialsByFamilyIdPagedAsync(int familyId, PaginationParameters pagination, bool includeInactive = false)
+    {
+        var query = _context.Materials
+            .Include(m => m.MaterialGroup)
+                .ThenInclude(mg => mg.MaterialFamily)
+            .Where(m => m.MaterialGroup.MaterialFamilyId == familyId)
+            .AsQueryable();
+
+        if (!includeInactive)
+        {
+            query = query.Where(m => m.IsActive);
+        }
+
+        var totalCount = await query.CountAsync();
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize);
+
+        var materials = await query
+            .OrderBy(m => m.MaterialGroup.SortOrder)
+            .ThenBy(m => m.Name)
+            .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .ToListAsync();
+
+        _logger.LogDebug("Retrieved paginated materials for family {FamilyId} - Page {PageNumber}, Size {PageSize}, Total {TotalCount}", 
+            familyId, pagination.PageNumber, pagination.PageSize, totalCount);
+
+        return new PagedResult<Material>
+        {
+            Items = materials,
+            PageNumber = pagination.PageNumber,
+            PageSize = pagination.PageSize,
+            TotalItems = totalCount,
+            TotalPages = totalPages
+        };
+    }
+
     public async Task<IEnumerable<Material>> SearchMaterialsAsync(string searchTerm, bool includeInactive = false)
     {
         if (string.IsNullOrWhiteSpace(searchTerm))
@@ -249,6 +285,53 @@ public class MaterialService : IMaterialService
 
         _cache.Set(cacheKey, materials, TimeSpan.FromMinutes(15)); // Shorter cache for search results
         return materials;
+    }
+
+    public async Task<PagedResult<Material>> SearchMaterialsPagedAsync(string searchTerm, PaginationParameters pagination, bool includeInactive = false)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            // If empty search term, delegate to the paged version of GetAllMaterialsAsync
+            return await GetAllMaterialsPagedAsync(pagination, includeInactive);
+        }
+
+        var normalizedSearchTerm = searchTerm.Trim().ToLowerInvariant();
+        var query = _context.Materials
+            .Include(m => m.MaterialGroup)
+                .ThenInclude(mg => mg.MaterialFamily)
+            .Where(m =>
+                m.Name.ToLower().Contains(normalizedSearchTerm) ||
+                (m.Description != null && m.Description.ToLower().Contains(normalizedSearchTerm)) ||
+                (m.MaterialNumber != null && m.MaterialNumber.ToLower().Contains(normalizedSearchTerm)) ||
+                (m.ManufacturerReference != null && m.ManufacturerReference.ToLower().Contains(normalizedSearchTerm)) ||
+                m.MaterialGroup.Name.ToLower().Contains(normalizedSearchTerm))
+            .AsQueryable();
+
+        if (!includeInactive)
+        {
+            query = query.Where(m => m.IsActive);
+        }
+
+        var totalCount = await query.CountAsync();
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize);
+
+        var materials = await query
+            .OrderBy(m => m.Name)
+            .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .ToListAsync();
+
+        _logger.LogDebug("Retrieved paginated search results for term '{SearchTerm}' - Page {PageNumber}, Size {PageSize}, Total {TotalCount}", 
+            searchTerm, pagination.PageNumber, pagination.PageSize, totalCount);
+
+        return new PagedResult<Material>
+        {
+            Items = materials,
+            PageNumber = pagination.PageNumber,
+            PageSize = pagination.PageSize,
+            TotalItems = totalCount,
+            TotalPages = totalPages
+        };
     }
 
     public async Task<IEnumerable<Material>> GetMaterialsByProcessCompatibilityAsync(int processId, bool includeInactive = false)
