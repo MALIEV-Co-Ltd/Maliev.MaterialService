@@ -4,6 +4,7 @@ using Maliev.MaterialService.Data.DbContexts;
 using Maliev.MaterialService.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using System.Threading;
 
 namespace Maliev.MaterialService.Api.Services;
 
@@ -26,7 +27,7 @@ public class MaterialService : IMaterialService
         _cacheOptions = cacheOptions;
     }
 
-    public async Task<IEnumerable<Material>> GetAllMaterialsAsync(bool includeInactive = false)
+    public async Task<IEnumerable<Material>> GetAllMaterialsAsync(bool includeInactive = false, CancellationToken cancellationToken = default)
     {
         var cacheKey = string.Format(MaterialServiceCacheKeys.AllMaterials, includeInactive);
 
@@ -49,7 +50,7 @@ public class MaterialService : IMaterialService
         var materials = await query
             .OrderBy(m => m.MaterialGroup.SortOrder)
             .ThenBy(m => m.Name)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         _cache.Set(cacheKey, materials, _cacheOptions.DefaultExpiration);
         _logger.LogDebug("Retrieved and cached {Count} materials", materials.Count);
@@ -57,7 +58,7 @@ public class MaterialService : IMaterialService
         return materials;
     }
 
-    public async Task<Material?> GetMaterialByIdAsync(int id)
+    public async Task<Material?> GetMaterialByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         var cacheKey = string.Format(MaterialServiceCacheKeys.MaterialById, id);
 
@@ -81,7 +82,7 @@ public class MaterialService : IMaterialService
                 .ThenInclude(mc => mc.Color)
             .Include(m => m.MaterialSurfaceFinishes)
                 .ThenInclude(msf => msf.SurfaceFinish)
-            .FirstOrDefaultAsync(m => m.Id == id);
+            .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
 
         if (material != null)
         {
@@ -92,7 +93,7 @@ public class MaterialService : IMaterialService
         return material;
     }
 
-    public async Task<PagedResult<Material>> GetAllMaterialsPagedAsync(PaginationParameters pagination, bool includeInactive = false)
+    public async Task<PagedResult<Material>> GetAllMaterialsPagedAsync(PaginationParameters pagination, bool includeInactive = false, CancellationToken cancellationToken = default)
     {
         var query = _context.Materials
             .Include(m => m.MaterialGroup)
@@ -104,7 +105,7 @@ public class MaterialService : IMaterialService
             query = query.Where(m => m.IsActive);
         }
 
-        var totalCount = await query.CountAsync();
+        var totalCount = await query.CountAsync(cancellationToken);
         var totalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize);
 
         var materials = await query
@@ -112,7 +113,7 @@ public class MaterialService : IMaterialService
             .ThenBy(m => m.Name)
             .Skip((pagination.PageNumber - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         _logger.LogDebug("Retrieved paginated materials - Page {PageNumber}, Size {PageSize}, Total {TotalCount}", 
             pagination.PageNumber, pagination.PageSize, totalCount);
@@ -127,7 +128,7 @@ public class MaterialService : IMaterialService
         };
     }
 
-    public async Task<IEnumerable<Material>> GetMaterialsByGroupIdAsync(int groupId, bool includeInactive = false)
+    public async Task<IEnumerable<Material>> GetMaterialsByGroupIdAsync(int groupId, bool includeInactive = false, CancellationToken cancellationToken = default)
     {
         var cacheKey = string.Format(MaterialServiceCacheKeys.MaterialsByGroupId, groupId, includeInactive);
 
@@ -147,13 +148,13 @@ public class MaterialService : IMaterialService
 
         var materials = await query
             .OrderBy(m => m.Name)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         _cache.Set(cacheKey, materials, _cacheOptions.DefaultExpiration);
         return materials;
     }
 
-    public async Task<PagedResult<Material>> GetMaterialsByGroupIdPagedAsync(int groupId, PaginationParameters pagination, bool includeInactive = false)
+    public async Task<PagedResult<Material>> GetMaterialsByGroupIdPagedAsync(int groupId, PaginationParameters pagination, bool includeInactive = false, CancellationToken cancellationToken = default)
     {
         var query = _context.Materials
             .Include(m => m.MaterialGroup)
@@ -164,14 +165,14 @@ public class MaterialService : IMaterialService
             query = query.Where(m => m.IsActive);
         }
 
-        var totalCount = await query.CountAsync();
+        var totalCount = await query.CountAsync(cancellationToken);
         var totalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize);
 
         var materials = await query
             .OrderBy(m => m.Name)
             .Skip((pagination.PageNumber - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         _logger.LogDebug("Retrieved paginated materials for group {GroupId} - Page {PageNumber}, Size {PageSize}, Total {TotalCount}", 
             groupId, pagination.PageNumber, pagination.PageSize, totalCount);
@@ -186,7 +187,7 @@ public class MaterialService : IMaterialService
         };
     }
 
-    public async Task<IEnumerable<Material>> GetMaterialsByFamilyIdAsync(int familyId, bool includeInactive = false)
+    public async Task<IEnumerable<Material>> GetMaterialsByFamilyIdAsync(int familyId, bool includeInactive = false, CancellationToken cancellationToken = default)
     {
         var cacheKey = string.Format(MaterialServiceCacheKeys.MaterialsByFamilyId, familyId, includeInactive);
 
@@ -207,13 +208,13 @@ public class MaterialService : IMaterialService
         var materials = await query
             .OrderBy(m => m.MaterialGroup.SortOrder)
             .ThenBy(m => m.Name)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         _cache.Set(cacheKey, materials, _cacheOptions.DefaultExpiration);
         return materials;
     }
 
-    public async Task<PagedResult<Material>> GetMaterialsByFamilyIdPagedAsync(int familyId, PaginationParameters pagination, bool includeInactive = false)
+    public async Task<PagedResult<Material>> GetMaterialsByFamilyIdPagedAsync(int familyId, PaginationParameters pagination, bool includeInactive = false, CancellationToken cancellationToken = default)
     {
         var query = _context.Materials
             .Include(m => m.MaterialGroup)
@@ -226,7 +227,7 @@ public class MaterialService : IMaterialService
             query = query.Where(m => m.IsActive);
         }
 
-        var totalCount = await query.CountAsync();
+        var totalCount = await query.CountAsync(cancellationToken);
         var totalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize);
 
         var materials = await query
@@ -234,7 +235,7 @@ public class MaterialService : IMaterialService
             .ThenBy(m => m.Name)
             .Skip((pagination.PageNumber - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         _logger.LogDebug("Retrieved paginated materials for family {FamilyId} - Page {PageNumber}, Size {PageSize}, Total {TotalCount}", 
             familyId, pagination.PageNumber, pagination.PageSize, totalCount);
@@ -249,11 +250,11 @@ public class MaterialService : IMaterialService
         };
     }
 
-    public async Task<IEnumerable<Material>> SearchMaterialsAsync(string searchTerm, bool includeInactive = false)
+    public async Task<IEnumerable<Material>> SearchMaterialsAsync(string searchTerm, bool includeInactive = false, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(searchTerm))
         {
-            return await GetAllMaterialsAsync(includeInactive);
+            return await GetAllMaterialsAsync(includeInactive, cancellationToken);
         }
 
         var normalizedSearchTerm = searchTerm.Trim().ToLowerInvariant();
@@ -281,18 +282,18 @@ public class MaterialService : IMaterialService
 
         var materials = await query
             .OrderBy(m => m.Name)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         _cache.Set(cacheKey, materials, TimeSpan.FromMinutes(15)); // Shorter cache for search results
         return materials;
     }
 
-    public async Task<PagedResult<Material>> SearchMaterialsPagedAsync(string searchTerm, PaginationParameters pagination, bool includeInactive = false)
+    public async Task<PagedResult<Material>> SearchMaterialsPagedAsync(string searchTerm, PaginationParameters pagination, bool includeInactive = false, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(searchTerm))
         {
             // If empty search term, delegate to the paged version of GetAllMaterialsAsync
-            return await GetAllMaterialsPagedAsync(pagination, includeInactive);
+            return await GetAllMaterialsPagedAsync(pagination, includeInactive, cancellationToken);
         }
 
         var normalizedSearchTerm = searchTerm.Trim().ToLowerInvariant();
@@ -312,14 +313,14 @@ public class MaterialService : IMaterialService
             query = query.Where(m => m.IsActive);
         }
 
-        var totalCount = await query.CountAsync();
+        var totalCount = await query.CountAsync(cancellationToken);
         var totalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize);
 
         var materials = await query
             .OrderBy(m => m.Name)
             .Skip((pagination.PageNumber - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         _logger.LogDebug("Retrieved paginated search results for term '{SearchTerm}' - Page {PageNumber}, Size {PageSize}, Total {TotalCount}", 
             searchTerm, pagination.PageNumber, pagination.PageSize, totalCount);
@@ -334,7 +335,7 @@ public class MaterialService : IMaterialService
         };
     }
 
-    public async Task<IEnumerable<Material>> GetMaterialsByProcessCompatibilityAsync(int processId, bool includeInactive = false)
+    public async Task<IEnumerable<Material>> GetMaterialsByProcessCompatibilityAsync(int processId, bool includeInactive = false, CancellationToken cancellationToken = default)
     {
         var cacheKey = $"materials_process_{processId}_{includeInactive}";
 
@@ -358,15 +359,15 @@ public class MaterialService : IMaterialService
                 .Where(mpc => mpc.ProcessId == processId)
                 .Max(mpc => mpc.CompatibilityLevel))
             .ThenBy(m => m.Name)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         _cache.Set(cacheKey, materials, _cacheOptions.DefaultExpiration);
         return materials;
     }
 
-    public async Task<Material> CreateMaterialAsync(Material material)
+    public async Task<Material> CreateMaterialAsync(Material material, CancellationToken cancellationToken = default)
     {
-        if (await _context.Materials.AnyAsync(m => m.Name == material.Name && m.MaterialGroupId == material.MaterialGroupId))
+        if (await _context.Materials.AnyAsync(m => m.Name == material.Name && m.MaterialGroupId == material.MaterialGroupId, cancellationToken))
         {
             throw new InvalidOperationException($"A material with name '{material.Name}' already exists in this material group.");
         }
@@ -375,7 +376,7 @@ public class MaterialService : IMaterialService
         material.ModifiedDate = DateTime.UtcNow;
 
         _context.Materials.Add(material);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
 
         // Clear relevant caches
         ClearMaterialCaches();
@@ -384,9 +385,9 @@ public class MaterialService : IMaterialService
         return material;
     }
 
-    public async Task<Material> UpdateMaterialAsync(Material material)
+    public async Task<Material> UpdateMaterialAsync(Material material, CancellationToken cancellationToken = default)
     {
-        var existingMaterial = await _context.Materials.FindAsync(material.Id);
+        var existingMaterial = await _context.Materials.FindAsync(new object[] { material.Id }, cancellationToken);
         if (existingMaterial == null)
         {
             throw new KeyNotFoundException($"Material with ID {material.Id} not found.");
@@ -395,7 +396,7 @@ public class MaterialService : IMaterialService
         // Check for duplicate names (excluding current material)
         if (await _context.Materials.AnyAsync(m => m.Name == material.Name &&
                                                    m.MaterialGroupId == material.MaterialGroupId &&
-                                                   m.Id != material.Id))
+                                                   m.Id != material.Id, cancellationToken))
         {
             throw new InvalidOperationException($"A material with name '{material.Name}' already exists in this material group.");
         }
@@ -404,7 +405,7 @@ public class MaterialService : IMaterialService
         _context.Entry(existingMaterial).CurrentValues.SetValues(material);
         existingMaterial.ModifiedDate = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
 
         // Clear relevant caches
         ClearMaterialCaches();
@@ -414,16 +415,16 @@ public class MaterialService : IMaterialService
         return existingMaterial;
     }
 
-    public async Task DeleteMaterialAsync(int id)
+    public async Task DeleteMaterialAsync(int id, CancellationToken cancellationToken = default)
     {
-        var material = await _context.Materials.FindAsync(id);
+        var material = await _context.Materials.FindAsync(new object[] { id }, cancellationToken);
         if (material == null)
         {
             throw new KeyNotFoundException($"Material with ID {id} not found.");
         }
 
         _context.Materials.Remove(material);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
 
         // Clear relevant caches
         ClearMaterialCaches();
@@ -432,13 +433,13 @@ public class MaterialService : IMaterialService
         _logger.LogInformation("Deleted material {Id}: {Name}", id, material.Name);
     }
 
-    public async Task<bool> MaterialExistsAsync(int id)
+    public async Task<bool> MaterialExistsAsync(int id, CancellationToken cancellationToken = default)
     {
-        return await _context.Materials.AnyAsync(m => m.Id == id);
+        return await _context.Materials.AnyAsync(m => m.Id == id, cancellationToken);
     }
 
     // Material Properties
-    public async Task<IEnumerable<MaterialProperty>> GetMaterialPropertiesAsync(int materialId)
+    public async Task<IEnumerable<MaterialProperty>> GetMaterialPropertiesAsync(int materialId, CancellationToken cancellationToken = default)
     {
         var cacheKey = $"material_properties_{materialId}";
 
@@ -453,19 +454,19 @@ public class MaterialService : IMaterialService
             .Where(mp => mp.MaterialId == materialId)
             .OrderBy(mp => mp.PropertySubtype.PropertyType.Category)
             .ThenBy(mp => mp.PropertySubtype.SortOrder)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         _cache.Set(cacheKey, properties, _cacheOptions.DefaultExpiration);
         return properties;
     }
 
-    public async Task<MaterialProperty> AddMaterialPropertyAsync(MaterialProperty property)
+    public async Task<MaterialProperty> AddMaterialPropertyAsync(MaterialProperty property, CancellationToken cancellationToken = default)
     {
         property.CreatedDate = DateTime.UtcNow;
         property.ModifiedDate = DateTime.UtcNow;
 
         _context.MaterialProperties.Add(property);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
 
         _cache.Remove($"material_properties_{property.MaterialId}");
         _cache.Remove($"material_{property.MaterialId}");
@@ -473,9 +474,9 @@ public class MaterialService : IMaterialService
         return property;
     }
 
-    public async Task UpdateMaterialPropertyAsync(MaterialProperty property)
+    public async Task UpdateMaterialPropertyAsync(MaterialProperty property, CancellationToken cancellationToken = default)
     {
-        var existing = await _context.MaterialProperties.FindAsync(property.Id);
+        var existing = await _context.MaterialProperties.FindAsync(new object[] { property.Id }, cancellationToken);
         if (existing == null)
         {
             throw new KeyNotFoundException($"Material property with ID {property.Id} not found.");
@@ -484,15 +485,15 @@ public class MaterialService : IMaterialService
         _context.Entry(existing).CurrentValues.SetValues(property);
         existing.ModifiedDate = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
 
         _cache.Remove($"material_properties_{property.MaterialId}");
         _cache.Remove($"material_{property.MaterialId}");
     }
 
-    public async Task DeleteMaterialPropertyAsync(int propertyId)
+    public async Task DeleteMaterialPropertyAsync(int propertyId, CancellationToken cancellationToken = default)
     {
-        var property = await _context.MaterialProperties.FindAsync(propertyId);
+        var property = await _context.MaterialProperties.FindAsync(new object[] { propertyId }, cancellationToken);
         if (property == null)
         {
             throw new KeyNotFoundException($"Material property with ID {propertyId} not found.");
@@ -500,37 +501,37 @@ public class MaterialService : IMaterialService
 
         var materialId = property.MaterialId;
         _context.MaterialProperties.Remove(property);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
 
         _cache.Remove($"material_properties_{materialId}");
         _cache.Remove($"material_{materialId}");
     }
 
     // Material Standards
-    public async Task<IEnumerable<MaterialStandard>> GetMaterialStandardsAsync(int materialId)
+    public async Task<IEnumerable<MaterialStandard>> GetMaterialStandardsAsync(int materialId, CancellationToken cancellationToken = default)
     {
         return await _context.MaterialStandards
             .Include(ms => ms.StandardType)
             .Where(ms => ms.MaterialId == materialId)
             .OrderBy(ms => ms.StandardType.Code)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
     }
 
-    public async Task<MaterialStandard> AddMaterialStandardAsync(MaterialStandard standard)
+    public async Task<MaterialStandard> AddMaterialStandardAsync(MaterialStandard standard, CancellationToken cancellationToken = default)
     {
         standard.CreatedDate = DateTime.UtcNow;
         standard.ModifiedDate = DateTime.UtcNow;
 
         _context.MaterialStandards.Add(standard);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
 
         _cache.Remove($"material_{standard.MaterialId}");
         return standard;
     }
 
-    public async Task UpdateMaterialStandardAsync(MaterialStandard standard)
+    public async Task UpdateMaterialStandardAsync(MaterialStandard standard, CancellationToken cancellationToken = default)
     {
-        var existing = await _context.MaterialStandards.FindAsync(standard.Id);
+        var existing = await _context.MaterialStandards.FindAsync(new object[] { standard.Id }, cancellationToken);
         if (existing == null)
         {
             throw new KeyNotFoundException($"Material standard with ID {standard.Id} not found.");
@@ -539,13 +540,13 @@ public class MaterialService : IMaterialService
         _context.Entry(existing).CurrentValues.SetValues(standard);
         existing.ModifiedDate = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
         _cache.Remove($"material_{standard.MaterialId}");
     }
 
-    public async Task DeleteMaterialStandardAsync(int standardId)
+    public async Task DeleteMaterialStandardAsync(int standardId, CancellationToken cancellationToken = default)
     {
-        var standard = await _context.MaterialStandards.FindAsync(standardId);
+        var standard = await _context.MaterialStandards.FindAsync(new object[] { standardId }, cancellationToken);
         if (standard == null)
         {
             throw new KeyNotFoundException($"Material standard with ID {standardId} not found.");
@@ -553,13 +554,13 @@ public class MaterialService : IMaterialService
 
         var materialId = standard.MaterialId;
         _context.MaterialStandards.Remove(standard);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
 
         _cache.Remove($"material_{materialId}");
     }
 
     // Process Compatibility
-    public async Task<IEnumerable<MaterialProcessCompatibility>> GetMaterialProcessCompatibilityAsync(int materialId)
+    public async Task<IEnumerable<MaterialProcessCompatibility>> GetMaterialProcessCompatibilityAsync(int materialId, CancellationToken cancellationToken = default)
     {
         return await _context.MaterialProcessCompatibilities
             .Include(mpc => mpc.Process)
@@ -567,24 +568,24 @@ public class MaterialService : IMaterialService
             .Where(mpc => mpc.MaterialId == materialId)
             .OrderBy(mpc => mpc.Process.Category.SortOrder)
             .ThenBy(mpc => mpc.Process.SortOrder)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
     }
 
-    public async Task<MaterialProcessCompatibility> AddProcessCompatibilityAsync(MaterialProcessCompatibility compatibility)
+    public async Task<MaterialProcessCompatibility> AddProcessCompatibilityAsync(MaterialProcessCompatibility compatibility, CancellationToken cancellationToken = default)
     {
         compatibility.CreatedDate = DateTime.UtcNow;
         compatibility.ModifiedDate = DateTime.UtcNow;
 
         _context.MaterialProcessCompatibilities.Add(compatibility);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
 
         ClearProcessCompatibilityCaches(compatibility.MaterialId, compatibility.ProcessId);
         return compatibility;
     }
 
-    public async Task UpdateProcessCompatibilityAsync(MaterialProcessCompatibility compatibility)
+    public async Task UpdateProcessCompatibilityAsync(MaterialProcessCompatibility compatibility, CancellationToken cancellationToken = default)
     {
-        var existing = await _context.MaterialProcessCompatibilities.FindAsync(compatibility.Id);
+        var existing = await _context.MaterialProcessCompatibilities.FindAsync(new object[] { compatibility.Id }, cancellationToken);
         if (existing == null)
         {
             throw new KeyNotFoundException($"Process compatibility with ID {compatibility.Id} not found.");
@@ -593,13 +594,13 @@ public class MaterialService : IMaterialService
         _context.Entry(existing).CurrentValues.SetValues(compatibility);
         existing.ModifiedDate = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
         ClearProcessCompatibilityCaches(compatibility.MaterialId, compatibility.ProcessId);
     }
 
-    public async Task DeleteProcessCompatibilityAsync(int compatibilityId)
+    public async Task DeleteProcessCompatibilityAsync(int compatibilityId, CancellationToken cancellationToken = default)
     {
-        var compatibility = await _context.MaterialProcessCompatibilities.FindAsync(compatibilityId);
+        var compatibility = await _context.MaterialProcessCompatibilities.FindAsync(new object[] { compatibilityId }, cancellationToken);
         if (compatibility == null)
         {
             throw new KeyNotFoundException($"Process compatibility with ID {compatibilityId} not found.");
@@ -609,7 +610,7 @@ public class MaterialService : IMaterialService
         var processId = compatibility.ProcessId;
 
         _context.MaterialProcessCompatibilities.Remove(compatibility);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
 
         ClearProcessCompatibilityCaches(materialId, processId);
     }

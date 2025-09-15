@@ -85,7 +85,7 @@ public class MaterialGroupServiceTests : IDisposable
     public async Task GetAllGroupsAsync_ShouldReturnAllGroups()
     {
         // Act
-        var result = await _service.GetAllGroupsAsync();
+        var result = await _service.GetAllGroupsAsync(TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -97,7 +97,7 @@ public class MaterialGroupServiceTests : IDisposable
     public async Task GetGroupByIdAsync_WithValidId_ShouldReturnGroup()
     {
         // Act
-        var result = await _service.GetGroupByIdAsync(1);
+        var result = await _service.GetGroupByIdAsync(1, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -112,7 +112,7 @@ public class MaterialGroupServiceTests : IDisposable
     public async Task GetGroupByIdAsync_WithInvalidId_ShouldReturnNull()
     {
         // Act
-        var result = await _service.GetGroupByIdAsync(999);
+        var result = await _service.GetGroupByIdAsync(999, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeNull();
@@ -122,7 +122,7 @@ public class MaterialGroupServiceTests : IDisposable
     public async Task GetGroupsByFamilyIdAsync_WithValidFamilyId_ShouldReturnGroups()
     {
         // Act
-        var result = await _service.GetGroupsByFamilyIdAsync(1);
+        var result = await _service.GetGroupsByFamilyIdAsync(1, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -135,7 +135,7 @@ public class MaterialGroupServiceTests : IDisposable
     public async Task GetGroupsByFamilyIdAsync_WithInvalidFamilyId_ShouldReturnEmptyCollection()
     {
         // Act
-        var result = await _service.GetGroupsByFamilyIdAsync(999);
+        var result = await _service.GetGroupsByFamilyIdAsync(999, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -158,7 +158,7 @@ public class MaterialGroupServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.CreateGroupAsync(newGroup);
+        var result = await _service.CreateGroupAsync(newGroup, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -167,7 +167,7 @@ public class MaterialGroupServiceTests : IDisposable
         result.Name.Should().Be("New Test Group");
 
         // Verify it was saved to database
-        var savedGroup = await _context.MaterialGroups.FindAsync(result.Id);
+        var savedGroup = await _context.MaterialGroups.FindAsync(result.Id, TestContext.Current.CancellationToken);
         savedGroup.Should().NotBeNull();
         savedGroup.Should().BeOfType<MaterialGroup>();
         savedGroup!.Name.Should().Be("New Test Group");
@@ -188,7 +188,7 @@ public class MaterialGroupServiceTests : IDisposable
         };
 
         // Act
-        Func<Task> act = async () => await _service.CreateGroupAsync(newGroup);
+        Func<Task> act = async () => await _service.CreateGroupAsync(newGroup, TestContext.Current.CancellationToken);
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>()
@@ -199,7 +199,7 @@ public class MaterialGroupServiceTests : IDisposable
     public async Task UpdateGroupAsync_WithValidGroup_ShouldUpdateExistingGroup()
     {
         // Arrange
-        var existingGroup = await _context.MaterialGroups.FindAsync(1);
+        var existingGroup = await _context.MaterialGroups.FindAsync(1, TestContext.Current.CancellationToken);
         existingGroup.Should().NotBeNull();
 
         existingGroup!.Name = "Updated Group Name";
@@ -207,7 +207,7 @@ public class MaterialGroupServiceTests : IDisposable
         existingGroup.ModifiedDate = DateTime.UtcNow;
 
         // Act
-        var result = await _service.UpdateGroupAsync(existingGroup);
+        var result = await _service.UpdateGroupAsync(existingGroup, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -217,7 +217,7 @@ public class MaterialGroupServiceTests : IDisposable
         result.Description.Should().Be("Updated description");
 
         // Verify it was updated in database
-        var updatedGroup = await _context.MaterialGroups.FindAsync(1);
+        var updatedGroup = await _context.MaterialGroups.FindAsync(1, TestContext.Current.CancellationToken);
         updatedGroup.Should().NotBeNull();
         updatedGroup.Should().BeOfType<MaterialGroup>();
         updatedGroup!.Name.Should().Be("Updated Group Name");
@@ -251,7 +251,7 @@ public class MaterialGroupServiceTests : IDisposable
     {
         // Arrange
         // First, get an existing group (ID 1)
-        var existingGroup = await _context.MaterialGroups.FindAsync(1);
+        var existingGroup = await _context.MaterialGroups.FindAsync(1, TestContext.Current.CancellationToken);
         existingGroup.Should().NotBeNull();
 
         // Try to update it with the name of another existing group (ID 2)
@@ -266,7 +266,7 @@ public class MaterialGroupServiceTests : IDisposable
         };
 
         // Act
-        Func<Task> act = async () => await _service.UpdateGroupAsync(groupToUpdate);
+        Func<Task> act = async () => await _service.UpdateGroupAsync(groupToUpdate, TestContext.Current.CancellationToken);
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>()
@@ -277,10 +277,10 @@ public class MaterialGroupServiceTests : IDisposable
     public async Task DeleteGroupAsync_WithValidId_ShouldRemoveGroup()
     {
         // Act
-        await _service.DeleteGroupAsync(1);
+        await _service.DeleteGroupAsync(1, TestContext.Current.CancellationToken);
 
         // Assert
-        var deletedGroup = await _context.MaterialGroups.FindAsync(1);
+        var deletedGroup = await _context.MaterialGroups.FindAsync(1, TestContext.Current.CancellationToken);
         deletedGroup.Should().BeNull();
     }
 
@@ -288,7 +288,7 @@ public class MaterialGroupServiceTests : IDisposable
     public async Task DeleteGroupAsync_WithNonExistentId_ShouldThrowKeyNotFoundException()
     {
         // Act
-        Func<Task> act = async () => await _service.DeleteGroupAsync(999);
+        Func<Task> act = async () => await _service.DeleteGroupAsync(999, TestContext.Current.CancellationToken);
 
         // Assert
         await act.Should().ThrowAsync<KeyNotFoundException>()
@@ -299,7 +299,7 @@ public class MaterialGroupServiceTests : IDisposable
     public async Task GroupExistsAsync_WithExistingId_ShouldReturnTrue()
     {
         // Act
-        var result = await _service.GroupExistsAsync(1);
+        var result = await _service.GroupExistsAsync(1, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeTrue();
@@ -309,7 +309,7 @@ public class MaterialGroupServiceTests : IDisposable
     public async Task GroupExistsAsync_WithNonExistentId_ShouldReturnFalse()
     {
         // Act
-        var result = await _service.GroupExistsAsync(999);
+        var result = await _service.GroupExistsAsync(999, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeFalse();
@@ -319,7 +319,7 @@ public class MaterialGroupServiceTests : IDisposable
     public async Task GetAllFamiliesAsync_ShouldReturnAllFamilies()
     {
         // Act
-        var result = await _service.GetAllFamiliesAsync();
+        var result = await _service.GetAllFamiliesAsync(TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -331,7 +331,7 @@ public class MaterialGroupServiceTests : IDisposable
     public async Task GetFamilyByIdAsync_WithValidId_ShouldReturnFamily()
     {
         // Act
-        var result = await _service.GetFamilyByIdAsync(1);
+        var result = await _service.GetFamilyByIdAsync(1, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -344,7 +344,7 @@ public class MaterialGroupServiceTests : IDisposable
     public async Task GetFamilyByIdAsync_WithInvalidId_ShouldReturnNull()
     {
         // Act
-        var result = await _service.GetFamilyByIdAsync(999);
+        var result = await _service.GetFamilyByIdAsync(999, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeNull();

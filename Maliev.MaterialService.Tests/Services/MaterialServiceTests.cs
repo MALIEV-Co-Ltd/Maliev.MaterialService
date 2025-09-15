@@ -98,7 +98,7 @@ public class MaterialServiceTests : IDisposable
     public async Task GetAllMaterialsAsync_WithIncludeInactiveFalse_ShouldReturnOnlyActiveMaterials()
     {
         // Act
-        var result = await _service.GetAllMaterialsAsync(includeInactive: false);
+        var result = await _service.GetAllMaterialsAsync(includeInactive: false, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -112,7 +112,7 @@ public class MaterialServiceTests : IDisposable
     public async Task GetAllMaterialsAsync_WithIncludeInactiveTrue_ShouldReturnAllMaterials()
     {
         // Act
-        var result = await _service.GetAllMaterialsAsync(includeInactive: true);
+        var result = await _service.GetAllMaterialsAsync(includeInactive: true, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -124,7 +124,7 @@ public class MaterialServiceTests : IDisposable
     public async Task GetMaterialByIdAsync_WithValidId_ShouldReturnMaterial()
     {
         // Act
-        var result = await _service.GetMaterialByIdAsync(1);
+        var result = await _service.GetMaterialByIdAsync(1, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -139,7 +139,7 @@ public class MaterialServiceTests : IDisposable
     public async Task GetMaterialByIdAsync_WithInvalidId_ShouldReturnNull()
     {
         // Act
-        var result = await _service.GetMaterialByIdAsync(999);
+        var result = await _service.GetMaterialByIdAsync(999, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeNull();
@@ -149,7 +149,7 @@ public class MaterialServiceTests : IDisposable
     public async Task GetMaterialsByGroupIdAsync_WithValidGroupId_ShouldReturnMaterialsInGroup()
     {
         // Act
-        var result = await _service.GetMaterialsByGroupIdAsync(1, includeInactive: true);
+        var result = await _service.GetMaterialsByGroupIdAsync(1, includeInactive: true, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -162,10 +162,10 @@ public class MaterialServiceTests : IDisposable
     public async Task GetAllMaterialsAsync_ShouldCacheResults()
     {
         // Act - First call
-        await _service.GetAllMaterialsAsync();
+        await _service.GetAllMaterialsAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         // Act - Second call
-        await _service.GetAllMaterialsAsync();
+        await _service.GetAllMaterialsAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - Verify cache was used by checking only one database call was made
         var expectedCacheKey = string.Format(MaterialServiceCacheKeys.AllMaterials, false);
@@ -187,7 +187,7 @@ public class MaterialServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.CreateMaterialAsync(newMaterial);
+        var result = await _service.CreateMaterialAsync(newMaterial, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -214,7 +214,7 @@ public class MaterialServiceTests : IDisposable
         existingMaterial.ModifiedDate = DateTime.UtcNow;
 
         // Act
-        var result = await _service.UpdateMaterialAsync(existingMaterial);
+        var result = await _service.UpdateMaterialAsync(existingMaterial, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -235,7 +235,7 @@ public class MaterialServiceTests : IDisposable
     public async Task DeleteMaterialAsync_WithValidId_ShouldRemoveMaterial()
     {
         // Act
-        await _service.DeleteMaterialAsync(1);
+        await _service.DeleteMaterialAsync(1, TestContext.Current.CancellationToken);
 
         // Assert
         var deletedMaterial = await _context.Materials.FindAsync(1, TestContext.Current.CancellationToken);
@@ -257,7 +257,7 @@ public class MaterialServiceTests : IDisposable
         };
 
         // Act
-        Func<Task> act = async () => await _service.CreateMaterialAsync(newMaterial);
+        Func<Task> act = async () => await _service.CreateMaterialAsync(newMaterial, TestContext.Current.CancellationToken);
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>()
@@ -279,7 +279,7 @@ public class MaterialServiceTests : IDisposable
         };
 
         // Act
-        Func<Task> act = async () => await _service.UpdateMaterialAsync(nonExistentMaterial);
+        Func<Task> act = async () => await _service.UpdateMaterialAsync(nonExistentMaterial, TestContext.Current.CancellationToken);
 
         // Assert
         await act.Should().ThrowAsync<KeyNotFoundException>()
@@ -306,7 +306,7 @@ public class MaterialServiceTests : IDisposable
         };
 
         // Act
-        Func<Task> act = async () => await _service.UpdateMaterialAsync(materialToUpdate);
+        Func<Task> act = async () => await _service.UpdateMaterialAsync(materialToUpdate, TestContext.Current.CancellationToken);
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>()

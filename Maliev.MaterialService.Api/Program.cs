@@ -67,7 +67,7 @@ try
     builder.Services.AddControllers();
 
     // Configure Material DbContext
-    if (builder.Environment.IsEnvironment("Testing"))
+    if (builder.Environment.IsEnvironment("Testing") || builder.Configuration.GetValue<bool>("UseInMemoryDatabase"))
     {
         builder.Services.AddDbContext<MaterialDbContext>(options =>
             options.UseInMemoryDatabase("TestDb"));
@@ -123,6 +123,7 @@ try
     });
 
     // Configure mapping services
+    builder.Services.AddAutoMapper(typeof(Program));
     builder.Services.AddScoped<IManufacturingProcessMappingService, ManufacturingProcessMappingService>();
     builder.Services.AddScoped<IMaterialGroupMappingService, MaterialGroupMappingService>();
 
@@ -130,6 +131,7 @@ try
     builder.Services.AddScoped<DatabaseInitializationService>();
 
     // Configure Swagger
+    builder.Services.AddSwaggerGen();
     builder.Services.Configure<CacheOptions>(builder.Configuration.GetSection(CacheOptions.SectionName));
     builder.Services.AddOptions<CacheOptions>()
         .Bind(builder.Configuration.GetSection(CacheOptions.SectionName))
@@ -140,6 +142,9 @@ try
     builder.Services.AddOptions<SwaggerOptions>()
         .Bind(builder.Configuration.GetSection(SwaggerOptions.SectionName))
         .ValidateDataAnnotations();
+        
+    // Register the Swagger configuration
+    builder.Services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
 
     // Configure rate limit options
     builder.Services.Configure<RateLimitOptions>(builder.Configuration.GetSection(RateLimitOptions.SectionName));
