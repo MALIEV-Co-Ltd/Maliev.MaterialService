@@ -225,9 +225,13 @@ try
         options.KnownProxies.Clear();
     });
 
+    builder.Services.AddHttpClient();
+
     builder.Services.AddHealthChecks()
         .AddDbContextCheck<MaterialDbContext>("MaterialDbContext", tags: new[] { "readiness" })
-        .AddCheck<DatabaseHealthCheck>("Database Health Check", tags: new[] { "readiness" });
+        .AddCheck<DatabaseHealthCheck>("Database Health Check", tags: new[] { "readiness" })
+        // Add checks for external services that the application depends on
+        .AddUrlGroup(new Uri("https://httpbin.org/get"), "External API Service", tags: new[] { "readiness", "external" });
 
     var app = builder.Build();
 
@@ -272,6 +276,20 @@ try
     app.MapHealthChecks("/materials/readiness", new HealthCheckOptions
     {
         Predicate = healthCheck => healthCheck.Tags.Contains("readiness"),
+        ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+    });
+
+    // Detailed health check endpoints
+    app.MapHealthChecks("/materials/health/database", new HealthCheckOptions
+    {
+        Predicate = healthCheck => healthCheck.Tags.Contains("readiness") && 
+                                  (healthCheck.Name == "MaterialDbContext" || healthCheck.Name == "Database Health Check"),
+        ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+    });
+
+    app.MapHealthChecks("/materials/health/external", new HealthCheckOptions
+    {
+        Predicate = healthCheck => healthCheck.Tags.Contains("external"),
         ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
     });
 
