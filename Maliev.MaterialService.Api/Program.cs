@@ -249,9 +249,7 @@ try
 
     builder.Services.AddHealthChecks()
         .AddDbContextCheck<MaterialDbContext>("MaterialDbContext", tags: new[] { "readiness" })
-        .AddCheck<DatabaseHealthCheck>("Database Health Check", tags: new[] { "readiness" })
-        // Add checks for external services that the application depends on
-        .AddUrlGroup(new Uri("https://httpbin.org/get"), "External API Service", tags: new[] { "readiness", "external" });
+        .AddCheck<DatabaseHealthCheck>("Database Health Check", tags: new[] { "readiness" });
 
     var app = builder.Build();
 
@@ -304,12 +302,6 @@ try
     {
         Predicate = healthCheck => healthCheck.Tags.Contains("readiness") && 
                                   (healthCheck.Name == "MaterialDbContext" || healthCheck.Name == "Database Health Check"),
-        ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
-    });
-
-    app.MapHealthChecks("/materials/health/external", new HealthCheckOptions
-    {
-        Predicate = healthCheck => healthCheck.Tags.Contains("external"),
         ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
     });
 

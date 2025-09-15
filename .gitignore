@@ -56,3 +56,4 @@ maliev-shared-secrets.yaml
 gha-creds-*.json
 .vs/
 *.csproj.user
+QWEN.md

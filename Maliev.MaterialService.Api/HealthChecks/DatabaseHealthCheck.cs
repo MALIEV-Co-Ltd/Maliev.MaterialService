@@ -35,20 +35,27 @@ public class DatabaseHealthCheck : IHealthCheck
     {
         try
         {
-            // Simple query to check database connectivity
-            var materialCount = await _context.Materials.CountAsync(cancellationToken);
-            var materialGroupCount = await _context.MaterialGroups.CountAsync(cancellationToken);
+            // Create a linked token with a timeout to prevent hanging
+            using var timeoutToken = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutToken.Token);
+
+            // Simple query to check database connectivity - just ping the database
+            await _context.Database.CanConnectAsync(linkedToken.Token);
+
+            // If connection is successful, check if tables exist by querying with a limit
+            var materialCount = await _context.Materials.Take(1).ToListAsync(linkedToken.Token);
+            var materialGroupCount = await _context.MaterialGroups.Take(1).ToListAsync(linkedToken.Token);
 
             var data = new Dictionary<string, object>
             {
-                { "MaterialCount", materialCount },
-                { "MaterialGroupCount", materialGroupCount }
+                { "DatabaseConnection", "Successful" },
+                { "MaterialsTableAccessible", "Yes" },
+                { "MaterialGroupsTableAccessible", "Yes" }
             };
 
-            _logger.LogDebug("Database health check passed. Materials: {MaterialCount}, Groups: {GroupCount}",
-                materialCount, materialGroupCount);
+            _logger.LogDebug("Database health check passed. Database connection successful.");
 
-            return HealthCheckResult.Healthy("Database is accessible and contains data.", data);
+            return HealthCheckResult.Healthy("Database is accessible.", data);
         }
         catch (Exception ex)
         {
