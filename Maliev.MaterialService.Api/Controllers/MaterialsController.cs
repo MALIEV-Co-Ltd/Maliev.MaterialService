@@ -188,7 +188,7 @@ public class MaterialsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<MaterialDto>> Create([FromBody] CreateMaterialRequest request)
     {
-        _logger.LogDebug("Creating new material: {Name}", request.Name);
+        _logger.LogInformation("Creating new material: {Name}", request.Name);
 
         if (!ModelState.IsValid)
         {
@@ -214,7 +214,7 @@ public class MaterialsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<MaterialDto>> Update(int id, [FromBody] UpdateMaterialRequest request)
     {
-        _logger.LogDebug("Updating material ID: {Id}", id);
+        _logger.LogInformation("Updating material ID: {Id}", id);
 
         if (!ModelState.IsValid)
         {
@@ -246,7 +246,7 @@ public class MaterialsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult> Delete(int id)
     {
-        _logger.LogDebug("Deleting material ID: {Id}", id);
+        _logger.LogInformation("Deleting material ID: {Id}", id);
 
         var existingMaterial = await _materialService.GetMaterialByIdAsync(id);
         if (existingMaterial == null)
