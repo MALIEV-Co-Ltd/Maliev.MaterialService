@@ -40,10 +40,39 @@ public class ManufacturingProcessService : IManufacturingProcessService
             .ThenBy(mp => mp.SortOrder)
             .ToListAsync();
 
-        _cache.Set(cacheKey, processes, _cacheOptions.LongExpiration);
+        _cache.Set(cacheKey, processes, _cacheOptions.DefaultExpiration);
         _logger.LogDebug("Retrieved and cached {Count} manufacturing processes", processes.Count);
 
         return processes;
+    }
+
+    public async Task<PagedResult<ManufacturingProcess>> GetAllProcessesPagedAsync(PaginationParameters pagination)
+    {
+        var query = _context.ManufacturingProcesses
+            .Include(mp => mp.Category)
+            .AsQueryable();
+
+        var totalCount = await query.CountAsync();
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize);
+
+        var processes = await query
+            .OrderBy(mp => mp.CategoryId)
+            .ThenBy(mp => mp.SortOrder)
+            .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .ToListAsync();
+
+        _logger.LogDebug("Retrieved paginated manufacturing processes - Page {PageNumber}, Size {PageSize}, Total {TotalCount}",
+            pagination.PageNumber, pagination.PageSize, totalCount);
+
+        return new PagedResult<ManufacturingProcess>
+        {
+            Items = processes,
+            PageNumber = pagination.PageNumber,
+            PageSize = pagination.PageSize,
+            TotalItems = totalCount,
+            TotalPages = totalPages
+        };
     }
 
     public async Task<ManufacturingProcess?> GetProcessByIdAsync(int id)
@@ -82,8 +111,39 @@ public class ManufacturingProcessService : IManufacturingProcessService
             .OrderBy(mp => mp.SortOrder)
             .ToListAsync();
 
-        _cache.Set(cacheKey, processes, _cacheOptions.LongExpiration);
+        _cache.Set(cacheKey, processes, _cacheOptions.DefaultExpiration);
+        _logger.LogDebug("Retrieved and cached {Count} manufacturing processes for category {CategoryId}", processes.Count, categoryId);
+
         return processes;
+    }
+
+    public async Task<PagedResult<ManufacturingProcess>> GetProcessesByCategoryIdPagedAsync(int categoryId, PaginationParameters pagination)
+    {
+        var query = _context.ManufacturingProcesses
+            .Include(mp => mp.Category)
+            .Where(mp => mp.CategoryId == categoryId)
+            .AsQueryable();
+
+        var totalCount = await query.CountAsync();
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize);
+
+        var processes = await query
+            .OrderBy(mp => mp.SortOrder)
+            .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .ToListAsync();
+
+        _logger.LogDebug("Retrieved paginated manufacturing processes for category {CategoryId} - Page {PageNumber}, Size {PageSize}, Total {TotalCount}",
+            categoryId, pagination.PageNumber, pagination.PageSize, totalCount);
+
+        return new PagedResult<ManufacturingProcess>
+        {
+            Items = processes,
+            PageNumber = pagination.PageNumber,
+            PageSize = pagination.PageSize,
+            TotalItems = totalCount,
+            TotalPages = totalPages
+        };
     }
 
     public async Task<IEnumerable<ManufacturingProcessCategory>> GetAllCategoriesAsync()

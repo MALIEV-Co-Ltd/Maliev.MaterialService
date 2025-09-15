@@ -130,6 +130,13 @@ try
         .Bind(builder.Configuration.GetSection(CacheOptions.SectionName))
         .ValidateDataAnnotations();
 
+    // Configure AutoMapper
+    builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
+    // Configure mapping services
+    builder.Services.AddScoped<IManufacturingProcessMappingService, ManufacturingProcessMappingService>();
+    builder.Services.AddScoped<IMaterialGroupMappingService, MaterialGroupMappingService>();
+
     // Configure Swagger
     builder.Services.Configure<SwaggerOptions>(builder.Configuration.GetSection(SwaggerOptions.SectionName));
     builder.Services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();

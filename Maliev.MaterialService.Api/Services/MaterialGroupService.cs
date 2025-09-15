@@ -40,10 +40,39 @@ public class MaterialGroupService : IMaterialGroupService
             .ThenBy(mg => mg.SortOrder)
             .ToListAsync();
 
-        _cache.Set(cacheKey, groups, _cacheOptions.LongExpiration);
+        _cache.Set(cacheKey, groups, _cacheOptions.DefaultExpiration);
         _logger.LogDebug("Retrieved and cached {Count} material groups", groups.Count);
 
         return groups;
+    }
+
+    public async Task<PagedResult<MaterialGroup>> GetAllGroupsPagedAsync(PaginationParameters pagination)
+    {
+        var query = _context.MaterialGroups
+            .Include(mg => mg.MaterialFamily)
+            .AsQueryable();
+
+        var totalCount = await query.CountAsync();
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize);
+
+        var groups = await query
+            .OrderBy(mg => mg.MaterialFamilyId)
+            .ThenBy(mg => mg.SortOrder)
+            .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .ToListAsync();
+
+        _logger.LogDebug("Retrieved paginated material groups - Page {PageNumber}, Size {PageSize}, Total {TotalCount}",
+            pagination.PageNumber, pagination.PageSize, totalCount);
+
+        return new PagedResult<MaterialGroup>
+        {
+            Items = groups,
+            PageNumber = pagination.PageNumber,
+            PageSize = pagination.PageSize,
+            TotalItems = totalCount,
+            TotalPages = totalPages
+        };
     }
 
     public async Task<MaterialGroup?> GetGroupByIdAsync(int id)
@@ -85,6 +114,35 @@ public class MaterialGroupService : IMaterialGroupService
 
         _cache.Set(cacheKey, groups, _cacheOptions.LongExpiration);
         return groups;
+    }
+
+    public async Task<PagedResult<MaterialGroup>> GetGroupsByFamilyIdPagedAsync(int familyId, PaginationParameters pagination)
+    {
+        var query = _context.MaterialGroups
+            .Include(mg => mg.MaterialFamily)
+            .Where(mg => mg.MaterialFamilyId == familyId)
+            .AsQueryable();
+
+        var totalCount = await query.CountAsync();
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pagination.PageSize);
+
+        var groups = await query
+            .OrderBy(mg => mg.SortOrder)
+            .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .ToListAsync();
+
+        _logger.LogDebug("Retrieved paginated material groups for family {FamilyId} - Page {PageNumber}, Size {PageSize}, Total {TotalCount}",
+            familyId, pagination.PageNumber, pagination.PageSize, totalCount);
+
+        return new PagedResult<MaterialGroup>
+        {
+            Items = groups,
+            PageNumber = pagination.PageNumber,
+            PageSize = pagination.PageSize,
+            TotalItems = totalCount,
+            TotalPages = totalPages
+        };
     }
 
     public async Task<MaterialGroup> CreateGroupAsync(MaterialGroup group)

@@ -4,6 +4,7 @@ using Maliev.MaterialService.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Maliev.MaterialService.Api.Controllers;
 
@@ -15,43 +16,80 @@ namespace Maliev.MaterialService.Api.Controllers;
 public class ManufacturingProcessesController : ControllerBase
 {
     private readonly IManufacturingProcessService _processService;
+    private readonly IManufacturingProcessMappingService _mappingService;
+    private readonly IMemoryCache _cache;
     private readonly ILogger<ManufacturingProcessesController> _logger;
+    private readonly CacheOptions _cacheOptions;
 
     public ManufacturingProcessesController(
         IManufacturingProcessService processService,
-        ILogger<ManufacturingProcessesController> logger)
+        IManufacturingProcessMappingService mappingService,
+        IMemoryCache cache,
+        ILogger<ManufacturingProcessesController> logger,
+        CacheOptions cacheOptions)
     {
         _processService = processService;
+        _mappingService = mappingService;
+        _cache = cache;
         _logger = logger;
+        _cacheOptions = cacheOptions;
     }
 
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<ManufacturingProcessDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult<IEnumerable<ManufacturingProcessDto>>> GetAll()
+    public async Task<ActionResult<IEnumerable<ManufacturingProcessDto>>> GetAll(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20)
     {
-        _logger.LogDebug("Getting all manufacturing processes");
+        _logger.LogDebug("Getting all manufacturing processes, Page: {PageNumber}, Size: {PageSize}", pageNumber, pageSize);
 
-        var processes = await _processService.GetAllProcessesAsync();
-        var processDtos = processes.Select(p => new ManufacturingProcessDto
+        // If default pagination parameters, return all processes (backward compatibility)
+        if (pageNumber == 1 && pageSize == 20)
         {
-            Id = p.Id,
-            CategoryId = p.CategoryId,
-            Name = p.Name,
-            Description = p.Description,
-            SortOrder = p.SortOrder,
-            Category = p.Category != null ? new ManufacturingProcessCategoryDto
+            // Check cache first
+            const string cacheKey = "manufacturing_processes_all";
+            if (_cache.TryGetValue(cacheKey, out IEnumerable<ManufacturingProcessDto>? cachedProcesses))
             {
-                Id = p.Category.Id,
-                Name = p.Category.Name,
-                Description = p.Category.Description,
-                SortOrder = p.Category.SortOrder
-            } : null
+                _logger.LogDebug("Retrieved {Count} manufacturing processes from cache", cachedProcesses!.Count());
+                return Ok(cachedProcesses!);
+            }
+
+            var processes = await _processService.GetAllProcessesAsync();
+            var allProcessDtos = _mappingService.MapToDtos(processes);
+
+            // Cache the result
+            _cache.Set(cacheKey, allProcessDtos, _cacheOptions.DefaultExpiration);
+            _logger.LogDebug("Retrieved and cached {Count} manufacturing processes", allProcessDtos.Count());
+
+            return Ok(allProcessDtos);
+        }
+
+        // Otherwise, use pagination
+        var pagination = new PaginationParameters
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+
+        var pagedResult = await _processService.GetAllProcessesPagedAsync(pagination);
+        var pagedProcessDtos = _mappingService.MapToDtos(pagedResult.Items);
+
+        _logger.LogDebug("Retrieved {Count} manufacturing processes for page {PageNumber}", pagedProcessDtos.Count(), pageNumber);
+
+        // Add pagination headers
+        Response.Headers["X-Pagination"] = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            pagedResult.PageNumber,
+            pagedResult.PageSize,
+            pagedResult.TotalItems,
+            pagedResult.TotalPages,
+            pagedResult.HasPreviousPage,
+            pagedResult.HasNextPage
         });
 
-        _logger.LogDebug("Retrieved {Count} manufacturing processes", processDtos.Count());
-        return Ok(processDtos);
+        return Ok(pagedProcessDtos);
     }
 
     [HttpGet("{id:int}")]
@@ -63,6 +101,14 @@ public class ManufacturingProcessesController : ControllerBase
     {
         _logger.LogDebug("Getting manufacturing process by ID: {Id}", id);
 
+        // Check cache first
+        var cacheKey = $"manufacturing_process_{id}";
+        if (_cache.TryGetValue(cacheKey, out ManufacturingProcessDto? cachedProcess))
+        {
+            _logger.LogDebug("Retrieved manufacturing process {Id} from cache", id);
+            return Ok(cachedProcess!);
+        }
+
         var process = await _processService.GetProcessByIdAsync(id);
 
         if (process == null)
@@ -71,21 +117,11 @@ public class ManufacturingProcessesController : ControllerBase
             return NotFound($"Manufacturing process with ID {id} not found");
         }
 
-        var processDto = new ManufacturingProcessDto
-        {
-            Id = process.Id,
-            CategoryId = process.CategoryId,
-            Name = process.Name,
-            Description = process.Description,
-            SortOrder = process.SortOrder,
-            Category = process.Category != null ? new ManufacturingProcessCategoryDto
-            {
-                Id = process.Category.Id,
-                Name = process.Category.Name,
-                Description = process.Category.Description,
-                SortOrder = process.Category.SortOrder
-            } : null
-        };
+        var processDto = _mappingService.MapToDto(process);
+
+        // Cache the result
+        _cache.Set(cacheKey, processDto, _cacheOptions.DefaultExpiration);
+        _logger.LogDebug("Retrieved and cached manufacturing process {Id}", id);
 
         return Ok(processDto);
     }
@@ -94,29 +130,58 @@ public class ManufacturingProcessesController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<ManufacturingProcessDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult<IEnumerable<ManufacturingProcessDto>>> GetByCategory(int categoryId)
+    public async Task<ActionResult<IEnumerable<ManufacturingProcessDto>>> GetByCategory(
+        int categoryId,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20)
     {
-        _logger.LogDebug("Getting manufacturing processes by category ID: {CategoryId}", categoryId);
+        _logger.LogDebug("Getting manufacturing processes by category ID: {CategoryId}, Page: {PageNumber}, Size: {PageSize}", categoryId, pageNumber, pageSize);
 
-        var processes = await _processService.GetProcessesByCategoryIdAsync(categoryId);
-        var processDtos = processes.Select(p => new ManufacturingProcessDto
+        // If default pagination parameters, return all processes (backward compatibility)
+        if (pageNumber == 1 && pageSize == 20)
         {
-            Id = p.Id,
-            CategoryId = p.CategoryId,
-            Name = p.Name,
-            Description = p.Description,
-            SortOrder = p.SortOrder,
-            Category = p.Category != null ? new ManufacturingProcessCategoryDto
+            // Check cache first
+            var cacheKey = $"manufacturing_processes_category_{categoryId}";
+            if (_cache.TryGetValue(cacheKey, out IEnumerable<ManufacturingProcessDto>? cachedProcesses))
             {
-                Id = p.Category.Id,
-                Name = p.Category.Name,
-                Description = p.Category.Description,
-                SortOrder = p.Category.SortOrder
-            } : null
+                _logger.LogDebug("Retrieved {Count} manufacturing processes for category {CategoryId} from cache", cachedProcesses!.Count(), categoryId);
+                return Ok(cachedProcesses!);
+            }
+
+            var processes = await _processService.GetProcessesByCategoryIdAsync(categoryId);
+            var allProcessDtos = _mappingService.MapToDtos(processes);
+
+            // Cache the result
+            _cache.Set(cacheKey, allProcessDtos, _cacheOptions.DefaultExpiration);
+            _logger.LogDebug("Retrieved and cached {Count} manufacturing processes for category {CategoryId}", allProcessDtos.Count(), categoryId);
+
+            return Ok(allProcessDtos);
+        }
+
+        // Otherwise, use pagination
+        var pagination = new PaginationParameters
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+
+        var pagedResult = await _processService.GetProcessesByCategoryIdPagedAsync(categoryId, pagination);
+        var pagedProcessDtos = _mappingService.MapToDtos(pagedResult.Items);
+
+        _logger.LogDebug("Retrieved {Count} manufacturing processes for category {CategoryId} on page {PageNumber}", pagedProcessDtos.Count(), categoryId, pageNumber);
+
+        // Add pagination headers
+        Response.Headers["X-Pagination"] = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            pagedResult.PageNumber,
+            pagedResult.PageSize,
+            pagedResult.TotalItems,
+            pagedResult.TotalPages,
+            pagedResult.HasPreviousPage,
+            pagedResult.HasNextPage
         });
 
-        _logger.LogDebug("Retrieved {Count} manufacturing processes for category {CategoryId}", processDtos.Count(), categoryId);
-        return Ok(processDtos);
+        return Ok(pagedProcessDtos);
     }
 
     [HttpGet("{processId:int}/materials")]
