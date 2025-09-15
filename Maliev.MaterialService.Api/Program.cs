@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Prometheus;
+using System.ComponentModel.DataAnnotations;
 using System;
 using System.Security.Claims;
 using System.Text;
@@ -130,17 +131,22 @@ try
         .Bind(builder.Configuration.GetSection(CacheOptions.SectionName))
         .ValidateDataAnnotations();
 
-    // Configure AutoMapper
-    builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
-
-    // Configure mapping services
-    builder.Services.AddScoped<IManufacturingProcessMappingService, ManufacturingProcessMappingService>();
-    builder.Services.AddScoped<IMaterialGroupMappingService, MaterialGroupMappingService>();
-
-    // Configure Swagger
+    // Configure Swagger options
     builder.Services.Configure<SwaggerOptions>(builder.Configuration.GetSection(SwaggerOptions.SectionName));
-    builder.Services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
-    builder.Services.AddSwaggerGen();
+    builder.Services.AddOptions<SwaggerOptions>()
+        .Bind(builder.Configuration.GetSection(SwaggerOptions.SectionName))
+        .ValidateDataAnnotations();
+
+    // Configure rate limit options
+    builder.Services.Configure<RateLimitOptions>(builder.Configuration.GetSection(RateLimitOptions.SectionName));
+    builder.Services.AddOptions<RateLimitOptions>()
+        .Bind(builder.Configuration.GetSection(RateLimitOptions.SectionName))
+        .ValidateDataAnnotations();
+
+    // Configure JWT options
+    builder.Services.AddOptions<JwtOptions>()
+        .Bind(builder.Configuration.GetSection(JwtOptions.SectionName))
+        .ValidateDataAnnotations();
 
     // Configure CORS
     builder.Services.AddCors(options =>
@@ -329,12 +335,18 @@ finally
     Log.CloseAndFlush();
 }
 
+// JWT Options with validation
 public class JwtOptions
 {
     public const string SectionName = "Jwt";
 
+    [Required]
     public required string Issuer { get; set; }
+
+    [Required]
     public required string Audience { get; set; }
+
+    [Required]
     public required string SecurityKey { get; set; }
 }
 
