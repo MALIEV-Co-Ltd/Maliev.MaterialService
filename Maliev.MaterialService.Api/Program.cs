@@ -16,7 +16,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using NetEscapades.Configuration.Yaml;
-using Prometheus;
 using System.ComponentModel.DataAnnotations;
 using System;
 using System.IO;
@@ -298,7 +297,6 @@ try
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseHttpsRedirection();
 
-    app.UseHttpMetrics();
     app.UseRateLimiter();
     app.UseCors();
 
@@ -325,7 +323,6 @@ try
         ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
     });
 
-    app.MapMetrics("/materials/metrics");
 
     // Ensure database is created and seeded
     using (var scope = app.Services.CreateScope())
