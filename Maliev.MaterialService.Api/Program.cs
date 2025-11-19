@@ -28,6 +28,9 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
+
+
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi("v1", options =>
@@ -227,18 +230,15 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapMetrics("/materials/metrics");
-app.MapHealthChecks("/materials/liveness", new HealthCheckOptions
-{
-    Predicate = _ => false,
-    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
-});
+app.MapGet("/materials/liveness", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow }))
+    .WithName("Liveness")
+    .WithTags("Health")
+    .AllowAnonymous();
 app.MapHealthChecks("/materials/readiness", new HealthCheckOptions
 {
     Predicate = _ => true,
     ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
-});
-
-app.Run();
+}).AllowAnonymous();
 
 /// <summary>
 /// Program entry point for Material Service API
