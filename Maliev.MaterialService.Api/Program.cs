@@ -224,13 +224,13 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapMetrics();
-app.MapHealthChecks("/liveness", new HealthCheckOptions
+app.MapMetrics("/materials/metrics");
+app.MapHealthChecks("/materials/liveness", new HealthCheckOptions
 {
     Predicate = _ => true,
     ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
 });
-app.MapHealthChecks("/readiness", new HealthCheckOptions
+app.MapHealthChecks("/materials/readiness", new HealthCheckOptions
 {
     Predicate = _ => true,
     ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
