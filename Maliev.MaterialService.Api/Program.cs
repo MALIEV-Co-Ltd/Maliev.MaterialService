@@ -238,21 +238,6 @@ app.MapHealthChecks("/materials/readiness", new HealthCheckOptions
 }).AllowAnonymous();
 
 
-using (var scope = app.Services.CreateScope())
-{
-    try
-    {
-        var context = scope.ServiceProvider.GetRequiredService<MaterialDbContext>();
-        await context.Database.MigrateAsync();
-        Log.Information("Database migrated successfully");
-    }
-    catch (Exception ex)
-    {
-        Log.Error(ex, "An error occurred while migrating the database");
-        throw;
-    }
-}
-
 app.Run();
 
 /// <summary>
