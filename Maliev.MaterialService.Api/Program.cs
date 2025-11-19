@@ -64,6 +64,7 @@ builder.Services.AddDbContext<MaterialDbContext>((sp, options) =>
 });
 
 var redisHost = builder.Configuration["Redis:Host"] ?? "redis:6379";
+Log.Information("Configured Redis Host: {RedisHost}", redisHost);
 builder.Services.AddStackExchangeRedisCache(options =>
 {
     options.Configuration = redisHost;
@@ -81,6 +82,7 @@ builder.Services.AddScoped<IBulkMaterialService, BulkMaterialService>();
 builder.Services.AddHostedService<Maliev.MaterialService.Api.BackgroundServices.CacheWarmingService>();
 
 var rabbitHost = builder.Configuration["RabbitMq:Host"] ?? "rabbitmq";
+Log.Information("Configured RabbitMQ Host: {RabbitHost}", rabbitHost);
 var rabbitPort = int.Parse(builder.Configuration["RabbitMq:Port"] ?? "5672");
 var rabbitUser = builder.Configuration["RabbitMq:Username"] ?? "guest";
 var rabbitPass = builder.Configuration["RabbitMq:Password"] ?? "guest";
