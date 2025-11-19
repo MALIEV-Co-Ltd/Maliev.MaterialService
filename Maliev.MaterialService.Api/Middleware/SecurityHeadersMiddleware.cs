@@ -31,7 +31,7 @@ public class SecurityHeadersMiddleware
         context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
 
         // Allow relaxed CSP for Scalar documentation endpoints
-        if (context.Request.Path.StartsWithSegments("/scalar") ||
+        if (context.Request.Path.StartsWithSegments("/materials/scalar") ||
             context.Request.Path.StartsWithSegments("/materials/openapi"))
         {
             context.Response.Headers.Append("Content-Security-Policy",
