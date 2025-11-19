@@ -227,7 +227,7 @@ app.MapControllers();
 app.MapMetrics("/materials/metrics");
 app.MapHealthChecks("/materials/liveness", new HealthCheckOptions
 {
-    Predicate = _ => true,
+    Predicate = _ => false,
     ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
 });
 app.MapHealthChecks("/materials/readiness", new HealthCheckOptions
