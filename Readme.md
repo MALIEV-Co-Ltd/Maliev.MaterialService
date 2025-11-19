@@ -1,207 +1,267 @@
-# Maliev Material Service
+# Material Service API
 
-A comprehensive material management microservice for Maliev Co. Ltd.'s 3D printing and manufacturing operations. This service handles material inventory tracking, specifications, supplier management, and material lifecycle operations.
+A RESTful web service for managing material data with comprehensive CRUD operations, advanced querying, and enterprise-grade features.
 
-## Overview
+## Features
 
-The Material Service is part of Maliev's microservices architecture, built with ASP.NET Core 9.0 and following GitOps deployment patterns. It provides RESTful APIs for managing materials used in 3D printing and manufacturing processes.
+### Core Functionality
+- ✅ **Material Management**: Full CRUD operations for materials
+- ✅ **Advanced Querying**: Pagination, filtering, sorting, and search
+- ✅ **Related Data**: Manufacturing processes, colors, mechanical properties, suppliers
+- ✅ **Soft Delete**: Materials are marked inactive instead of being physically deleted
+- ✅ **Optimistic Concurrency**: Version-based conflict detection
 
-### Key Features
-- Material inventory management
-- Material specifications and properties tracking
-- Supplier relationship management
-- Real-time inventory updates
-- Integration with manufacturing workflows
-- Comprehensive monitoring and health checks
+### Enterprise Features
+- ✅ **Authentication & Authorization**: JWT-based with role-based access control
+- ✅ **Caching**: Redis distributed caching with automatic invalidation
+- ✅ **Logging**: Structured logging with Serilog
+- ✅ **API Documentation**: OpenAPI 3.0 with Scalar UI
+- ✅ **Health Checks**: Liveness and readiness endpoints
+- ✅ **Metrics**: Prometheus metrics for monitoring
+- ✅ **Rate Limiting**: Built-in ASP.NET Core rate limiting
+- ✅ **CORS**: Configurable cross-origin resource sharing
+- ✅ **Database Migrations**: EF Core migrations for PostgreSQL
 
-## Technology Stack
+## Tech Stack
 
-- **Framework**: ASP.NET Core 9.0
+- **Framework**: ASP.NET Core 10.0
 - **Database**: PostgreSQL with Entity Framework Core
-- **Authentication**: JWT Bearer tokens
-- **Monitoring**: Prometheus metrics, Serilog logging
-- **Deployment**: Kubernetes with GitOps (ArgoCD)
-- **Testing**: xUnit with FluentAssertions and Moq
+- **Caching**: Redis (StackExchange.Redis)
+- **Messaging**: RabbitMQ (MassTransit)
+- **Logging**: Serilog
+- **Validation**: FluentValidation
+- **Mapping**: AutoMapper
+- **API Documentation**: OpenAPI 3.0 + Scalar
+- **Metrics**: Prometheus
 
-## Project Structure
+## Prerequisites
 
+- [.NET 10.0 SDK](https://dotnet.microsoft.com/download)
+- [Docker](https://www.docker.com/) (for PostgreSQL and Redis)
+- [Docker Compose](https://docs.docker.com/compose/)
+
+## Quick Start
+
+### 1. Start Infrastructure Services
+
+```powershell
+# Start PostgreSQL and Redis using Docker Compose
+docker-compose -f docker-compose.dev.yml up -d
 ```
-Maliev.MaterialService/
-├── .github/workflows/          # CI/CD pipelines (develop, staging, main)
-├── Maliev.MaterialService.Api/ # Web API project
-├── Maliev.MaterialService.Data/# Data layer with EF Core
-├── Maliev.MaterialService.Tests/# Unit and integration tests
-└── Maliev.MaterialService.sln # Solution file
+
+### 2. Apply Database Migrations
+
+```powershell
+# Navigate to the solution directory
+cd r:\maliev\Maliev.MaterialService
+
+# Apply migrations
+dotnet ef database update --project Maliev.MaterialService.Data --startup-project Maliev.MaterialService.Api
 ```
 
-## Getting Started
+### 3. Run the Application
 
-### Prerequisites
-- .NET 9.0 SDK
-- Docker (for containerization)
-- PostgreSQL (for database)
-- kubectl (for Kubernetes operations)
+```powershell
+# Run the API
+dotnet run --project Maliev.MaterialService.Api
+```
 
-### Local Development
+The API will start at:
+- **HTTP**: `http://localhost:5007`
+- **HTTPS**: `https://localhost:7133`
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/MALIEV-Co-Ltd/Maliev.MaterialService.git
-   cd Maliev.MaterialService
-   ```
-
-2. **Restore dependencies**
-   ```bash
-   dotnet restore Maliev.MaterialService.sln
-   ```
-
-3. **Build the solution**
-   ```bash
-   dotnet build Maliev.MaterialService.sln
-   ```
-
-4. **Run tests**
-   ```bash
-   dotnet test Maliev.MaterialService.sln --verbosity normal
-   ```
-
-5. **Configure database connection**
-   - Set up local PostgreSQL instance or use port forwarding to development cluster
-   - Update connection string in configuration
-
-6. **Run the application**
-   ```bash
-   dotnet run --project Maliev.MaterialService.Api
-   ```
-
-The API will be available at `https://localhost:5001` with Swagger UI at `/materials/swagger`.
+The **Scalar UI** will automatically open in your browser at:
+- `https://localhost:7133/scalar/v1`
 
 ## API Endpoints
 
-The service exposes RESTful APIs under the `/materials` base path:
+### Materials
 
-- **Health Checks**
-  - `GET /materials/liveness` - Liveness probe
-  - `GET /materials/readiness` - Readiness probe with dependency checks
+| Method | Endpoint | Description | Authorization |
+|--------|----------|-------------|---------------|
+| GET | `/materials/v1/materials` | Get materials (with filtering, pagination, sorting) | None |
+| GET | `/materials/v1/materials/{id}` | Get material by ID | None |
+| POST | `/materials/v1/materials` | Create new material | EmployeeOrHigher |
+| PUT | `/materials/v1/materials/{id}` | Update material | EmployeeOrHigher |
+| DELETE | `/materials/v1/materials/{id}` | Delete material (soft delete) | Manager |
 
-- **Monitoring**
-  - `GET /materials/metrics` - Prometheus metrics endpoint
+### Bulk Operations
 
-- **API Documentation**
-  - `/materials/swagger` - Swagger UI
+| Method | Endpoint | Description | Authorization |
+|--------|----------|-------------|---------------|
+| POST | `/materials/v1/bulk/import` | Bulk import materials | EmployeeOrHigher |
+| GET | `/materials/v1/bulk/export` | Bulk export materials | Employee |
+
+### Query Parameters (GET /materials/v1/materials)
+
+- `page` - Page number (default: 1)
+- `pageSize` - Items per page (default: 10, max: 100)
+- `search` - Search in name, code, or description
+- `sortBy` - Sort field: `name`, `code`, `price`, `stock`, `createdat`
+- `sortDesc` - Sort descending (default: false)
+- `minPrice` - Minimum price filter
+- `maxPrice` - Maximum price filter
+- `supplierId` - Filter by supplier ID
+
+### Health & Monitoring
+
+| Endpoint | Description |
+|----------|-------------|
+| `/liveness` | Liveness probe |
+| `/readiness` | Readiness probe (checks DB, Redis) |
+| `/metrics` | Prometheus metrics |
 
 ## Configuration
 
-### Environment Variables
-The service uses Google Secret Manager for production secrets. For development, you can use local configuration files.
+### Connection Strings
 
-### Database Connection
-```bash
-# For local development with port forwarding
-kubectl port-forward -n maliev-dev svc/postgres-cluster-rw 5432:5432
+Update `appsettings.json`:
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=material_app_db;Username=postgres;Password=password",
+    "Redis": "localhost:6379",
+    "RabbitMq": "amqp://guest:guest@localhost:5672"
+  }
+}
 ```
 
-### Database Migrations
-```bash
-# Set connection string
-export ConnectionStrings__MaterialDbContext="Server=localhost;Port=5432;Database=material_app_db;User Id=postgres;Password=YOUR_PASSWORD_HERE;"
+### Authorization Roles
 
-# Apply migrations
-dotnet ef database update --project Maliev.MaterialService.Data
+- **Customer**: Read-only access
+- **Employee**: Can create and update materials
+- **Manager**: Can delete materials
+- **Admin**: Full access
+
+## Development
+
+### Project Structure
+
+```
+Maliev.MaterialService/
+├── Maliev.MaterialService.Api/          # Web API project
+│   ├── Controllers/                     # API controllers
+│   ├── DTOs/                            # Data transfer objects
+│   ├── Services/                        # Business logic
+│   ├── Validators/                      # FluentValidation validators
+│   ├── Middleware/                      # Custom middleware
+│   └── MappingProfiles/                 # AutoMapper profiles
+├── Maliev.MaterialService.Data/         # Data access layer
+│   ├── Entities/                        # Entity models
+│   ├── Configurations/                  # EF Core configurations
+│   ├── DbContext/                       # Database context
+│   └── Migrations/                      # EF Core migrations
+└── Maliev.MaterialService.Tests/        # Test project
 ```
 
-## Deployment
+### Build
 
-### Kubernetes Deployment
-The service is deployed using GitOps with ArgoCD. Deployment manifests are maintained in the `maliev-gitops` repository.
-
-```bash
-# View service status
-kubectl get pods -n maliev-dev -l app=maliev-material-service
-
-# View logs
-kubectl logs -f deployment/maliev-material-service -n maliev-dev
-
-# Port forward for local access
-kubectl port-forward -n maliev-dev svc/maliev-material-service 8080:8080
+```powershell
+dotnet build
 ```
 
-### CI/CD Pipelines
-The service includes three CI/CD workflows:
-- `ci-develop.yml` - Builds and deploys to development environment
-- `ci-staging.yml` - Builds and deploys to staging environment
-- `ci-main.yml` - Builds and deploys to production environment
+### Run Tests
+
+```powershell
+dotnet test
+```
+
+### Create Migration
+
+```powershell
+dotnet ef migrations add MigrationName --project Maliev.MaterialService.Data --startup-project Maliev.MaterialService.Api
+```
+
+### Apply Migration
+
+```powershell
+dotnet ef database update --project Maliev.MaterialService.Data --startup-project Maliev.MaterialService.Api
+```
+
+## Docker
+
+### Build Docker Image
+
+```powershell
+docker build -t material-service:latest -f Maliev.MaterialService.Api/Dockerfile .
+```
+
+### Run with Docker
+
+```powershell
+docker run -d -p 5007:80 --name material-service material-service:latest
+```
+
+## Example Requests
+
+### Create Material
+
+```http
+POST /materials/v1/materials
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+  "name": "PLA Filament",
+  "code": "PLA-001",
+  "description": "3D printing filament",
+  "pricePerUnit": 25.99,
+  "stockLevel": 100,
+  "manufacturingProcessIds": [],
+  "colorIds": [],
+  "postProcessingMethodIds": [],
+  "mechanicalProperties": []
+}
+```
+
+### Get Materials with Filters
+
+```http
+GET /materials/v1/materials?page=1&pageSize=10&search=PLA&sortBy=price&minPrice=20&maxPrice=50
+```
+
+### Update Material
+
+```http
+PUT /materials/v1/materials/{id}
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+  "name": "PLA Filament Updated",
+  "code": "PLA-001",
+  "description": "Updated description",
+  "pricePerUnit": 27.99,
+  "stockLevel": 150,
+  "version": 1,
+  "manufacturingProcessIds": [],
+  "colorIds": [],
+  "postProcessingMethodIds": [],
+  "mechanicalProperties": []
+}
+```
 
 ## Monitoring
 
-### Access Grafana Dashboard
-```powershell
-cd maliev-gitops
-.\scripts\open-grafana.ps1
-```
+### Prometheus Metrics
 
-### Key Metrics
-- HTTP request metrics (duration, count, errors)
-- Database connection health
-- Memory and CPU usage
-- Custom business metrics for material operations
+Access metrics at `/metrics` for:
+- HTTP request duration
+- HTTP request count
+- Database query duration
+- Database query count
+- Custom business metrics
 
-### Logging
-The service uses Serilog for structured logging with console output. Logs include:
-- Request/response correlation IDs
-- User context and authentication info
-- Database operation performance
-- Error details and stack traces
+### Health Checks
 
-## Testing
-
-### Run All Tests
-```bash
-dotnet test Maliev.MaterialService.sln --verbosity normal
-```
-
-### Test Coverage
-The test suite includes:
-- Unit tests for business logic
-- Integration tests for API endpoints
-- Database integration tests
-- Health check validation
-
-## Development Guidelines
-
-### Code Quality
-- All warnings treated as errors
-- Follow established coding conventions
-- Maintain test coverage above 80%
-- Use FluentAssertions for test assertions
-
-### Security
-- JWT authentication required for all endpoints (except health checks)
-- No secrets in source code
-- Use Google Secret Manager for production secrets
-- Regular security dependency updates
-
-### Performance
-- Prometheus metrics for monitoring
-- Database query optimization
-- Caching strategies for frequently accessed data
-- Rate limiting for API protection
-
-## Contributing
-
-1. Create feature branch from `develop`
-2. Implement changes with tests
-3. Ensure all CI checks pass
-4. Create pull request to `develop`
-5. After review and merge, changes deploy automatically
-
-## Support
-
-For issues and questions:
-- Check Grafana dashboards for service health
-- Review logs in Kubernetes cluster
-- Create GitHub issue for bugs or feature requests
+- **Liveness**: `/liveness` - Returns 200 if the app is running
+- **Readiness**: `/readiness` - Returns 200 if the app can serve requests (DB + Redis healthy)
 
 ## License
 
-Internal use only - Maliev Co. Ltd.
+Proprietary - MALIEV Co., Ltd.
+
+## Support
+
+For issues or questions, contact the development team.

@@ -1,298 +1,172 @@
+using System;
+using System.Collections.Generic;
+using System.Security.Claims;
+using System.Threading.Tasks;
 using Asp.Versioning;
-using Maliev.MaterialService.Api.Helpers;
-using Maliev.MaterialService.Api.Models;
-using Maliev.MaterialService.Api.Services;
-using Maliev.MaterialService.Data.Entities;
+using Maliev.MaterialService.Api.DTOs.Materials;
+using Maliev.MaterialService.Api.Services.Materials;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 namespace Maliev.MaterialService.Api.Controllers;
 
+/// <summary>
+/// Controller for managing materials
+/// </summary>
 [ApiController]
-[Route("materials/v{version:apiVersion}")]
 [ApiVersion("1.0")]
-[EnableRateLimiting("MaterialsPolicy")]
-[Authorize] // Require valid JWT token for all endpoints
+[Route("materials/v{version:apiVersion}/[controller]")]
 public class MaterialsController : ControllerBase
 {
     private readonly IMaterialService _materialService;
-    private readonly IMaterialSearchService _searchService;
-    private readonly IMaterialMappingService _mappingService;
     private readonly ILogger<MaterialsController> _logger;
 
-    public MaterialsController(
-        IMaterialService materialService,
-        IMaterialSearchService searchService,
-        IMaterialMappingService mappingService,
-        ILogger<MaterialsController> logger)
+    /// <summary>
+    /// Initializes a new instance of MaterialsController
+    /// </summary>
+    /// <param name="materialService">Material service</param>
+    /// <param name="logger">Logger instance</param>
+    public MaterialsController(IMaterialService materialService, ILogger<MaterialsController> logger)
     {
         _materialService = materialService;
-        _searchService = searchService;
-        _mappingService = mappingService;
         _logger = logger;
     }
 
+    /// <summary>
+    /// Get materials with optional filtering, sorting, and pagination
+    /// </summary>
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<MaterialDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult<IEnumerable<MaterialDto>>> GetAll(
-        [FromQuery] bool includeInactive = false,
-        [FromQuery] int pageNumber = 1,
-        [FromQuery] int pageSize = 20)
+    [ProducesResponseType(typeof(PagedResult<MaterialResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<MaterialResponse>>> GetMaterials(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? search = null,
+        [FromQuery] string? sortBy = null,
+        [FromQuery] bool sortDesc = false,
+        [FromQuery] decimal? minPrice = null,
+        [FromQuery] decimal? maxPrice = null,
+        [FromQuery] Guid? supplierId = null)
     {
-        _logger.LogDebug("Getting all materials, includeInactive: {IncludeInactive}, Page: {PageNumber}, Size: {PageSize}", 
-            includeInactive, pageNumber, pageSize);
+        _logger.LogInformation("Getting materials with pagination: page={Page}, pageSize={PageSize}", page, pageSize);
 
-        // If default pagination parameters, return all materials (backward compatibility)
-        if (pageNumber == 1 && pageSize == 20)
-        {
-            var materials = await _materialService.GetAllMaterialsAsync(includeInactive);
-            var allMaterialDtos = _mappingService.MapToDtos(materials);
+        // Validate pagination parameters
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 10;
+        if (pageSize > 100) pageSize = 100; // Limit max page size
 
-            _logger.LogDebug("Retrieved {Count} materials", allMaterialDtos.Count());
-            return Ok(allMaterialDtos);
-        }
+        var result = await _materialService.GetMaterialsAsync(
+            page, pageSize, search, sortBy, sortDesc, minPrice, maxPrice, supplierId);
 
-        // Otherwise, use pagination
-        var pagination = new PaginationParameters
-        {
-            PageNumber = pageNumber,
-            PageSize = pageSize
-        };
-
-        var pagedResult = await _materialService.GetAllMaterialsPagedAsync(pagination, includeInactive);
-        var pagedMaterialDtos = _mappingService.MapToDtos(pagedResult.Items);
-
-        _logger.LogDebug("Retrieved {Count} materials for page {PageNumber}", pagedMaterialDtos.Count(), pageNumber);
-
-        // Add pagination headers
-        PaginationHelper.AddPaginationHeaders(Response, pagedResult);
-
-        return Ok(pagedMaterialDtos);
+        return Ok(result);
     }
 
-    [HttpGet("{id:int}")]
-    [ProducesResponseType(typeof(MaterialDto), StatusCodes.Status200OK)]
+    /// <summary>
+    /// Get a material by ID
+    /// </summary>
+    [HttpGet("{id}")]
+    [ProducesResponseType(typeof(MaterialResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult<MaterialDto>> GetById(int id)
+    public async Task<ActionResult<MaterialResponse>> GetMaterialById(Guid id)
     {
-        _logger.LogDebug("Getting material by ID: {Id}", id);
-
+        _logger.LogInformation("Getting material with ID: {MaterialId}", id);
         var material = await _materialService.GetMaterialByIdAsync(id);
 
         if (material == null)
         {
-            _logger.LogWarning("Material not found with ID: {Id}", id);
-            return NotFound($"Material with ID {id} not found");
+            return NotFound(new { message = $"Material with ID {id} not found." });
         }
 
-        var materialDto = _mappingService.MapToDetailedDto(material);
-        return Ok(materialDto);
+        return Ok(material);
     }
 
-    [HttpGet("group/{groupId:int}")]
-    [ProducesResponseType(typeof(IEnumerable<MaterialDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult<IEnumerable<MaterialDto>>> GetByGroupId(
-        int groupId, 
-        [FromQuery] bool includeInactive = false,
-        [FromQuery] int pageNumber = 1,
-        [FromQuery] int pageSize = 20)
-    {
-        _logger.LogDebug("Getting materials by group ID: {GroupId}, includeInactive: {IncludeInactive}, Page: {PageNumber}, Size: {PageSize}", 
-            groupId, includeInactive, pageNumber, pageSize);
-
-        // If default pagination parameters, return all materials (backward compatibility)
-        if (pageNumber == 1 && pageSize == 20)
-        {
-            var materials = await _materialService.GetMaterialsByGroupIdAsync(groupId, includeInactive);
-            var materialDtos = _mappingService.MapToDtos(materials);
-
-            _logger.LogDebug("Retrieved {Count} materials for group {GroupId}", materialDtos.Count(), groupId);
-            return Ok(materialDtos);
-        }
-
-        // Otherwise, use pagination
-        var pagination = new PaginationParameters
-        {
-            PageNumber = pageNumber,
-            PageSize = pageSize
-        };
-
-        var pagedResult = await _materialService.GetMaterialsByGroupIdPagedAsync(groupId, pagination, includeInactive);
-        var pagedMaterialDtos = _mappingService.MapToDtos(pagedResult.Items);
-
-        _logger.LogDebug("Retrieved {Count} materials for group {GroupId} on page {PageNumber}", 
-            pagedMaterialDtos.Count(), groupId, pageNumber);
-
-        // Add pagination headers
-        PaginationHelper.AddPaginationHeaders(Response, pagedResult);
-
-        return Ok(pagedMaterialDtos);
-    }
-
-    [HttpGet("family/{familyId:int}")]
-    [ProducesResponseType(typeof(IEnumerable<MaterialDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult<IEnumerable<MaterialDto>>> GetByFamilyId(
-        int familyId, 
-        [FromQuery] bool includeInactive = false,
-        [FromQuery] int pageNumber = 1,
-        [FromQuery] int pageSize = 20)
-    {
-        _logger.LogDebug("Getting materials by family ID: {FamilyId}, includeInactive: {IncludeInactive}, Page: {PageNumber}, Size: {PageSize}", 
-            familyId, includeInactive, pageNumber, pageSize);
-
-        // If default pagination parameters, return all materials (backward compatibility)
-        if (pageNumber == 1 && pageSize == 20)
-        {
-            var materials = await _materialService.GetMaterialsByFamilyIdAsync(familyId, includeInactive);
-            var materialDtos = _mappingService.MapToDtos(materials);
-
-            _logger.LogDebug("Retrieved {Count} materials for family {FamilyId}", materialDtos.Count(), familyId);
-            return Ok(materialDtos);
-        }
-
-        // Otherwise, use pagination
-        var pagination = new PaginationParameters
-        {
-            PageNumber = pageNumber,
-            PageSize = pageSize
-        };
-
-        var pagedResult = await _materialService.GetMaterialsByFamilyIdPagedAsync(familyId, pagination, includeInactive);
-        var pagedMaterialDtos = _mappingService.MapToDtos(pagedResult.Items);
-
-        _logger.LogDebug("Retrieved {Count} materials for family {FamilyId} on page {PageNumber}", 
-            pagedMaterialDtos.Count(), familyId, pageNumber);
-
-        // Add pagination headers
-        PaginationHelper.AddPaginationHeaders(Response, pagedResult);
-
-        return Ok(pagedMaterialDtos);
-    }
-
+    /// <summary>
+    /// Create a new material
+    /// </summary>
     [HttpPost]
-    [Authorize(Roles = "Admin,Manager")]
-    [ProducesResponseType(typeof(MaterialDto), StatusCodes.Status201Created)]
+    [Authorize(Policy = "EmployeeOrHigher")]
+    [ProducesResponseType(typeof(MaterialResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult<MaterialDto>> Create([FromBody] CreateMaterialRequest request)
+    public async Task<ActionResult<MaterialResponse>> CreateMaterial([FromBody] CreateMaterialRequest request)
     {
-        _logger.LogInformation("Creating new material: {Name}", request.Name);
+        _logger.LogInformation("Creating new material with code: {Code}", request.Code);
 
-        if (!ModelState.IsValid)
+        try
         {
-            return BadRequest(ModelState);
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "System";
+            var material = await _materialService.CreateMaterialAsync(request, userId);
+
+            return CreatedAtAction(
+                nameof(GetMaterialById),
+                new { id = material.Id },
+                material);
         }
-
-        var material = _mappingService.MapFromCreateRequest(request);
-        var createdMaterial = await _materialService.CreateMaterialAsync(material);
-
-        var materialDto = _mappingService.MapToDto(createdMaterial);
-        _logger.LogInformation("Created material with ID: {Id}", createdMaterial.Id);
-
-        return CreatedAtAction(nameof(GetById), new { id = createdMaterial.Id }, materialDto);
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Failed to create material");
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
-    [HttpPut("{id:int}")]
-    [Authorize(Roles = "Admin,Manager")]
-    [ProducesResponseType(typeof(MaterialDto), StatusCodes.Status200OK)]
+    /// <summary>
+    /// Update an existing material
+    /// </summary>
+    [HttpPut("{id}")]
+    [Authorize(Policy = "EmployeeOrHigher")]
+    [ProducesResponseType(typeof(MaterialResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult<MaterialDto>> Update(int id, [FromBody] UpdateMaterialRequest request)
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<MaterialResponse>> UpdateMaterial(Guid id, [FromBody] UpdateMaterialRequest request)
     {
-        _logger.LogInformation("Updating material ID: {Id}", id);
+        _logger.LogInformation("Updating material with ID: {MaterialId}", id);
 
-        if (!ModelState.IsValid)
+        try
         {
-            return BadRequest(ModelState);
-        }
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "System";
+            var material = await _materialService.UpdateMaterialAsync(id, request, userId);
 
-        var existingMaterial = await _materialService.GetMaterialByIdAsync(id);
-        if (existingMaterial == null)
+            if (material == null)
+            {
+                return NotFound(new { message = $"Material with ID {id} not found." });
+            }
+
+            return Ok(material);
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException ex)
         {
-            _logger.LogWarning("Material not found for update with ID: {Id}", id);
-            return NotFound($"Material with ID {id} not found");
+            _logger.LogWarning(ex, "Concurrency conflict when updating material");
+            return Conflict(new { message = "The material has been modified by another user. Please refresh and try again." });
         }
-
-        var material = _mappingService.MapFromUpdateRequest(request, id);
-        var updatedMaterial = await _materialService.UpdateMaterialAsync(material);
-
-        var materialDto = _mappingService.MapToDto(updatedMaterial);
-        _logger.LogInformation("Updated material with ID: {Id}", id);
-
-        return Ok(materialDto);
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Failed to update material");
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
-    [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    /// <summary>
+    /// Delete a material (soft delete)
+    /// </summary>
+    [HttpDelete("{id}")]
+    [Authorize(Policy = "Manager")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult> Delete(int id)
+    public async Task<IActionResult> DeleteMaterial(Guid id)
     {
-        _logger.LogInformation("Deleting material ID: {Id}", id);
+        _logger.LogInformation("Deleting material with ID: {MaterialId}", id);
 
-        var existingMaterial = await _materialService.GetMaterialByIdAsync(id);
-        if (existingMaterial == null)
+        var result = await _materialService.DeleteMaterialAsync(id);
+
+        if (!result)
         {
-            _logger.LogWarning("Material not found for deletion with ID: {Id}", id);
-            return NotFound($"Material with ID {id} not found");
+            return NotFound(new { message = $"Material with ID {id} not found." });
         }
 
-        await _materialService.DeleteMaterialAsync(id);
-
-        _logger.LogInformation("Deleted material with ID: {Id}", id);
         return NoContent();
-    }
-
-    [HttpGet("search")]
-    [ProducesResponseType(typeof(IEnumerable<MaterialDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult<IEnumerable<MaterialDto>>> Search([FromQuery] string? query, [FromQuery] MaterialSearchFilters? filters)
-    {
-        _logger.LogDebug("Searching materials with query: {Query}", query);
-
-        var materials = await _searchService.SearchAsync(query ?? "", filters);
-        var materialDtos = _mappingService.MapToDtos(materials);
-
-        _logger.LogDebug("Found {Count} materials matching search criteria", materialDtos.Count());
-        return Ok(materialDtos);
-    }
-
-    [HttpGet("recommend")]
-    [ProducesResponseType(typeof(IEnumerable<MaterialDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult<IEnumerable<MaterialDto>>> GetRecommendations([FromQuery] MaterialRecommendationRequest request)
-    {
-        _logger.LogDebug("Getting material recommendations for application: {Application}", request.Application);
-
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        var materials = await _searchService.GetRecommendationsAsync(request);
-        var materialDtos = _mappingService.MapToDtos(materials);
-
-        _logger.LogDebug("Found {Count} recommended materials", materialDtos.Count());
-        return Ok(materialDtos);
     }
 }

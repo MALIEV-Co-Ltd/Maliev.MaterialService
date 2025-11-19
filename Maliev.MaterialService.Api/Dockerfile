@@ -1,37 +1,49 @@
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
-WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
+# Multi-stage Docker build for Maliev.MaterialService.Api
+# Based on MALIEV Co. Ltd. standard .NET 10 microservice template
 
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
-ARG BUILD_CONFIGURATION=Release
+# Build stage
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-COPY ["Maliev.MaterialService.Api/Maliev.MaterialService.Api.csproj", "Maliev.MaterialService.Api/"]
-COPY ["Maliev.MaterialService.Data/Maliev.MaterialService.Data.csproj", "Maliev.MaterialService.Data/"]
-RUN dotnet restore "./Maliev.MaterialService.Api/Maliev.MaterialService.Api.csproj"
+
+# Copy solution and project files
+COPY Maliev.MaterialService.sln ./
+COPY Maliev.MaterialService.Api/Maliev.MaterialService.Api.csproj Maliev.MaterialService.Api/
+COPY Maliev.MaterialService.Data/Maliev.MaterialService.Data.csproj Maliev.MaterialService.Data/
+COPY Maliev.MaterialService.Tests/Maliev.MaterialService.Tests.csproj Maliev.MaterialService.Tests/
+
+# Restore dependencies
+RUN dotnet restore Maliev.MaterialService.sln
+
+# Copy all source code
 COPY . .
-WORKDIR "/src/Maliev.MaterialService.Api"
-RUN dotnet build "./Maliev.MaterialService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Maliev.MaterialService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+# Build and publish
+WORKDIR /src/Maliev.MaterialService.Api
+RUN dotnet publish -c Release -o /app/publish --no-restore /p:UseAppHost=false
 
-FROM base AS final
+# Runtime stage
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
-# Create non-root user for security
-RUN adduser --disabled-password --gecos "" --uid 10001 appuser
-
-# Create logs directory and set permissions
-RUN mkdir -p /app/logs && chown -R appuser:appuser /app
-
-# Copy published app
-COPY --from=publish /app/publish .
+# Create directory for Google Secret Manager secrets and ensure 'app' owns the workdir (app user already exists in ASP.NET runtime image)
+RUN mkdir -p /mnt/secrets && chown -R app:app /app /mnt/secrets
 
 # Switch to non-root user
-USER appuser
+USER app
+
+# Copy published application (now owned by app)
+COPY --from=build /app/publish .
+
+# Expose port
+EXPOSE 8080
+
+# Set ASP.NET Core environment
+ENV ASPNETCORE_URLS=http://+:8080
+ENV ASPNETCORE_ENVIRONMENT=Production
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD curl -f http://localhost:8080/materials/liveness || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8080/liveness || exit 1
+
+# Entry point
 ENTRYPOINT ["dotnet", "Maliev.MaterialService.Api.dll"]
