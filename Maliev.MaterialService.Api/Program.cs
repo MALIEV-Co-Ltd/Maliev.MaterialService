@@ -63,7 +63,7 @@ builder.Services.AddDbContext<MaterialDbContext>((sp, options) =>
            .AddInterceptors(new DatabaseMetricsInterceptor());
 });
 
-var redisHost = builder.Configuration["Redis:Host"] ?? "localhost:6379";
+var redisHost = builder.Configuration["Redis:Host"] ?? "redis:6379";
 builder.Services.AddStackExchangeRedisCache(options =>
 {
     options.Configuration = redisHost;
@@ -80,7 +80,7 @@ builder.Services.AddScoped<IBulkMaterialService, BulkMaterialService>();
 
 builder.Services.AddHostedService<Maliev.MaterialService.Api.BackgroundServices.CacheWarmingService>();
 
-var rabbitHost = builder.Configuration["RabbitMq:Host"] ?? "localhost";
+var rabbitHost = builder.Configuration["RabbitMq:Host"] ?? "rabbitmq";
 var rabbitPort = int.Parse(builder.Configuration["RabbitMq:Port"] ?? "5672");
 var rabbitUser = builder.Configuration["RabbitMq:Username"] ?? "guest";
 var rabbitPass = builder.Configuration["RabbitMq:Password"] ?? "guest";
