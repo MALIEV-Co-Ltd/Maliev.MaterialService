@@ -1,380 +1,244 @@
 using Asp.Versioning;
-using Asp.Versioning.ApiExplorer;
 using HealthChecks.UI.Client;
-using Maliev.MaterialService.Api.Authentication;
-using Maliev.MaterialService.Api.Configurations;
-using Maliev.MaterialService.Api.HealthChecks;
 using Maliev.MaterialService.Api.Middleware;
-using Maliev.MaterialService.Api.Models;
-using Maliev.MaterialService.Api.Services;
-using Maliev.MaterialService.Data.DbContexts;
-using Microsoft.AspNetCore.Authentication;
+using Maliev.MaterialService.Api.Services.Bulk;
+using Maliev.MaterialService.Api.Services.Cache;
+using Maliev.MaterialService.Api.Services.Materials;
+using Maliev.MaterialService.Data.DbContext;
+using Maliev.MaterialService.Data.Interceptors;
+using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using NetEscapades.Configuration.Yaml;
-using System.ComponentModel.DataAnnotations;
-using System;
-using System.IO;
-using System.Security.Claims;
-using System.Text;
-using System.Text.Encodings.Web;
-using System.Threading.RateLimiting;
+using Prometheus;
+using Scalar.AspNetCore;
 using Serilog;
-using Swashbuckle.AspNetCore.SwaggerGen;
+using System.Security.Cryptography;
+using System.Threading.RateLimiting;
+using FluentValidation;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Serilog
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
     .CreateLogger();
 
 builder.Host.UseSerilog();
 
-try
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddOpenApi("v1", options =>
 {
-    Log.Information("Starting Maliev Material Service");
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
 
-    // Load secrets.yaml
-    builder.Configuration.AddYamlFile("secrets.yaml", optional: true, reloadOnChange: true);
-
-    // Load secrets from mounted Kubernetes secrets
-    var secretsPath = "/mnt/secrets";
-    if (Directory.Exists(secretsPath))
+    if (File.Exists(xmlPath))
     {
-        builder.Configuration.AddKeyPerFile(directoryPath: secretsPath, optional: true);
-    }
-
-    // API Versioning
-    builder.Services.AddApiVersioning(options =>
-    {
-        options.DefaultApiVersion = new ApiVersion(1, 0);
-        options.AssumeDefaultVersionWhenUnspecified = true;
-        options.ReportApiVersions = true;
-        options.ApiVersionReader = new UrlSegmentApiVersionReader();
-    }).AddApiExplorer(options =>
-    {
-        options.GroupNameFormat = "'v'VVV";
-        options.SubstituteApiVersionInUrl = true;
-    });
-
-    // Add controllers
-    builder.Services.AddControllers();
-
-    // Configure Material DbContext
-    if (builder.Environment.IsEnvironment("Testing") || builder.Configuration.GetValue<bool>("UseInMemoryDatabase"))
-    {
-        builder.Services.AddDbContext<MaterialDbContext>(options =>
-            options.UseInMemoryDatabase("TestDb"));
-    }
-    else
-    {
-        var connectionString = builder.Configuration.GetConnectionString("MaterialDbContext");
-        if (string.IsNullOrEmpty(connectionString))
+        options.AddDocumentTransformer((document, context, cancellationToken) =>
         {
-            // Try to get connection string from environment variable directly
-            connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__MaterialDbContext");
-        }
-        
-        // Connection string is required for production deployment
-        if (string.IsNullOrEmpty(connectionString))
-        {
-            throw new InvalidOperationException("Database connection string is required. Please set ConnectionStrings__MaterialDbContext environment variable or configure it in secrets.");
-        }
-        else
-        {
-            // Ensure we're using the correct database name
-            connectionString = connectionString.Replace("Database=maliev_service_db", "Database=material_app_db");
-        }
-        
-        builder.Services.AddDbContext<MaterialDbContext>(options =>
-        {
-            options.UseNpgsql(connectionString);
-        });
-    }
-
-    // Configure caching
-    var cacheOptions = new CacheOptions();
-    builder.Configuration.GetSection("Cache").Bind(cacheOptions);
-    builder.Services.AddSingleton(cacheOptions);
-
-    builder.Services.AddMemoryCache();
-
-    // Configure rate limiting
-    var rateLimitOptions = new RateLimitOptions();
-    builder.Configuration.GetSection(RateLimitOptions.SectionName).Bind(rateLimitOptions);
-    
-    builder.Services.AddRateLimiter(options =>
-    {
-        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-
-        // Global rate limit
-        options.AddPolicy("GlobalPolicy", context =>
-            RateLimitPartition.GetSlidingWindowLimiter(
-                partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                factory: _ => new SlidingWindowRateLimiterOptions
-                {
-                    PermitLimit = rateLimitOptions.GlobalPolicy.PermitLimit,
-                    Window = TimeSpan.Parse(rateLimitOptions.GlobalPolicy.Window),
-                    SegmentsPerWindow = rateLimitOptions.GlobalPolicy.SegmentsPerWindow,
-                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                    QueueLimit = rateLimitOptions.GlobalPolicy.QueueLimit
-                }));
-
-        // Materials endpoint specific rate limit
-        options.AddPolicy("MaterialsPolicy", context =>
-            RateLimitPartition.GetSlidingWindowLimiter(
-                partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                factory: _ => new SlidingWindowRateLimiterOptions
-                {
-                    PermitLimit = rateLimitOptions.MaterialsPolicy.PermitLimit,
-                    Window = TimeSpan.Parse(rateLimitOptions.MaterialsPolicy.Window),
-                    SegmentsPerWindow = rateLimitOptions.MaterialsPolicy.SegmentsPerWindow,
-                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                    QueueLimit = rateLimitOptions.MaterialsPolicy.QueueLimit
-                }));
-    });
-
-    // Configure mapping services
-    builder.Services.AddAutoMapper(typeof(Program));
-    builder.Services.AddScoped<IManufacturingProcessMappingService, ManufacturingProcessMappingService>();
-    builder.Services.AddScoped<IMaterialGroupMappingService, MaterialGroupMappingService>();
-    builder.Services.AddScoped<IMaterialMappingService, MaterialMappingService>();
-    builder.Services.AddScoped<IMaterialSearchService, MaterialSearchService>();
-
-    // Configure business services
-    builder.Services.AddScoped<IMaterialService, MaterialService>();
-    builder.Services.AddScoped<IMaterialGroupService, MaterialGroupService>();
-    builder.Services.AddScoped<IManufacturingProcessService, ManufacturingProcessService>();
-
-    // Configure database initialization service
-    builder.Services.AddScoped<DatabaseInitializationService>();
-
-    // Configure Swagger
-    builder.Services.AddSwaggerGen();
-    builder.Services.Configure<CacheOptions>(builder.Configuration.GetSection(CacheOptions.SectionName));
-    builder.Services.AddOptions<CacheOptions>()
-        .Bind(builder.Configuration.GetSection(CacheOptions.SectionName))
-        .ValidateDataAnnotations();
-
-    // Configure Swagger options
-    builder.Services.Configure<SwaggerOptions>(builder.Configuration.GetSection(SwaggerOptions.SectionName));
-    builder.Services.AddOptions<SwaggerOptions>()
-        .Bind(builder.Configuration.GetSection(SwaggerOptions.SectionName))
-        .ValidateDataAnnotations();
-        
-    // Register the Swagger configuration
-    builder.Services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
-
-    // Configure rate limit options
-    builder.Services.Configure<RateLimitOptions>(builder.Configuration.GetSection(RateLimitOptions.SectionName));
-    builder.Services.AddOptions<RateLimitOptions>()
-        .Bind(builder.Configuration.GetSection(RateLimitOptions.SectionName))
-        .ValidateDataAnnotations();
-
-    // Configure JWT options
-    builder.Services.AddOptions<JwtOptions>()
-        .Bind(builder.Configuration.GetSection(JwtOptions.SectionName))
-        .ValidateDataAnnotations();
-
-    // Configure CORS
-    builder.Services.AddCors(options =>
-    {
-        options.AddDefaultPolicy(
-            policy =>
+            document.Info = new()
             {
-                var corsOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>();
-                if (corsOrigins != null && corsOrigins.Length > 0)
-                {
-                    policy.WithOrigins(corsOrigins)
-                    .AllowAnyHeader()
-                    .AllowAnyMethod();
-                }
-                else
-                {
-                    // Fallback to hardcoded origins if not configured
-                    policy.WithOrigins(
-                        "https://maliev.com",
-                        "https://*.maliev.com",
-                        "http://maliev.com",
-                        "http://*.maliev.com")
-                    .AllowAnyHeader()
-                    .AllowAnyMethod();
-                }
-            });
-    });
+                Title = "Material Service API",
+                Version = "v1",
+                Description = "API for managing materials, suppliers, and related entities in the Maliev manufacturing system.",
+                Contact = new() { Name = "Maliev Support", Email = "support@maliev.com" }
+            };
+            return Task.CompletedTask;
+        });
 
-    // Configure Authentication (different schemes for different environments)
-    if (builder.Environment.IsEnvironment("Testing"))
-    {
-        // Testing environment: Use no authentication
-        builder.Services.AddAuthentication("Test")
-            .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>("Test", _ => { });
+        // Note: XML documentation is automatically included by Microsoft.AspNetCore.OpenApi
     }
-    else
-    {
-        var jwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
-        if (jwtSection.Exists())
-        {
-            // Production/Staging: Use JWT authentication
-            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(options =>
-                {
-                    var jwtOptions = new JwtOptions
-                    {
-                        Issuer = "default-issuer",
-                        Audience = "default-audience",
-                        SecurityKey = "default-key"
-                    };
-                    jwtSection.Bind(jwtOptions);
+});
 
-                    options.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        ValidateIssuer = true,
-                        ValidateAudience = true,
-                        ValidateLifetime = true,
-                        ValidateIssuerSigningKey = true,
-                        ValidIssuer = jwtOptions.Issuer,
-                        ValidAudience = jwtOptions.Audience,
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SecurityKey))
-                    };
-                });
-        }
-        else
-        {
-            // Development: Use anonymous authentication scheme for local testing
-            builder.Services.AddAuthentication("Development")
-                .AddScheme<AuthenticationSchemeOptions, DevelopmentAuthenticationHandler>("Development", _ => { });
+var dbConnectionString = builder.Configuration.GetConnectionString("MaterialDbContext")
+    ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
-            Log.Warning("JWT configuration not found - using Development authentication scheme for local testing. Configure JWT secrets for production functionality.");
-        }
-    }
-
-    builder.Services.AddAuthorization();
-
-    builder.Services.Configure<ForwardedHeadersOptions>(options =>
-    {
-        options.ForwardedHeaders =
-            ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-        options.KnownNetworks.Clear();
-        options.KnownProxies.Clear();
-    });
-
-    builder.Services.AddHttpClient();
-
-    builder.Services.AddHealthChecks()
-        .AddDbContextCheck<MaterialDbContext>("MaterialDbContext", tags: new[] { "readiness" })
-        .AddCheck<DatabaseHealthCheck>("Database Health Check", tags: new[] { "readiness" });
-
-    var app = builder.Build();
-
-    app.UseForwardedHeaders();
-
-    // Add correlation ID middleware early in pipeline
-    app.UseCorrelationId();
-
-    // Configure the HTTP request pipeline
-    app.UseSwagger(c =>
-    {
-        c.RouteTemplate = "materials/swagger/{documentName}/swagger.json";
-    });
-    app.UseSwaggerUI(c =>
-    {
-        var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-        var swaggerOptions = app.Services.GetRequiredService<IOptions<SwaggerOptions>>().Value;
-        
-        foreach (var description in provider.ApiVersionDescriptions)
-        {
-            c.SwaggerEndpoint($"/materials/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
-        }
-        c.RoutePrefix = swaggerOptions.RoutePrefix;
-    });
-
-    app.UseMiddleware<ExceptionHandlingMiddleware>();
-    app.UseHttpsRedirection();
-
-    app.UseRateLimiter();
-    app.UseCors();
-
-    // Authentication & Authorization (always configured with appropriate scheme)
-    app.UseAuthentication();
-    app.UseAuthorization();
-
-    app.MapControllers();
-
-    // Health check endpoints
-    app.MapGet("/materials/liveness", () => "Healthy").AllowAnonymous();
-
-    app.MapHealthChecks("/materials/readiness", new HealthCheckOptions
-    {
-        Predicate = healthCheck => healthCheck.Tags.Contains("readiness"),
-        ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
-    });
-
-    // Detailed health check endpoints
-    app.MapHealthChecks("/materials/health/database", new HealthCheckOptions
-    {
-        Predicate = healthCheck => healthCheck.Tags.Contains("readiness") && 
-                                  (healthCheck.Name == "MaterialDbContext" || healthCheck.Name == "Database Health Check"),
-        ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
-    });
-
-
-    // Ensure database is created and seeded
-    using (var scope = app.Services.CreateScope())
-    {
-        var databaseInitializationService = scope.ServiceProvider.GetRequiredService<DatabaseInitializationService>();
-        try
-        {
-            await databaseInitializationService.InitializeDatabaseAsync();
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "An error occurred while initializing the database");
-        }
-    }
-
-    Log.Information("Maliev Material Service started successfully");
-    app.Run();
-}
-catch (Exception ex)
+builder.Services.AddDbContext<MaterialDbContext>((sp, options) =>
 {
-    Log.Fatal(ex, "Application terminated unexpectedly");
-}
-finally
+    options.UseNpgsql(dbConnectionString)
+           .UseSnakeCaseNamingConvention()
+           .AddInterceptors(new DatabaseMetricsInterceptor());
+});
+
+var redisHost = builder.Configuration["Redis:Host"] ?? "localhost:6379";
+builder.Services.AddStackExchangeRedisCache(options =>
 {
-    Log.CloseAndFlush();
+    options.Configuration = redisHost;
+});
+builder.Services.AddSingleton<ICacheService, RedisCacheService>();
+
+builder.Services.AddAutoMapper(typeof(Program).Assembly);
+builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
+
+builder.Services.AddHttpClient<Maliev.MaterialService.Api.Services.External.ISupplierServiceClient, Maliev.MaterialService.Api.Services.External.SupplierServiceClient>();
+
+builder.Services.AddScoped<IMaterialService, MaterialService>();
+builder.Services.AddScoped<IBulkMaterialService, BulkMaterialService>();
+
+builder.Services.AddHostedService<Maliev.MaterialService.Api.BackgroundServices.CacheWarmingService>();
+
+var rabbitHost = builder.Configuration["RabbitMq:Host"] ?? "localhost";
+var rabbitPort = int.Parse(builder.Configuration["RabbitMq:Port"] ?? "5672");
+var rabbitUser = builder.Configuration["RabbitMq:Username"] ?? "guest";
+var rabbitPass = builder.Configuration["RabbitMq:Password"] ?? "guest";
+var rabbitVHost = builder.Configuration["RabbitMq:VirtualHost"] ?? "/";
+
+builder.Services.AddMassTransit(x =>
+{
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host(rabbitHost, (ushort)rabbitPort, rabbitVHost, h =>
+        {
+            h.Username(rabbitUser);
+            h.Password(rabbitPass);
+        });
+    });
+});
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        var publicKeyBase64 = builder.Configuration["Jwt:PublicKey"];
+        var rsa = RSA.Create();
+
+        if (!string.IsNullOrEmpty(publicKeyBase64))
+        {
+            try
+            {
+                var publicKeyPem = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(publicKeyBase64));
+                rsa.ImportFromPem(publicKeyPem);
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = builder.Configuration["Jwt:Issuer"],
+                    ValidAudience = builder.Configuration["Jwt:Audience"],
+                    IssuerSigningKey = new RsaSecurityKey(rsa)
+                };
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to import JWT public key");
+                throw;
+            }
+        }
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("Customer", policy => policy.RequireRole("Customer"));
+    options.AddPolicy("Employee", policy => policy.RequireRole("Employee"));
+    options.AddPolicy("Manager", policy => policy.RequireRole("Manager"));
+    options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("EmployeeOrHigher", policy => policy.RequireRole("Employee", "Manager", "Admin"));
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.User.Identity?.Name ?? httpContext.Request.Headers.Host.ToString(),
+            factory: partition => new FixedWindowRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                PermitLimit = 100,
+                QueueLimit = 0,
+                Window = TimeSpan.FromMinutes(1)
+            }));
+});
+
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        var allowedOrigins = builder.Configuration["CORS:AllowedOrigins"]?
+            .Split(',', StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
+
+        policy.WithOrigins(allowedOrigins)
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+});
+
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+})
+.AddMvc()
+.AddApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'VVV";
+    options.SubstituteApiVersionInUrl = true;
+});
+
+builder.Services.AddHealthChecks()
+    .AddNpgSql(dbConnectionString!)
+    .AddRedis(redisHost);
+
+var app = builder.Build();
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
+if (app.Environment.IsDevelopment())
+{
+    // Map OpenAPI at /materials/openapi/v1.json
+    app.MapOpenApi("/materials/openapi/{documentName}.json");
+
+    // Map Scalar at default /scalar/v1 path
+    app.MapScalarApiReference(options =>
+    {
+        options
+            .WithTitle("Material Service API")
+            .WithTheme(ScalarTheme.Purple)
+            .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient)
+            .WithOpenApiRoutePattern("/materials/openapi/v1.json");
+    });
+
+    // Redirect root to Scalar
+    app.MapGet("/", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
+    app.MapGet("/materials", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
+    app.MapGet("/materials/scalar/v1", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
 }
+
+app.UseSerilogRequestLogging();
+app.UseResponseCompression();
+app.UseCors();
+app.UseHttpMetrics();
+app.UseRateLimiter();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
+app.MapMetrics();
+app.MapHealthChecks("/liveness", new HealthCheckOptions
+{
+    Predicate = _ => true,
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
+app.MapHealthChecks("/readiness", new HealthCheckOptions
+{
+    Predicate = _ => true,
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
+
+app.Run();
 
 /// <summary>
-/// JWT configuration options.
+/// Program entry point for Material Service API
 /// </summary>
-public class JwtOptions
-{
-    /// <summary>
-    /// The configuration section name for JWT options.
-    /// </summary>
-    public const string SectionName = "Jwt";
-
-    /// <summary>
-    /// Gets or sets the JWT issuer.
-    /// </summary>
-    [Required]
-    public required string Issuer { get; set; }
-
-    /// <summary>
-    /// Gets or sets the JWT audience.
-    /// </summary>
-    [Required]
-    public required string Audience { get; set; }
-
-    /// <summary>
-    /// Gets or sets the JWT security key.
-    /// </summary>
-    [Required]
-    public required string SecurityKey { get; set; }
-}
+public partial class Program { }

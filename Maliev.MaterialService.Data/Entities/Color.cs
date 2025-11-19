@@ -1,29 +1,13 @@
-using System.ComponentModel.DataAnnotations;
+using System;
+using System.Collections.Generic;
 
 namespace Maliev.MaterialService.Data.Entities;
 
-public class Color
+public class Color : BaseEntity
 {
-    public int Id { get; set; }
-
-    [Required]
-    [MaxLength(50)]
-    public required string Name { get; set; }
-
-    [MaxLength(7)]
-    public string? HexCode { get; set; } // #FFFFFF format
-
-    [MaxLength(200)]
-    public string? Description { get; set; }
-
-    public bool IsActive { get; set; } = true;
-
-    public int SortOrder { get; set; }
-
-    public DateTime CreatedDate { get; set; }
-
-    public DateTime ModifiedDate { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? HexCode { get; set; }
 
     // Navigation properties
-    public virtual ICollection<MaterialColor> MaterialColors { get; set; } = new List<MaterialColor>();
+    public ICollection<Material> Materials { get; set; } = new List<Material>();
 }

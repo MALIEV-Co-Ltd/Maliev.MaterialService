@@ -1,19 +1,35 @@
+using System;
 using System.Net;
 using System.Text.Json;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Maliev.MaterialService.Api.Middleware;
 
+/// <summary>
+/// Middleware for global exception handling
+/// </summary>
 public class ExceptionHandlingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<ExceptionHandlingMiddleware> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of ExceptionHandlingMiddleware
+    /// </summary>
+    /// <param name="next">Next middleware in the pipeline</param>
+    /// <param name="logger">Logger instance</param>
     public ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
     {
         _next = next;
         _logger = logger;
     }
 
+    /// <summary>
+    /// Invokes the middleware
+    /// </summary>
+    /// <param name="context">HTTP context</param>
     public async Task InvokeAsync(HttpContext context)
     {
         try
@@ -22,39 +38,23 @@ public class ExceptionHandlingMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An unhandled exception occurred");
+            _logger.LogError(ex, "An unhandled exception occurred.");
             await HandleExceptionAsync(context, ex);
         }
     }
 
-    private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
+    private static Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         context.Response.ContentType = "application/json";
+        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
         var response = new
         {
-            error = new
-            {
-                message = "An internal server error occurred",
-                detail = exception.Message,
-                type = exception.GetType().Name
-            }
+            StatusCode = context.Response.StatusCode,
+            Message = "Internal Server Error. Please try again later.",
+            Detailed = exception.Message
         };
 
-        context.Response.StatusCode = exception switch
-        {
-            ArgumentException => (int)HttpStatusCode.BadRequest,
-            KeyNotFoundException => (int)HttpStatusCode.NotFound,
-            UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
-            InvalidOperationException when exception.Message.Contains("duplicate") => (int)HttpStatusCode.Conflict,
-            _ => (int)HttpStatusCode.InternalServerError
-        };
-
-        var jsonResponse = JsonSerializer.Serialize(response, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
-
-        await context.Response.WriteAsync(jsonResponse);
+        return context.Response.WriteAsync(JsonSerializer.Serialize(response));
     }
 }
