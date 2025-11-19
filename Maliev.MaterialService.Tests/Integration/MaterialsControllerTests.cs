@@ -109,7 +109,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestFixture>
     public async Task HealthCheck_Liveness_ReturnsHealthy()
     {
         // Act
-        var response = await _client.GetAsync("/liveness");
+        var response = await _client.GetAsync("/materials/liveness");
 
         // Assert
         // May be unhealthy if checking original config instead of Testcontainer endpoints
@@ -120,7 +120,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestFixture>
     public async Task HealthCheck_Readiness_ReturnsHealthy()
     {
         // Act
-        var response = await _client.GetAsync("/readiness");
+        var response = await _client.GetAsync("/materials/readiness");
 
         // Assert
         // May be unhealthy if checking original config instead of Testcontainer endpoints
@@ -131,7 +131,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestFixture>
     public async Task Metrics_Endpoint_ReturnsMetrics()
     {
         // Act
-        var response = await _client.GetAsync("/metrics");
+        var response = await _client.GetAsync("/materials/metrics");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
