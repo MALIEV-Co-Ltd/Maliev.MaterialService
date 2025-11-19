@@ -200,8 +200,8 @@ if (app.Environment.IsDevelopment())
     // Map OpenAPI at /materials/openapi/v1.json
     app.MapOpenApi("/materials/openapi/{documentName}.json");
 
-    // Map Scalar at default /scalar/v1 path
-    app.MapScalarApiReference(options =>
+    // Map Scalar at /materials/scalar/v1 path (matches ingress /materials prefix)
+    app.MapScalarApiReference("/materials/scalar/v1", options =>
     {
         options
             .WithTitle("Material Service API")
@@ -211,9 +211,8 @@ if (app.Environment.IsDevelopment())
     });
 
     // Redirect root to Scalar
-    app.MapGet("/", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
-    app.MapGet("/materials", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
-    app.MapGet("/materials/scalar/v1", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
+    app.MapGet("/", () => Results.Redirect("/materials/scalar/v1")).ExcludeFromDescription();
+    app.MapGet("/materials", () => Results.Redirect("/materials/scalar/v1")).ExcludeFromDescription();
 }
 
 app.UseSerilogRequestLogging();
