@@ -37,6 +37,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Maliev.MaterialService.Data\Maliev.MaterialService.Data.csproj" />
+    <PackageReference Include="Maliev.Aspire.ServiceDefaults" Version="1.0.*" />
   </ItemGroup>
 
 </Project>

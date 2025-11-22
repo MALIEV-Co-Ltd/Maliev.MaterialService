@@ -88,6 +88,10 @@ namespace Maliev.MaterialService.Data.Migrations
                     b.HasKey("Id")
                         .HasName("pk_colors");
 
+                    b.HasIndex("HexCode")
+                        .IsUnique()
+                        .HasDatabaseName("ix_colors_hex_code");
+
                     b.HasIndex("Name")
                         .IsUnique()
                         .HasDatabaseName("ix_colors_name");

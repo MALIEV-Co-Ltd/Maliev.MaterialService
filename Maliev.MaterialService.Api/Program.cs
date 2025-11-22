@@ -189,6 +189,9 @@ builder.Services.AddHealthChecks()
     .AddNpgSql(dbConnectionString!)
     .AddRedis(redisHost);
 
+// Add service defaults for .NET Aspire
+builder.AddServiceDefaults();
+
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
