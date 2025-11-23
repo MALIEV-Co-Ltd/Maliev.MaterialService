@@ -304,6 +304,21 @@ public class MaterialService : IMaterialService
         };
     }
 
+    /// <inheritdoc/>
+    public async Task<int> GetSupplierReferenceCountAsync(Guid supplierId)
+    {
+        _logger.LogInformation("Checking material references for supplier {SupplierId}", supplierId);
+
+        var count = await _context.Materials
+            .AsNoTracking()
+            .Where(m => m.Active && m.SupplierId == supplierId)
+            .CountAsync();
+
+        _logger.LogInformation("Found {Count} materials referencing supplier {SupplierId}", count, supplierId);
+
+        return count;
+    }
+
     private async Task LoadRelatedEntitiesAsync(
         Material material,
         List<Guid> manufacturingProcessIds,

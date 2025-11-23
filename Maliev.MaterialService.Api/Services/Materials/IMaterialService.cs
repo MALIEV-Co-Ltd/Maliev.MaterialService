@@ -68,6 +68,13 @@ public interface IMaterialService
         decimal? minPrice = null,
         decimal? maxPrice = null,
         Guid? supplierId = null);
+
+    /// <summary>
+    /// Gets the count of materials that reference a specific supplier
+    /// </summary>
+    /// <param name="supplierId">Supplier ID to check</param>
+    /// <returns>Number of materials referencing the supplier</returns>
+    Task<int> GetSupplierReferenceCountAsync(Guid supplierId);
 }
 
 /// <summary>
