@@ -11,7 +11,6 @@ COPY nuget.config ./
 COPY Maliev.MaterialService.sln ./
 COPY Maliev.MaterialService.Api/Maliev.MaterialService.Api.csproj Maliev.MaterialService.Api/
 COPY Maliev.MaterialService.Data/Maliev.MaterialService.Data.csproj Maliev.MaterialService.Data/
-COPY Maliev.MaterialService.Tests/Maliev.MaterialService.Tests.csproj Maliev.MaterialService.Tests/
 
 # Restore with GitHub Packages authentication using BuildKit secrets
 RUN --mount=type=secret,id=nuget_username \
