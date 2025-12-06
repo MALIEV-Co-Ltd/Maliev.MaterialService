@@ -8,7 +8,6 @@ WORKDIR /src
 
 # Copy nuget.config and project files
 COPY nuget.config ./
-COPY Maliev.MaterialService.sln ./
 COPY Maliev.MaterialService.Api/Maliev.MaterialService.Api.csproj Maliev.MaterialService.Api/
 COPY Maliev.MaterialService.Data/Maliev.MaterialService.Data.csproj Maliev.MaterialService.Data/
 
@@ -17,7 +16,7 @@ RUN --mount=type=secret,id=nuget_username \
   --mount=type=secret,id=nuget_password \
   NUGET_USERNAME=$(cat /run/secrets/nuget_username) \
   NUGET_PASSWORD=$(cat /run/secrets/nuget_password) \
-  dotnet restore Maliev.MaterialService.sln
+  dotnet restore Maliev.MaterialService.Api/Maliev.MaterialService.Api.csproj
 
 # Copy all source code
 COPY . .
