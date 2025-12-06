@@ -2,11 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentValidation;
 using Maliev.MaterialService.Api.DTOs.Bulk;
 using Maliev.MaterialService.Api.DTOs.Materials;
 using Maliev.MaterialService.Api.Services.Materials;
-using Maliev.MaterialService.Api.Validators.Materials;
 using Microsoft.Extensions.Logging;
 
 namespace Maliev.MaterialService.Api.Services.Bulk;
@@ -18,21 +16,17 @@ public class BulkMaterialService : IBulkMaterialService
 {
     private readonly IMaterialService _materialService;
     private readonly ILogger<BulkMaterialService> _logger;
-    private readonly IValidator<CreateMaterialRequest> _validator;
 
     /// <summary>
     /// Initializes a new instance of BulkMaterialService
     /// </summary>
     /// <param name="materialService">Material service</param>
-    /// <param name="validator">Validator for material creation requests</param>
     /// <param name="logger">Logger instance</param>
     public BulkMaterialService(
         IMaterialService materialService,
-        IValidator<CreateMaterialRequest> validator,
         ILogger<BulkMaterialService> logger)
     {
         _materialService = materialService;
-        _validator = validator;
         _logger = logger;
     }
 
@@ -53,20 +47,6 @@ public class BulkMaterialService : IBulkMaterialService
 
             try
             {
-                // Validate
-                var validationResult = await _validator.ValidateAsync(material);
-                if (!validationResult.IsValid)
-                {
-                    response.FailureCount++;
-                    response.Errors.Add(new BulkImportError
-                    {
-                        Index = i,
-                        MaterialCode = material.Code,
-                        Error = string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage))
-                    });
-                    continue;
-                }
-
                 // Skip actual import if validate-only or dry-run
                 if (request.ValidateOnly || request.DryRun)
                 {

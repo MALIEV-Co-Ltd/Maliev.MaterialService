@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using AutoMapper;
 using Maliev.MaterialService.Api.DTOs.Materials;
+using Maliev.MaterialService.Api.Mapping;
 using Maliev.MaterialService.Api.Services.Cache;
 using Maliev.MaterialService.Data.DbContext;
 using Microsoft.EntityFrameworkCore;
@@ -36,6 +37,10 @@ public class CacheWarmingService : BackgroundService
     }
 
     /// <inheritdoc/>
+    /// <summary>
+    /// Executes the background service, warming up the Redis cache with reference data.
+    /// </summary>
+    /// <param name="stoppingToken">Triggered when the application host is performing a graceful shutdown.</param>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Cache Warming Service starting...");
@@ -45,23 +50,22 @@ public class CacheWarmingService : BackgroundService
             using var scope = _serviceProvider.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<MaterialDbContext>();
             var cacheService = scope.ServiceProvider.GetRequiredService<ICacheService>();
-            var mapper = scope.ServiceProvider.GetRequiredService<IMapper>();
 
             // Warm up Colors
             var colors = await context.Colors.AsNoTracking().ToListAsync(stoppingToken);
-            var colorDtos = mapper.Map<List<ColorResponse>>(colors);
+            var colorDtos = colors.Select(c => c.ToColorResponse()).ToList();
             await cacheService.SetAsync(ColorsKey, colorDtos, TimeSpan.FromHours(24));
             _logger.LogInformation("Cached {Count} colors", colors.Count);
 
             // Warm up Manufacturing Processes
             var processes = await context.ManufacturingProcesses.AsNoTracking().ToListAsync(stoppingToken);
-            var processDtos = mapper.Map<List<ManufacturingProcessResponse>>(processes);
+            var processDtos = processes.Select(p => p.ToManufacturingProcessResponse()).ToList();
             await cacheService.SetAsync(ProcessesKey, processDtos, TimeSpan.FromHours(24));
             _logger.LogInformation("Cached {Count} manufacturing processes", processes.Count);
 
             // Warm up Post Processing Methods
             var methods = await context.PostProcessingMethods.AsNoTracking().ToListAsync(stoppingToken);
-            var methodDtos = mapper.Map<List<PostProcessingMethodResponse>>(methods);
+            var methodDtos = methods.Select(m => m.ToPostProcessingMethodResponse()).ToList();
             await cacheService.SetAsync(MethodsKey, methodDtos, TimeSpan.FromHours(24));
             _logger.LogInformation("Cached {Count} post processing methods", methods.Count);
         }

@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AutoMapper;
 using Maliev.MaterialService.Api.DTOs.Materials;
+using Maliev.MaterialService.Api.Mapping;
 using Maliev.MaterialService.Api.Services.Cache;
 using Maliev.MaterialService.Data.DbContext;
 using Maliev.MaterialService.Data.Entities;
@@ -18,7 +18,6 @@ namespace Maliev.MaterialService.Api.Services.Materials;
 public class MaterialService : IMaterialService
 {
     private readonly MaterialDbContext _context;
-    private readonly IMapper _mapper;
     private readonly ICacheService _cacheService;
     private readonly ILogger<MaterialService> _logger;
     private const string CacheKeyPrefix = "material:";
@@ -27,17 +26,14 @@ public class MaterialService : IMaterialService
     /// Initializes a new instance of MaterialService
     /// </summary>
     /// <param name="context">Database context</param>
-    /// <param name="mapper">AutoMapper instance</param>
     /// <param name="cacheService">Cache service</param>
     /// <param name="logger">Logger instance</param>
     public MaterialService(
         MaterialDbContext context,
-        IMapper mapper,
         ICacheService cacheService,
         ILogger<MaterialService> logger)
     {
         _context = context;
-        _mapper = mapper;
         _cacheService = cacheService;
         _logger = logger;
     }
@@ -57,7 +53,7 @@ public class MaterialService : IMaterialService
             throw new InvalidOperationException($"Material with code '{request.Code}' already exists.");
         }
 
-        var material = _mapper.Map<Material>(request);
+        var material = request.ToMaterial();
         material.Id = Guid.NewGuid();
         material.CreatedBy = userId;
         material.Active = true;
@@ -115,7 +111,7 @@ public class MaterialService : IMaterialService
             return null;
         }
 
-        var response = _mapper.Map<MaterialResponse>(material);
+        var response = material.ToMaterialResponse();
 
         // Cache the result
         await _cacheService.SetAsync(cacheKey, response, TimeSpan.FromMinutes(10));
@@ -147,12 +143,7 @@ public class MaterialService : IMaterialService
         }
 
         // Update basic properties
-        material.Name = request.Name;
-        material.Code = request.Code;
-        material.Description = request.Description;
-        material.PricePerUnit = request.PricePerUnit;
-        material.StockLevel = request.StockLevel;
-        material.SupplierId = request.SupplierId;
+        material.UpdateMaterial(request);
         material.UpdatedBy = userId;
 
         // Clear and reload related entities
@@ -222,7 +213,7 @@ public class MaterialService : IMaterialService
             .Where(m => m.Active)
             .ToListAsync();
 
-        return _mapper.Map<IEnumerable<MaterialResponse>>(materials);
+        return materials.Select(m => m.ToMaterialResponse());
     }
 
     /// <inheritdoc/>
@@ -293,7 +284,7 @@ public class MaterialService : IMaterialService
             .Take(pageSize)
             .ToListAsync();
 
-        var responses = _mapper.Map<IEnumerable<MaterialResponse>>(materials);
+        var responses = materials.Select(m => m.ToMaterialResponse());
 
         return new PagedResult<MaterialResponse>
         {
