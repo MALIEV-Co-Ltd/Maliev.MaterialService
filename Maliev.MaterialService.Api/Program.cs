@@ -1,41 +1,69 @@
-using Asp.Versioning;
-using HealthChecks.UI.Client;
 using Maliev.MaterialService.Api.Middleware;
 using Maliev.MaterialService.Api.Services.Bulk;
 using Maliev.MaterialService.Api.Services.Cache;
 using Maliev.MaterialService.Api.Services.Materials;
 using Maliev.MaterialService.Data.DbContext;
 using Maliev.MaterialService.Data.Interceptors;
-using MassTransit;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Prometheus;
-using Scalar.AspNetCore;
-using Serilog;
-using System.Security.Cryptography;
 using System.Threading.RateLimiting;
-using FluentValidation;
 
 var builder = WebApplication.CreateBuilder(args);
 
-Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .CreateLogger();
+// --- Secrets & Configuration ---
+builder.AddGoogleSecretManagerVolume(); // Load secrets from /mnt/secrets if available
 
-builder.Host.UseSerilog();
+// --- Infrastructure & Observability ---
+builder.AddServiceDefaults(); // OpenTelemetry, health checks, resilience
+builder.AddServiceMeters("materials"); // Register service meters for OpenTelemetry business metrics
 
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddOpenApi("v1", options =>
+// Database with custom interceptor for metrics (non-standard snake_case convention)
+var dbConnectionString = builder.Configuration.GetConnectionString("MaterialDbContext")
+    ?? throw new InvalidOperationException("Database connection string not found. Expected 'ConnectionStrings:MaterialDbContext'");
+
+builder.Services.AddDbContext<MaterialDbContext>((sp, options) =>
 {
-    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    options.UseNpgsql(dbConnectionString, npgsqlOptions =>
+    {
+        npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(10),
+            errorCodesToAdd: null);
+    })
+    .UseSnakeCaseNamingConvention()
+    .AddInterceptors(new DatabaseMetricsInterceptor());
 
-    if (File.Exists(xmlPath))
+    options.ConfigureWarnings(warnings =>
+        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.CommandError));
+});
+
+// Redis cache with custom ICacheService
+var redisConnectionString = builder.Configuration.GetConnectionString("redis");
+if (!string.IsNullOrEmpty(redisConnectionString))
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConnectionString;
+    });
+    builder.Services.AddSingleton<ICacheService, RedisCacheService>();
+    builder.Services.AddHostedService<Maliev.MaterialService.Api.BackgroundServices.CacheWarmingService>();
+}
+else
+{
+    builder.Services.AddSingleton<ICacheService, InMemoryCacheService>();
+}
+
+// --- API Configuration ---
+builder.AddDefaultCors(); // CORS from CORS:AllowedOrigins config
+builder.AddDefaultApiVersioning(); // API versioning with URL segment reader
+
+// JWT Authentication (tests override via PostConfigureAll with dynamic RSA keys)
+builder.AddJwtAuthentication();
+
+// Add OpenAPI (must be in Program.cs for XML comments to work via source generator)
+if (!builder.Environment.IsProduction())
+{
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddOpenApi("v1", options =>
     {
         options.AddDocumentTransformer((document, context, cancellationToken) =>
         {
@@ -43,93 +71,19 @@ builder.Services.AddOpenApi("v1", options =>
             {
                 Title = "Material Service API",
                 Version = "v1",
-                Description = "API for managing materials, suppliers, and related entities in the Maliev manufacturing system.",
+                Description = "Material inventory management service. Provides CRUD operations for materials with supplier associations, bulk import/export capabilities, supplier validation, reference data for categories and units, and cached responses for high-performance lookups.",
                 Contact = new() { Name = "Maliev Support", Email = "support@maliev.com" }
             };
             return Task.CompletedTask;
         });
+    });
+}
 
-        // Note: XML documentation is automatically included by Microsoft.AspNetCore.OpenApi
-    }
-});
-
-var dbConnectionString = builder.Configuration.GetConnectionString("MaterialDbContext")
-    ?? builder.Configuration.GetConnectionString("DefaultConnection");
-
-builder.Services.AddDbContext<MaterialDbContext>((sp, options) =>
-{
-    options.UseNpgsql(dbConnectionString)
-           .UseSnakeCaseNamingConvention()
-           .AddInterceptors(new DatabaseMetricsInterceptor());
-});
-
-var redisHost = builder.Configuration["Redis:Host"] ?? "redis:6379";
-Log.Information("Configured Redis Host: {RedisHost}", redisHost);
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = redisHost;
-});
-builder.Services.AddSingleton<ICacheService, RedisCacheService>();
-
-builder.Services.AddAutoMapper(typeof(Program).Assembly);
-builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
-
-builder.Services.AddHttpClient<Maliev.MaterialService.Api.Services.External.ISupplierServiceClient, Maliev.MaterialService.Api.Services.External.SupplierServiceClient>();
+builder.Services.AddHttpClient<Maliev.MaterialService.Api.Services.External.ISupplierServiceClient, Maliev.MaterialService.Api.Services.External.SupplierServiceClient>()
+    .AddStandardResilienceHandler();
 
 builder.Services.AddScoped<IMaterialService, MaterialService>();
 builder.Services.AddScoped<IBulkMaterialService, BulkMaterialService>();
-
-builder.Services.AddHostedService<Maliev.MaterialService.Api.BackgroundServices.CacheWarmingService>();
-
-var rabbitHost = builder.Configuration["RabbitMq:Host"] ?? "rabbitmq";
-Log.Information("Configured RabbitMQ Host: {RabbitHost}", rabbitHost);
-var rabbitPort = int.Parse(builder.Configuration["RabbitMq:Port"] ?? "5672");
-var rabbitUser = builder.Configuration["RabbitMq:Username"] ?? "guest";
-var rabbitPass = builder.Configuration["RabbitMq:Password"] ?? "guest";
-var rabbitVHost = builder.Configuration["RabbitMq:VirtualHost"] ?? "/";
-
-builder.Services.AddMassTransit(x =>
-{
-    x.UsingRabbitMq((context, cfg) =>
-    {
-        cfg.Host(rabbitHost, (ushort)rabbitPort, rabbitVHost, h =>
-        {
-            h.Username(rabbitUser);
-            h.Password(rabbitPass);
-        });
-    });
-});
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        var publicKeyBase64 = builder.Configuration["Jwt:PublicKey"];
-        var rsa = RSA.Create();
-
-        if (!string.IsNullOrEmpty(publicKeyBase64))
-        {
-            try
-            {
-                var publicKeyPem = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(publicKeyBase64));
-                rsa.ImportFromPem(publicKeyPem);
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
-                    ValidIssuer = builder.Configuration["Jwt:Issuer"],
-                    ValidAudience = builder.Configuration["Jwt:Audience"],
-                    IssuerSigningKey = new RsaSecurityKey(rsa)
-                };
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Failed to import JWT public key");
-                throw;
-            }
-        }
-    });
 
 builder.Services.AddAuthorization(options =>
 {
@@ -154,95 +108,82 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(policy =>
-    {
-        var allowedOrigins = builder.Configuration["CORS:AllowedOrigins"]?
-            .Split(',', StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
-
-        policy.WithOrigins(allowedOrigins)
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
-});
-
 builder.Services.AddResponseCompression(options =>
 {
     options.EnableForHttps = true;
 });
 
-builder.Services.AddApiVersioning(options =>
-{
-    options.DefaultApiVersion = new ApiVersion(1, 0);
-    options.AssumeDefaultVersionWhenUnspecified = true;
-    options.ReportApiVersions = true;
-})
-.AddMvc()
-.AddApiExplorer(options =>
-{
-    options.GroupNameFormat = "'v'VVV";
-    options.SubstituteApiVersionInUrl = true;
-});
-
-builder.Services.AddHealthChecks()
-    .AddNpgSql(dbConnectionString!)
-    .AddRedis(redisHost);
-
-// Add service defaults for .NET Aspire
-builder.AddServiceDefaults();
+builder.Services.AddControllers();
 
 var app = builder.Build();
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+
+// Run database migrations on startup (skip in Testing environment)
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    try
+    {
+        await app.MigrateDatabaseAsync<MaterialDbContext>();
+    }
+    catch (Exception ex)
+    {
+        Log.MigrationFailed(logger, ex);
+        // Don't throw - allow app to start for debugging
+    }
+}
+
+// Log startup configuration
+if (!string.IsNullOrEmpty(redisConnectionString))
+{
+    Log.RedisCacheConfigured(logger);
+}
+else
+{
+    Log.RedisConnectionNotFound(logger);
+}
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 
-if (app.Environment.IsDevelopment())
-{
-    // Map OpenAPI at /materials/openapi/v1.json
-    app.MapOpenApi("/materials/openapi/{documentName}.json");
-
-    // Map Scalar at /materials/scalar/v1 path (matches ingress /materials prefix)
-    app.MapScalarApiReference("/materials/scalar/v1", options =>
-    {
-        options
-            .WithTitle("Material Service API")
-            .WithTheme(ScalarTheme.Purple)
-            .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient)
-            .WithOpenApiRoutePattern("/materials/openapi/v1.json");
-    });
-
-    // Redirect root to Scalar
-    app.MapGet("/", () => Results.Redirect("/materials/scalar/v1")).ExcludeFromDescription();
-    app.MapGet("/materials", () => Results.Redirect("/materials/scalar/v1")).ExcludeFromDescription();
-}
-
-app.UseSerilogRequestLogging();
+app.UseHttpsRedirection();
 app.UseResponseCompression();
 app.UseCors();
-app.UseHttpMetrics();
 app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Map endpoints after middleware
 app.MapControllers();
-app.MapMetrics("/materials/metrics");
-app.MapGet("/materials/liveness", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow }))
-    .WithName("Liveness")
-    .WithTags("Health")
-    .AllowAnonymous();
-app.MapHealthChecks("/materials/readiness", new HealthCheckOptions
-{
-    Predicate = _ => true,
-    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
-}).AllowAnonymous();
 
+// Map Aspire default endpoints (/health, /alive, /metrics)
+app.MapDefaultEndpoints(servicePrefix: "materials");
 
-app.Run();
+// Map OpenAPI and Scalar documentation (dev/staging only)
+app.MapApiDocumentation(servicePrefix: "materials");
+
+Log.ServiceStarted(logger);
+await app.RunAsync();
 
 /// <summary>
 /// Program entry point for Material Service API
 /// </summary>
-public partial class Program { }
+public partial class Program
+{
+    internal static partial class Log
+    {
+        [LoggerMessage(Level = LogLevel.Information, Message = "MaterialService started successfully")]
+        public static partial void ServiceStarted(ILogger logger);
+
+        [LoggerMessage(Level = LogLevel.Error, Message = "Database migration failed - application may not function correctly")]
+        public static partial void MigrationFailed(ILogger logger, Exception exception);
+
+        [LoggerMessage(Level = LogLevel.Information, Message = "Redis distributed cache configured")]
+        public static partial void RedisCacheConfigured(ILogger logger);
+
+        [LoggerMessage(Level = LogLevel.Warning, Message = "Redis connection string not found")]
+        public static partial void RedisConnectionNotFound(ILogger logger);
+    }
+}
+
