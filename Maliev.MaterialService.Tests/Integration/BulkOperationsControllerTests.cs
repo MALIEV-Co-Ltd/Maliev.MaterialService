@@ -2,70 +2,30 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Net.Http.Json;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Maliev.MaterialService.Api.DTOs.Bulk;
 using Maliev.MaterialService.Api.DTOs.Materials;
-using Maliev.MaterialService.Data.DbContext;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using Maliev.MaterialService.Tests.Fixtures;
 using Xunit;
 
 namespace Maliev.MaterialService.Tests.Integration;
 
-public class BulkOperationsControllerTests : IClassFixture<IntegrationTestFixture>
+public class BulkOperationsControllerTests : IClassFixture<IntegrationTestWebAppFactory>
 {
-    private readonly IntegrationTestFixture _fixture;
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly IntegrationTestWebAppFactory _factory;
     private readonly HttpClient _client;
 
-    public BulkOperationsControllerTests(IntegrationTestFixture fixture)
+    public BulkOperationsControllerTests(IntegrationTestWebAppFactory factory)
     {
-        _fixture = fixture;
+        _factory = factory;
+        _client = _factory.CreateClient();
 
-        _factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureTestServices(services =>
-                {
-                    // Remove existing DbContext registration
-                    services.RemoveAll(typeof(DbContextOptions<MaterialDbContext>));
-
-                    // Add DbContext with Testcontainers PostgreSQL
-                    services.AddDbContext<MaterialDbContext>(options =>
-                    {
-                        options.UseNpgsql(_fixture.PostgresConnectionString)
-                               .UseSnakeCaseNamingConvention();
-                    });
-
-                    // Configure Test Authentication
-                    services.AddAuthentication("Test")
-                        .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("Test", options => { });
-                });
-
-                // Override configuration for Redis and RabbitMQ
-                builder.UseSetting("Redis:Host", _fixture.RedisConnectionString);
-                builder.UseSetting("RabbitMq:Host", _fixture.RabbitMqHost);
-                builder.UseSetting("RabbitMq:Port", _fixture.RabbitMqPort.ToString());
-            });
-
-        _client = _factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false
-        });
-
-        _client.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Test");
-
-        // Ensure database is created
-        using var scope = _factory.Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MaterialDbContext>();
-        dbContext.Database.EnsureCreated();
+        // Set JWT authorization header
+        var token = _factory.CreateTestJwtToken();
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
     }
 
     [Fact]
@@ -97,11 +57,11 @@ public class BulkOperationsControllerTests : IClassFixture<IntegrationTestFixtur
         var response = await _client.PostAsJsonAsync("/materials/v1/bulk/import", request);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<BulkImportResponse>();
-        result.Should().NotBeNull();
-        result!.SuccessCount.Should().Be(2);
-        result.FailureCount.Should().Be(0);
+        Assert.NotNull(result);
+        Assert.Equal(2, result.SuccessCount);
+        Assert.Equal(0, result.FailureCount);
     }
 
     [Fact]
@@ -111,8 +71,8 @@ public class BulkOperationsControllerTests : IClassFixture<IntegrationTestFixtur
         var response = await _client.GetAsync("/materials/v1/bulk/export");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<IEnumerable<MaterialResponse>>();
-        result.Should().NotBeNull();
+        Assert.NotNull(result);
     }
 }

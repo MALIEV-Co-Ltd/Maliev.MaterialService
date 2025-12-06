@@ -3,69 +3,28 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Maliev.MaterialService.Api.DTOs.Materials;
 using Maliev.MaterialService.Api.Services.Materials;
-using Maliev.MaterialService.Data.DbContext;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using Maliev.MaterialService.Tests.Fixtures;
 using Xunit;
 
 namespace Maliev.MaterialService.Tests.Integration;
 
-public class MaterialsControllerTests : IClassFixture<IntegrationTestFixture>
+public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFactory>
 {
-    private readonly IntegrationTestFixture _fixture;
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly IntegrationTestWebAppFactory _factory;
     private readonly HttpClient _client;
 
-    public MaterialsControllerTests(IntegrationTestFixture fixture)
+    public MaterialsControllerTests(IntegrationTestWebAppFactory factory)
     {
-        _fixture = fixture;
+        _factory = factory;
+        _client = _factory.CreateClient();
 
-        _factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureTestServices(services =>
-                {
-                    // Remove existing DbContext registration
-                    services.RemoveAll(typeof(DbContextOptions<MaterialDbContext>));
-
-                    // Add DbContext with Testcontainers PostgreSQL
-                    services.AddDbContext<MaterialDbContext>(options =>
-                    {
-                        options.UseNpgsql(_fixture.PostgresConnectionString)
-                               .UseSnakeCaseNamingConvention();
-                    });
-
-                    // Configure Test Authentication
-                    services.AddAuthentication("Test")
-                        .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("Test", options => { });
-                });
-
-                // Override configuration for Redis and RabbitMQ
-                builder.UseSetting("Redis:Host", _fixture.RedisConnectionString);
-                builder.UseSetting("RabbitMq:Host", _fixture.RabbitMqHost);
-                builder.UseSetting("RabbitMq:Port", _fixture.RabbitMqPort.ToString());
-            });
-
-        _client = _factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false
-        });
-
-        _client.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Test");
-
-        // Ensure database is created
-        using var scope = _factory.Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MaterialDbContext>();
-        dbContext.Database.EnsureCreated();
+        // Set JWT authorization header
+        var token = _factory.CreateTestJwtToken();
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
     }
 
     [Fact]
@@ -75,7 +34,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestFixture>
         var response = await _client.GetAsync("/materials/v1/materials");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
@@ -85,11 +44,11 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestFixture>
         var response = await _client.GetAsync("/materials/v1/materials?page=1&pageSize=10");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<PagedResult<MaterialResponse>>();
-        result.Should().NotBeNull();
-        result!.Page.Should().Be(1);
-        result.PageSize.Should().Be(10);
+        Assert.NotNull(result);
+        Assert.Equal(1, result.Page);
+        Assert.Equal(10, result.PageSize);
     }
 
     [Fact]
@@ -102,7 +61,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestFixture>
         var response = await _client.GetAsync($"/materials/v1/materials/{invalidId}");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
@@ -113,7 +72,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestFixture>
 
         // Assert
         // May be unhealthy if checking original config instead of Testcontainer endpoints
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.ServiceUnavailable);
+        Assert.True(response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.ServiceUnavailable);
     }
 
     [Fact]
@@ -124,7 +83,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestFixture>
 
         // Assert
         // May be unhealthy if checking original config instead of Testcontainer endpoints
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.ServiceUnavailable);
+        Assert.True(response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.ServiceUnavailable);
     }
 
     [Fact]
@@ -134,8 +93,8 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestFixture>
         var response = await _client.GetAsync("/materials/metrics");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        content.Should().NotBeNullOrEmpty();
+        Assert.NotEmpty(content);
     }
 }

@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
-using FluentValidation;
 using Maliev.MaterialService.Api.DTOs.Bulk;
 using Maliev.MaterialService.Api.DTOs.Materials;
 using Maliev.MaterialService.Api.Services.Bulk;
@@ -17,20 +16,14 @@ public class BulkMaterialServiceTests
 {
     private readonly Mock<IMaterialService> _materialServiceMock;
     private readonly Mock<ILogger<BulkMaterialService>> _loggerMock;
-    private readonly Mock<IValidator<CreateMaterialRequest>> _validatorMock;
     private readonly BulkMaterialService _bulkService;
 
     public BulkMaterialServiceTests()
     {
         _materialServiceMock = new Mock<IMaterialService>();
         _loggerMock = new Mock<ILogger<BulkMaterialService>>();
-        _validatorMock = new Mock<IValidator<CreateMaterialRequest>>();
 
-        // Setup default validation to pass
-        _validatorMock.Setup(v => v.ValidateAsync(It.IsAny<CreateMaterialRequest>(), It.IsAny<System.Threading.CancellationToken>()))
-            .ReturnsAsync(new FluentValidation.Results.ValidationResult());
-
-        _bulkService = new BulkMaterialService(_materialServiceMock.Object, _validatorMock.Object, _loggerMock.Object);
+        _bulkService = new BulkMaterialService(_materialServiceMock.Object, _loggerMock.Object);
     }
 
     [Fact]
@@ -53,8 +46,8 @@ public class BulkMaterialServiceTests
         var result = await _bulkService.BulkImportMaterialsAsync(request, "TestUser");
 
         // Assert
-        result.SuccessCount.Should().Be(2);
-        result.FailureCount.Should().Be(0);
+        Assert.Equal(2, result.SuccessCount);
+        Assert.Equal(0, result.FailureCount);
         _materialServiceMock.Verify(s => s.CreateMaterialAsync(It.IsAny<CreateMaterialRequest>(), "TestUser"), Times.Exactly(2));
     }
 
@@ -81,8 +74,9 @@ public class BulkMaterialServiceTests
         var result = await _bulkService.BulkImportMaterialsAsync(request, "TestUser");
 
         // Assert
-        result.SuccessCount.Should().Be(1);
-        result.FailureCount.Should().Be(1);
-        result.Errors.Should().ContainSingle(e => e.MaterialCode == "C2" && e.Error == "Duplicate code");
+        Assert.Equal(1, result.SuccessCount);
+        Assert.Equal(1, result.FailureCount);
+        var errorForC2 = Assert.Single(result.Errors, e => e.MaterialCode == "C2" && e.Error == "Duplicate code");
+        Assert.NotNull(errorForC2);
     }
 }
