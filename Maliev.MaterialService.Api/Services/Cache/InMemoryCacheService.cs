@@ -1,53 +1,48 @@
-using System.Collections.Concurrent;
+using Microsoft.Extensions.Caching.Memory;
+using System;
+using System.Threading.Tasks;
 
 namespace Maliev.MaterialService.Api.Services.Cache;
 
 /// <summary>
-/// In-memory implementation of ICacheService using ConcurrentDictionary.
-/// Used as a fallback when Redis is not available (e.g., in Testing environment).
+/// In-memory implementation of ICacheService using the standard IMemoryCache.
+/// Used as a fallback when Redis is not available.
 /// </summary>
 public class InMemoryCacheService : ICacheService
 {
-    private readonly ConcurrentDictionary<string, object> _cache = new();
+    private readonly IMemoryCache _cache;
 
     /// <summary>
-    /// Retrieves a value from the in-memory cache.
+    /// Initializes a new instance of the InMemoryCacheService class.
     /// </summary>
-    /// <typeparam name="T">The type of the cached value.</typeparam>
-    /// <param name="key">The cache key.</param>
-    /// <returns>The cached value if found, otherwise null.</returns>
-    public Task<T?> GetAsync<T>(string key)
+    /// <param name="cache">The memory cache instance.</param>
+    public InMemoryCacheService(IMemoryCache cache)
     {
-        if (_cache.TryGetValue(key, out var value) && value is T typedValue)
-        {
-            return Task.FromResult<T?>(typedValue);
-        }
-        return Task.FromResult<T?>(default);
+        _cache = cache;
     }
 
-    /// <summary>
-    /// Stores a value in the in-memory cache.
-    /// </summary>
-    /// <typeparam name="T">The type of the value to cache.</typeparam>
-    /// <param name="key">The cache key.</param>
-    /// <param name="value">The value to cache.</param>
-    /// <param name="expiration">Expiration time (ignored in this in-memory implementation).</param>
-    /// <returns>A completed task.</returns>
+    /// <inheritdoc/>
+    public Task<T?> GetAsync<T>(string key)
+    {
+        _cache.TryGetValue(key, out T? value);
+        return Task.FromResult(value);
+    }
+
+    /// <inheritdoc/>
     public Task SetAsync<T>(string key, T value, TimeSpan? expiration = null)
     {
-        _cache[key] = value!;
-        // Note: Expiration is ignored in this in-memory implementation
+        var options = new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = expiration ?? TimeSpan.FromMinutes(10)
+        };
+        _cache.Set(key, value, options);
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Removes a value from the in-memory cache.
-    /// </summary>
-    /// <param name="key">The cache key.</param>
-    /// <returns>A completed task.</returns>
+    /// <inheritdoc/>
     public Task RemoveAsync(string key)
     {
-        _cache.TryRemove(key, out _);
+        _cache.Remove(key);
         return Task.CompletedTask;
     }
 }

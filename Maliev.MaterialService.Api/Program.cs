@@ -5,6 +5,7 @@ using Maliev.MaterialService.Api.Services.Materials;
 using Maliev.MaterialService.Data.DbContext;
 using Maliev.MaterialService.Data.Interceptors;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,34 +17,22 @@ builder.AddGoogleSecretManagerVolume(); // Load secrets from /mnt/secrets if ava
 builder.AddServiceDefaults(); // OpenTelemetry, health checks, resilience
 builder.AddServiceMeters("materials"); // Register service meters for OpenTelemetry business metrics
 
-// Database with custom interceptor for metrics (non-standard snake_case convention)
-var dbConnectionString = builder.Configuration.GetConnectionString("MaterialDbContext")
-    ?? throw new InvalidOperationException("Database connection string not found. Expected 'ConnectionStrings:MaterialDbContext'");
-
-builder.Services.AddDbContext<MaterialDbContext>((sp, options) =>
-{
-    options.UseNpgsql(dbConnectionString, npgsqlOptions =>
+// Database - using shared configuration for consistency
+builder.AddPostgresDbContext<MaterialDbContext>(
+    connectionStringName: "MaterialDbContext",
+    configureOptions: options =>
     {
-        npgsqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 5,
-            maxRetryDelay: TimeSpan.FromSeconds(10),
-            errorCodesToAdd: null);
-    })
-    .UseSnakeCaseNamingConvention()
-    .AddInterceptors(new DatabaseMetricsInterceptor());
-
-    options.ConfigureWarnings(warnings =>
-        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.CommandError));
-});
-
-// Redis cache with custom ICacheService
-var redisConnectionString = builder.Configuration.GetConnectionString("redis");
-if (!string.IsNullOrEmpty(redisConnectionString))
-{
-    builder.Services.AddStackExchangeRedisCache(options =>
-    {
-        options.Configuration = redisConnectionString;
+        options.UseSnakeCaseNamingConvention()
+               .AddInterceptors(new DatabaseMetricsInterceptor());
     });
+
+// Redis cache - using shared configuration for consistency
+builder.AddRedisDistributedCache("Material");
+
+// Register custom ICacheService based on whether Redis is available
+var redisConnectionString = builder.Configuration.GetConnectionString("redis");
+if (!builder.Environment.IsEnvironment("Testing") && !string.IsNullOrEmpty(redisConnectionString))
+{
     builder.Services.AddSingleton<ICacheService, RedisCacheService>();
     builder.Services.AddHostedService<Maliev.MaterialService.Api.BackgroundServices.CacheWarmingService>();
 }
@@ -132,16 +121,6 @@ if (!app.Environment.IsEnvironment("Testing"))
     }
 }
 
-// Log startup configuration
-if (!string.IsNullOrEmpty(redisConnectionString))
-{
-    Log.RedisCacheConfigured(logger);
-}
-else
-{
-    Log.RedisConnectionNotFound(logger);
-}
-
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
@@ -178,12 +157,5 @@ public partial class Program
 
         [LoggerMessage(Level = LogLevel.Error, Message = "Database migration failed - application may not function correctly")]
         public static partial void MigrationFailed(ILogger logger, Exception exception);
-
-        [LoggerMessage(Level = LogLevel.Information, Message = "Redis distributed cache configured")]
-        public static partial void RedisCacheConfigured(ILogger logger);
-
-        [LoggerMessage(Level = LogLevel.Warning, Message = "Redis connection string not found")]
-        public static partial void RedisConnectionNotFound(ILogger logger);
     }
 }
-
