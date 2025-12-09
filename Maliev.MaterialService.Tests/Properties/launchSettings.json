@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Maliev.MaterialService.Tests": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:61181;http://localhost:61182"
+    }
+  }
+}

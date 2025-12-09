@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using Maliev.MaterialService.Data.DbContext;
+using Maliev.MaterialService.Data.Entities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -23,11 +24,10 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
 
     public IntegrationTestWebAppFactory()
     {
-        // Generate ephemeral RSA key for test JWT tokens
         _testRsa = RSA.Create(2048);
 
         _postgresContainer = new PostgreSqlBuilder()
-            .WithImage("postgres:18")
+            .WithImage("postgres:16") // Use a recent, stable version
             .WithDatabase("material_test")
             .WithUsername("postgres")
             .WithPassword("postgres")
@@ -36,7 +36,6 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
 
     public async Task InitializeAsync()
     {
-        // Start PostgreSQL container (RabbitMQ and Redis use in-memory fallbacks in Testing environment)
         await _postgresContainer.StartAsync();
     }
 
@@ -49,12 +48,10 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        // Set environment FIRST to ensure it's available during configuration
         builder.UseEnvironment("Testing");
 
         builder.ConfigureAppConfiguration((context, config) =>
         {
-            // Clear existing sources and add test configuration with highest priority
             config.Sources.Clear();
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -62,59 +59,42 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
                 { "ASPNETCORE_ENVIRONMENT", "Testing" },
                 { "Jwt:Issuer", TestIssuer },
                 { "Jwt:Audience", TestAudience },
-                { "Jwt:PublicKey", "dummy-key-will-be-replaced-by-test-rsa" }
+                { "Jwt:PublicKey", "dummy-key" }
             });
         });
 
         builder.ConfigureTestServices(services =>
         {
-            // Remove existing DbContext registration
             services.RemoveAll<DbContextOptions<MaterialDbContext>>();
             services.RemoveAll<MaterialDbContext>();
 
-            // Add DbContext with Testcontainers connection string
             services.AddDbContext<MaterialDbContext>(options =>
             {
                 options.UseNpgsql(_postgresContainer.GetConnectionString())
                        .UseSnakeCaseNamingConvention();
             });
-
-            // Configure existing JWT Bearer options for tests
+            
             services.PostConfigure<Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerOptions>(
                 Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme,
                 options =>
                 {
-                    options.Authority = null; // Disable authority discovery for tests
+                    options.Authority = null;
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
-                        ValidateIssuer = true,
-                        ValidateAudience = true,
-                        ValidateLifetime = true,
-                        ValidateIssuerSigningKey = true,
                         ValidIssuer = TestIssuer,
                         ValidAudience = TestAudience,
-                        IssuerSigningKey = new RsaSecurityKey(_testRsa),
-                        ClockSkew = TimeSpan.Zero // No clock skew for tests
+                        IssuerSigningKey = new RsaSecurityKey(_testRsa)
                     };
                 });
 
-            services.AddAuthorization();
-
-            // Build service provider and apply migrations
             var serviceProvider = services.BuildServiceProvider();
             using var scope = serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<MaterialDbContext>();
             dbContext.Database.Migrate();
+            SeedData.Initialize(dbContext); // Seed data for tests
         });
     }
 
-    /// <summary>
-    /// Creates a test JWT token with specified claims for integration testing.
-    /// </summary>
-    /// <param name="userId">User ID claim</param>
-    /// <param name="roles">User roles</param>
-    /// <param name="additionalClaims">Additional claims to include</param>
-    /// <returns>JWT token string</returns>
     public string CreateTestJwtToken(string userId = "test-user", string[]? roles = null, Dictionary<string, string>? additionalClaims = null)
     {
         var claims = new List<Claim>
@@ -124,33 +104,84 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
-        // Add roles
         roles ??= new[] { "Admin" };
-        foreach (var role in roles)
-        {
-            claims.Add(new Claim(ClaimTypes.Role, role));
-        }
+        claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
-        // Add additional claims
         if (additionalClaims != null)
         {
-            foreach (var (key, value) in additionalClaims)
-            {
-                claims.Add(new Claim(key, value));
-            }
+            claims.AddRange(additionalClaims.Select(kvp => new Claim(kvp.Key, kvp.Value)));
         }
 
-        var credentials = new SigningCredentials(
-            new RsaSecurityKey(_testRsa),
-            SecurityAlgorithms.RsaSha256);
-
-        var token = new JwtSecurityToken(
-            issuer: TestIssuer,
-            audience: TestAudience,
-            claims: claims,
-            expires: DateTime.UtcNow.AddHours(1),
-            signingCredentials: credentials);
-
+        var credentials = new SigningCredentials(new RsaSecurityKey(_testRsa), SecurityAlgorithms.RsaSha256);
+        var token = new JwtSecurityToken(TestIssuer, TestAudience, claims, expires: DateTime.UtcNow.AddHours(1), signingCredentials: credentials);
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+}
+
+internal static class SeedData
+{
+    public static void Initialize(MaterialDbContext context)
+    {
+        if (context.Materials.Any())
+        {
+            return; // DB has been seeded
+        }
+
+        // Lookups
+        var proc3dPrinting = new ManufacturingProcess { Name = "3D Printing" };
+        var procCncMachining = new ManufacturingProcess { Name = "CNC Machining" };
+
+        var colorRed = new Color { Name = "Red", HexCode = "#FF0000" };
+        var colorBlue = new Color { Name = "Blue", HexCode = "#0000FF" };
+        var colorSilver = new Color { Name = "Silver", HexCode = "#C0C0C0" };
+
+        var propTensile = new MechanicalProperty { Name = "Tensile Strength", Unit = "MPa" };
+        var propHardness = new MechanicalProperty { Name = "Hardness", Unit = "Shore D" };
+
+        context.AddRange(proc3dPrinting, procCncMachining, colorRed, colorBlue, colorSilver, propTensile, propHardness);
+        context.SaveChanges();
+
+        // Materials
+        var materialA = new Material
+        {
+            Name = "Polycarbonate",
+            Code = "PC-001",
+            StockLevel = 100,
+            PricePerUnit = 50.0m,
+            ManufacturingProcesses = new List<ManufacturingProcess> { proc3dPrinting },
+            AvailableColors = new List<Color> { colorRed, colorBlue }
+        };
+
+        var materialB = new Material
+        {
+            Name = "Aluminum 6061",
+            Code = "AL-6061",
+            StockLevel = 50,
+            PricePerUnit = 120.0m,
+            ManufacturingProcesses = new List<ManufacturingProcess> { procCncMachining },
+            AvailableColors = new List<Color> { colorSilver }
+        };
+
+        var materialC = new Material
+        {
+            Name = "ABS Plastic",
+            Code = "ABS-001",
+            StockLevel = 200,
+            PricePerUnit = 30.0m,
+            ManufacturingProcesses = new List<ManufacturingProcess> { proc3dPrinting },
+            AvailableColors = new List<Color> { colorBlue }
+        };
+
+        context.AddRange(materialA, materialB, materialC);
+        context.SaveChanges();
+
+        // Material Properties
+        var propsA = new MaterialMechanicalProperty { Material = materialA, MechanicalProperty = propTensile, Value = 100 };
+        var propsB_Tensile = new MaterialMechanicalProperty { Material = materialB, MechanicalProperty = propTensile, Value = 310 };
+        var propsC_Tensile = new MaterialMechanicalProperty { Material = materialC, MechanicalProperty = propTensile, Value = 40 };
+        var propsC_Hardness = new MaterialMechanicalProperty { Material = materialC, MechanicalProperty = propHardness, Value = 75 };
+
+        context.AddRange(propsA, propsB_Tensile, propsC_Tensile, propsC_Hardness);
+        context.SaveChanges();
     }
 }
