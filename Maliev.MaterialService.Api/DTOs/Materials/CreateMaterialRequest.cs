@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace Maliev.MaterialService.Api.DTOs.Materials;
 
@@ -11,26 +12,33 @@ public class CreateMaterialRequest
     /// <summary>
     /// Name of the material
     /// </summary>
+    [Required]
+    [StringLength(100, MinimumLength = 2)]
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// Unique code identifier for the material
     /// </summary>
+    [Required]
+    [StringLength(50, MinimumLength = 2)]
     public string Code { get; set; } = string.Empty;
 
     /// <summary>
     /// Optional description of the material
     /// </summary>
+    [StringLength(500)]
     public string? Description { get; set; }
 
     /// <summary>
     /// Price per unit of the material
     /// </summary>
+    [Range(0, (double)decimal.MaxValue)]
     public decimal PricePerUnit { get; set; }
 
     /// <summary>
     /// Current stock level
     /// </summary>
+    [Range(0, int.MaxValue)]
     public int StockLevel { get; set; }
 
     /// <summary>
