@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Maliev.MaterialService.Api.DTOs;
 using Maliev.MaterialService.Api.DTOs.Materials;
 using Maliev.MaterialService.Api.Mapping;
 using Maliev.MaterialService.Api.Services.Cache;
@@ -42,6 +43,24 @@ public class MaterialService : IMaterialService
     public async Task<MaterialResponse> CreateMaterialAsync(CreateMaterialRequest request, string userId)
     {
         _logger.LogInformation("Creating new material with code: {Code}", request.Code);
+
+        // Manual validation for properties that might be missed by model binding in bulk operations
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            throw new InvalidOperationException("Material name is required.");
+        }
+        if (string.IsNullOrWhiteSpace(request.Code))
+        {
+            throw new InvalidOperationException("Material code is required.");
+        }
+        if (request.StockLevel < 0)
+        {
+            throw new InvalidOperationException("Stock level cannot be negative.");
+        }
+        if (request.PricePerUnit <= 0)
+        {
+            throw new InvalidOperationException("Price per unit must be greater than zero.");
+        }
 
         // Check if material with same code already exists
         var existingMaterial = await _context.Materials
@@ -152,6 +171,8 @@ public class MaterialService : IMaterialService
         material.PostProcessingMethods.Clear();
         material.MechanicalProperties.Clear();
 
+        await _context.SaveChangesAsync();
+
         await LoadRelatedEntitiesAsync(material, request.ManufacturingProcessIds, request.ColorIds, request.PostProcessingMethodIds);
 
         // Add mechanical properties
@@ -225,19 +246,19 @@ public class MaterialService : IMaterialService
         bool sortDescending = false,
         decimal? minPrice = null,
         decimal? maxPrice = null,
-        Guid? supplierId = null)
+        Guid? supplierId = null,
+        string? manufacturingProcess = null,
+        string? color = null,
+        decimal? minTensileStrength = null,
+        decimal? maxTensileStrength = null)
     {
-        _logger.LogInformation("Getting materials with filters: page={Page}, pageSize={PageSize}, search={SearchTerm}",
-            page, pageSize, searchTerm);
+        _logger.LogInformation("Getting materials with filters: page={Page}, pageSize={PageSize}, search={SearchTerm}, " +
+                               "manufacturingProcess={ManufacturingProcess}, color={Color}, " +
+                               "minTensileStrength={MinTensileStrength}, maxTensileStrength={MaxTensileStrength}",
+            page, pageSize, searchTerm, manufacturingProcess, color, minTensileStrength, maxTensileStrength);
 
         var query = _context.Materials
             .AsNoTracking()
-            .Include(m => m.Supplier)
-            .Include(m => m.ManufacturingProcesses)
-            .Include(m => m.AvailableColors)
-            .Include(m => m.PostProcessingMethods)
-            .Include(m => m.MechanicalProperties)
-                .ThenInclude(mp => mp.MechanicalProperty)
             .Where(m => m.Active);
 
         // Apply filters
@@ -263,6 +284,37 @@ public class MaterialService : IMaterialService
         {
             query = query.Where(m => m.SupplierId == supplierId.Value);
         }
+
+        _logger.LogDebug("Applying manufacturing process filter: {ManufacturingProcess}", manufacturingProcess);
+        if (!string.IsNullOrWhiteSpace(manufacturingProcess))
+        {
+            query = query.Where(m => m.ManufacturingProcesses.Any(mp => mp.Name == manufacturingProcess));
+        }
+
+        // Filter by color
+        if (!string.IsNullOrWhiteSpace(color))
+        {
+            query = query.Where(m => m.AvailableColors.Any(c => c.Name == color));
+        }
+
+        // Filter by mechanical properties (Tensile Strength)
+        if (minTensileStrength.HasValue || maxTensileStrength.HasValue)
+        {
+            query = query.Where(m => m.MechanicalProperties.Any(mp =>
+                mp.MechanicalProperty.Name == "Tensile Strength" &&
+                (!minTensileStrength.HasValue || mp.Value >= minTensileStrength.Value) &&
+                (!maxTensileStrength.HasValue || mp.Value <= maxTensileStrength.Value)
+            ));
+        }
+        
+        // Include related entities
+        query = query
+            .Include(m => m.Supplier)
+            .Include(m => m.ManufacturingProcesses)
+            .Include(m => m.AvailableColors)
+            .Include(m => m.PostProcessingMethods)
+            .Include(m => m.MechanicalProperties)
+                .ThenInclude(mp => mp.MechanicalProperty);
 
         // Get total count before pagination
         var totalCount = await query.CountAsync();
@@ -316,7 +368,7 @@ public class MaterialService : IMaterialService
         List<Guid> colorIds,
         List<Guid> postProcessingMethodIds)
     {
-        if (manufacturingProcessIds.Any())
+        if (manufacturingProcessIds != null && manufacturingProcessIds.Any())
         {
             var processes = await _context.ManufacturingProcesses
                 .Where(mp => manufacturingProcessIds.Contains(mp.Id))
@@ -327,7 +379,7 @@ public class MaterialService : IMaterialService
             }
         }
 
-        if (colorIds.Any())
+        if (colorIds != null && colorIds.Any())
         {
             var colors = await _context.Colors
                 .Where(c => colorIds.Contains(c.Id))
@@ -338,7 +390,7 @@ public class MaterialService : IMaterialService
             }
         }
 
-        if (postProcessingMethodIds.Any())
+        if (postProcessingMethodIds != null && postProcessingMethodIds.Any())
         {
             var methods = await _context.PostProcessingMethods
                 .Where(ppm => postProcessingMethodIds.Contains(ppm.Id))

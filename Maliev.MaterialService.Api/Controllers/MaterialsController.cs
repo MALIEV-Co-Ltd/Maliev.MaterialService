@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Asp.Versioning;
+using Maliev.MaterialService.Api.DTOs;
 using Maliev.MaterialService.Api.DTOs.Materials;
 using Maliev.MaterialService.Api.Services.Materials;
 using Microsoft.AspNetCore.Authorization;
@@ -18,6 +19,7 @@ namespace Maliev.MaterialService.Api.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("materials/v{version:apiVersion}/[controller]")]
+[Authorize] // All endpoints in this controller require authorization by default
 public class MaterialsController : ControllerBase
 {
     private readonly IMaterialService _materialService;
@@ -47,7 +49,11 @@ public class MaterialsController : ControllerBase
         [FromQuery] bool sortDesc = false,
         [FromQuery] decimal? minPrice = null,
         [FromQuery] decimal? maxPrice = null,
-        [FromQuery] Guid? supplierId = null)
+        [FromQuery] Guid? supplierId = null,
+        [FromQuery] string? manufacturingProcess = null,
+        [FromQuery] string? color = null,
+        [FromQuery] decimal? minTensileStrength = null,
+        [FromQuery] decimal? maxTensileStrength = null)
     {
         _logger.LogInformation("Getting materials with pagination: page={Page}, pageSize={PageSize}", page, pageSize);
 
@@ -57,7 +63,7 @@ public class MaterialsController : ControllerBase
         if (pageSize > 100) pageSize = 100; // Limit max page size
 
         var result = await _materialService.GetMaterialsAsync(
-            page, pageSize, search, sortBy, sortDesc, minPrice, maxPrice, supplierId);
+            page, pageSize, search, sortBy, sortDesc, minPrice, maxPrice, supplierId, manufacturingProcess, color, minTensileStrength, maxTensileStrength);
 
         return Ok(result);
     }
