@@ -12,15 +12,15 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Maliev.MaterialService.Data.Migrations
 {
     [DbContext(typeof(MaterialDbContext))]
-    [Migration("20251119065808_AddPerformanceIndexes")]
-    partial class AddPerformanceIndexes
+    [Migration("20251217071931_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.1")
+                .HasAnnotation("ProductVersion", "10.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -99,7 +99,7 @@ namespace Maliev.MaterialService.Data.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_colors_name");
 
-                    b.ToTable("colors", (string)null);
+                    b.ToTable("colors");
                 });
 
             modelBuilder.Entity("Maliev.MaterialService.Data.Entities.ManufacturingProcess", b =>
@@ -148,7 +148,7 @@ namespace Maliev.MaterialService.Data.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_manufacturing_processes_name");
 
-                    b.ToTable("manufacturing_processes", (string)null);
+                    b.ToTable("manufacturing_processes");
                 });
 
             modelBuilder.Entity("Maliev.MaterialService.Data.Entities.Material", b =>
@@ -237,7 +237,7 @@ namespace Maliev.MaterialService.Data.Migrations
                     b.HasIndex("SupplierId")
                         .HasDatabaseName("ix_materials_supplier_id");
 
-                    b.ToTable("materials", (string)null);
+                    b.ToTable("materials");
                 });
 
             modelBuilder.Entity("Maliev.MaterialService.Data.Entities.MaterialMechanicalProperty", b =>
@@ -261,7 +261,7 @@ namespace Maliev.MaterialService.Data.Migrations
                     b.HasIndex("MechanicalPropertyId")
                         .HasDatabaseName("ix_material_mechanical_properties_mechanical_property_id");
 
-                    b.ToTable("material_mechanical_properties", (string)null);
+                    b.ToTable("material_mechanical_properties");
                 });
 
             modelBuilder.Entity("Maliev.MaterialService.Data.Entities.MechanicalProperty", b =>
@@ -316,7 +316,7 @@ namespace Maliev.MaterialService.Data.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_mechanical_properties_name");
 
-                    b.ToTable("mechanical_properties", (string)null);
+                    b.ToTable("mechanical_properties");
                 });
 
             modelBuilder.Entity("Maliev.MaterialService.Data.Entities.PostProcessingMethod", b =>
@@ -365,7 +365,7 @@ namespace Maliev.MaterialService.Data.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_post_processing_methods_name");
 
-                    b.ToTable("post_processing_methods", (string)null);
+                    b.ToTable("post_processing_methods");
                 });
 
             modelBuilder.Entity("Maliev.MaterialService.Data.Entities.Supplier", b =>
@@ -415,7 +415,7 @@ namespace Maliev.MaterialService.Data.Migrations
                     b.HasKey("Id")
                         .HasName("pk_suppliers");
 
-                    b.ToTable("suppliers", (string)null);
+                    b.ToTable("suppliers");
                 });
 
             modelBuilder.Entity("ManufacturingProcessMaterial", b =>
@@ -463,14 +463,14 @@ namespace Maliev.MaterialService.Data.Migrations
                         .HasForeignKey("AvailableColorsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_material_colors_colors_available_colors_id");
+                        .HasConstraintName("fk_material_colors__colors_available_colors_id");
 
                     b.HasOne("Maliev.MaterialService.Data.Entities.Material", null)
                         .WithMany()
                         .HasForeignKey("MaterialsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_material_colors_materials_materials_id");
+                        .HasConstraintName("fk_material_colors__materials_materials_id");
                 });
 
             modelBuilder.Entity("Maliev.MaterialService.Data.Entities.Material", b =>
@@ -479,7 +479,7 @@ namespace Maliev.MaterialService.Data.Migrations
                         .WithMany("Materials")
                         .HasForeignKey("SupplierId")
                         .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_materials_suppliers_supplier_id");
+                        .HasConstraintName("fk_materials__suppliers_supplier_id");
 
                     b.Navigation("Supplier");
                 });
@@ -498,7 +498,7 @@ namespace Maliev.MaterialService.Data.Migrations
                         .HasForeignKey("MechanicalPropertyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_material_mechanical_properties_mechanical_properties_mechan");
+                        .HasConstraintName("fk_material_mechanical_properties__mechanical_properties_mechani~");
 
                     b.Navigation("Material");
 
@@ -512,7 +512,7 @@ namespace Maliev.MaterialService.Data.Migrations
                         .HasForeignKey("ManufacturingProcessesId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_material_manufacturing_processes_manufacturing_processes_ma");
+                        .HasConstraintName("fk_material_manufacturing_processes_manufacturing_processes_ma~");
 
                     b.HasOne("Maliev.MaterialService.Data.Entities.Material", null)
                         .WithMany()
@@ -536,7 +536,7 @@ namespace Maliev.MaterialService.Data.Migrations
                         .HasForeignKey("PostProcessingMethodsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_material_post_processing_methods_post_processing_methods_po");
+                        .HasConstraintName("fk_material_post_processing_methods_post_processing_methods_po~");
                 });
 
             modelBuilder.Entity("Maliev.MaterialService.Data.Entities.Material", b =>

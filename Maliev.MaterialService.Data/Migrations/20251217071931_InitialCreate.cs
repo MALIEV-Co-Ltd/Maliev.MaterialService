@@ -126,7 +126,7 @@ namespace Maliev.MaterialService.Data.Migrations
                 {
                     table.PrimaryKey("pk_materials", x => x.id);
                     table.ForeignKey(
-                        name: "fk_materials_suppliers_supplier_id",
+                        name: "fk_materials__suppliers_supplier_id",
                         column: x => x.supplier_id,
                         principalTable: "suppliers",
                         principalColumn: "id",
@@ -144,13 +144,13 @@ namespace Maliev.MaterialService.Data.Migrations
                 {
                     table.PrimaryKey("pk_material_colors", x => new { x.available_colors_id, x.materials_id });
                     table.ForeignKey(
-                        name: "fk_material_colors_colors_available_colors_id",
+                        name: "fk_material_colors__colors_available_colors_id",
                         column: x => x.available_colors_id,
                         principalTable: "colors",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "fk_material_colors_materials_materials_id",
+                        name: "fk_material_colors__materials_materials_id",
                         column: x => x.materials_id,
                         principalTable: "materials",
                         principalColumn: "id",
@@ -168,7 +168,7 @@ namespace Maliev.MaterialService.Data.Migrations
                 {
                     table.PrimaryKey("pk_material_manufacturing_processes", x => new { x.manufacturing_processes_id, x.materials_id });
                     table.ForeignKey(
-                        name: "fk_material_manufacturing_processes_manufacturing_processes_ma",
+                        name: "fk_material_manufacturing_processes_manufacturing_processes_ma~",
                         column: x => x.manufacturing_processes_id,
                         principalTable: "manufacturing_processes",
                         principalColumn: "id",
@@ -193,15 +193,15 @@ namespace Maliev.MaterialService.Data.Migrations
                 {
                     table.PrimaryKey("pk_material_mechanical_properties", x => new { x.material_id, x.mechanical_property_id });
                     table.ForeignKey(
-                        name: "fk_material_mechanical_properties_materials_material_id",
-                        column: x => x.material_id,
-                        principalTable: "materials",
+                        name: "fk_material_mechanical_properties__mechanical_properties_mechani~",
+                        column: x => x.mechanical_property_id,
+                        principalTable: "mechanical_properties",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "fk_material_mechanical_properties_mechanical_properties_mechan",
-                        column: x => x.mechanical_property_id,
-                        principalTable: "mechanical_properties",
+                        name: "fk_material_mechanical_properties_materials_material_id",
+                        column: x => x.material_id,
+                        principalTable: "materials",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -223,7 +223,7 @@ namespace Maliev.MaterialService.Data.Migrations
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "fk_material_post_processing_methods_post_processing_methods_po",
+                        name: "fk_material_post_processing_methods_post_processing_methods_po~",
                         column: x => x.post_processing_methods_id,
                         principalTable: "post_processing_methods",
                         principalColumn: "id",
@@ -269,16 +269,31 @@ namespace Maliev.MaterialService.Data.Migrations
                 column: "post_processing_methods_id");
 
             migrationBuilder.CreateIndex(
+                name: "ix_materials_active",
+                table: "materials",
+                column: "active");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_materials_code",
                 table: "materials",
                 column: "code",
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "ix_materials_created_at",
+                table: "materials",
+                column: "created_at");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_materials_name",
                 table: "materials",
                 column: "name",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_materials_price_per_unit",
+                table: "materials",
+                column: "price_per_unit");
 
             migrationBuilder.CreateIndex(
                 name: "ix_materials_supplier_id",

@@ -1,15 +1,22 @@
 using Microsoft.EntityFrameworkCore;
+using Maliev.Aspire.ServiceDefaults.Database;
 using Maliev.MaterialService.Data.Entities;
 using System.Threading;
 using System.Threading.Tasks;
 using System;
+using Maliev.MaterialService.Data.Interceptors;
 
 namespace Maliev.MaterialService.Data.DbContext;
 
 public class MaterialDbContext : Microsoft.EntityFrameworkCore.DbContext
 {
-    public MaterialDbContext(DbContextOptions<MaterialDbContext> options) : base(options)
+    private readonly DatabaseMetricsInterceptor? _metricsInterceptor;
+
+    public MaterialDbContext(
+        DbContextOptions<MaterialDbContext> options,
+        DatabaseMetricsInterceptor? metricsInterceptor) : base(options)
     {
+        _metricsInterceptor = metricsInterceptor;
     }
 
     // DbSets
@@ -25,12 +32,19 @@ public class MaterialDbContext : Microsoft.EntityFrameworkCore.DbContext
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(MaterialDbContext).Assembly);
+
+        // Apply PostgreSQL snake_case naming convention globally
+        SnakeCaseNamingHelper.ApplySnakeCaseNaming(modelBuilder);
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         base.OnConfiguring(optionsBuilder);
-        optionsBuilder.UseSnakeCaseNamingConvention();
+        if (_metricsInterceptor is not null)
+        {
+            optionsBuilder.AddInterceptors(_metricsInterceptor);
+    
+        }
     }
 
     public override int SaveChanges()
