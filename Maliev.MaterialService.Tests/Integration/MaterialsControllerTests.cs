@@ -1,3 +1,4 @@
+using Maliev.MaterialService.Tests.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -33,9 +34,8 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
         _scope = _factory.Services.CreateScope();
         var dbContext = _scope.ServiceProvider.GetRequiredService<MaterialDbContext>();
 
-        // Ensure a clean database for each test
-        dbContext.Database.EnsureDeleted();
-        dbContext.Database.Migrate();
+        // Clean database for each test (migrations already applied by factory)
+        _factory.CleanDatabaseAsync().GetAwaiter().GetResult();
         SeedData.Initialize(dbContext);
 
         // Authorize the client
@@ -66,7 +66,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
             PricePerUnit = 99.99m
         };
 
-        var createResponse = await clientForLifecycle.PostAsJsonAsync("/materials/v1/materials", createRequest);
+        var createResponse = await clientForLifecycle.PostAsJsonAsync("/material/v1/materials", createRequest);
         
         // Assert CREATE
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
@@ -77,7 +77,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
         var newId = createdMaterial.Id;
 
         // 2. GET the created material by ID
-        var getResponse = await clientForLifecycle.GetAsync($"/materials/v1/materials/{newId}");
+        var getResponse = await clientForLifecycle.GetAsync($"/material/v1/materials/{newId}");
 
         // Assert GET
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
@@ -96,7 +96,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
             Version = fetchedMaterial.Version
         };
 
-        var updateResponse = await clientForLifecycle.PutAsJsonAsync($"/materials/v1/materials/{newId}", updateRequest);
+        var updateResponse = await clientForLifecycle.PutAsJsonAsync($"/material/v1/materials/{newId}", updateRequest);
         
         // Assert UPDATE
         Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
@@ -106,19 +106,19 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
         Assert.Equal(updateRequest.StockLevel, updatedMaterial.StockLevel);
 
         // Verify the update persisted
-        var getAfterUpdateResponse = await clientForLifecycle.GetAsync($"/materials/v1/materials/{newId}");
+        var getAfterUpdateResponse = await clientForLifecycle.GetAsync($"/material/v1/materials/{newId}");
         var fetchedAfterUpdate = await getAfterUpdateResponse.Content.ReadFromJsonAsync<MaterialResponse>();
         Assert.NotNull(fetchedAfterUpdate);
         Assert.Equal(updateRequest.Name, fetchedAfterUpdate.Name);
 
         // 4. DELETE the material
-        var deleteResponse = await clientForLifecycle.DeleteAsync($"/materials/v1/materials/{newId}");
+        var deleteResponse = await clientForLifecycle.DeleteAsync($"/material/v1/materials/{newId}");
 
         // Assert DELETE
         Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
 
         // Verify it's gone
-        var getAfterDeleteResponse = await clientForLifecycle.GetAsync($"/materials/v1/materials/{newId}");
+        var getAfterDeleteResponse = await clientForLifecycle.GetAsync($"/material/v1/materials/{newId}");
         Assert.Equal(HttpStatusCode.NotFound, getAfterDeleteResponse.StatusCode);
     }
     
@@ -127,7 +127,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
     {
         // Arrange: 1. Create a new material
         var createRequest = new CreateMaterialRequest { Name = "Concurrency Test", Code = "CON-001", StockLevel = 10, PricePerUnit = 50.0m };
-        var createResponse = await _client.PostAsJsonAsync("/materials/v1/materials", createRequest);
+        var createResponse = await _client.PostAsJsonAsync("/material/v1/materials", createRequest);
         var originalMaterial = await createResponse.Content.ReadFromJsonAsync<MaterialResponse>();
         Assert.NotNull(originalMaterial);
 
@@ -143,7 +143,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
             StockLevel = 20, // User A changes the stock level
             Version = materialForUserA.Version
         };
-        var updateUserAResponse = await _client.PutAsJsonAsync($"/materials/v1/materials/{originalMaterial.Id}", updateUserARequest);
+        var updateUserAResponse = await _client.PutAsJsonAsync($"/material/v1/materials/{originalMaterial.Id}", updateUserARequest);
         Assert.Equal(HttpStatusCode.OK, updateUserAResponse.StatusCode);
 
         // Act: 4. User B attempts to update using the stale version
@@ -154,7 +154,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
             PricePerUnit = 99.99m, // User B changes the price
             Version = materialForUserB.Version // <-- This version is now stale
         };
-        var updateUserBResponse = await _client.PutAsJsonAsync($"/materials/v1/materials/{originalMaterial.Id}", updateUserBRequest);
+        var updateUserBResponse = await _client.PutAsJsonAsync($"/material/v1/materials/{originalMaterial.Id}", updateUserBRequest);
 
         // Assert: 5. User B's request is rejected with a conflict
         Assert.Equal(HttpStatusCode.Conflict, updateUserBResponse.StatusCode);
@@ -172,7 +172,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/materials/v1/materials", invalidRequest);
+        var response = await _client.PostAsJsonAsync("/material/v1/materials", invalidRequest);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -190,7 +190,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
         var request = new CreateMaterialRequest { Name = "Second Polycarbonate", Code = uniqueCode, StockLevel = 20 };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/materials/v1/materials", request);
+        var response = await _client.PostAsJsonAsync("/material/v1/materials", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -200,7 +200,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
     public async Task GetMaterials_ReturnsSuccessStatusCode()
     {
         // Act
-        var response = await _client.GetAsync("/materials/v1/materials");
+        var response = await _client.GetAsync("/material/v1/materials");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -210,7 +210,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
     public async Task GetMaterials_WithPagination_ReturnsPagedResult()
     {
         // Act
-        var response = await _client.GetAsync("/materials/v1/materials?page=1&pageSize=2");
+        var response = await _client.GetAsync("/material/v1/materials?page=1&pageSize=2");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -226,7 +226,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
     public async Task GetMaterials_FilterByName_ReturnsMatchingMaterial()
     {
         // Act
-        var response = await _client.GetAsync("/materials/v1/materials?search=Polycarbonate");
+        var response = await _client.GetAsync("/material/v1/materials?search=Polycarbonate");
         
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -240,7 +240,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
     public async Task GetMaterials_FilterByManufacturingProcess_ReturnsMatchingMaterials()
     {
         // Act
-        var response = await _client.GetAsync("/materials/v1/materials?manufacturingProcess=CNC Machining");
+        var response = await _client.GetAsync("/material/v1/materials?manufacturingProcess=CNC Machining");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -254,7 +254,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
     public async Task GetMaterials_FilterByColor_ReturnsMatchingMaterials()
     {
         // Act
-        var response = await _client.GetAsync("/materials/v1/materials?color=Blue");
+        var response = await _client.GetAsync("/material/v1/materials?color=Blue");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -269,7 +269,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
     public async Task GetMaterials_FilterByMechanicalProperty_ReturnsMatchingMaterial()
     {
         // Act
-        var response = await _client.GetAsync("/materials/v1/materials?minTensileStrength=50&maxTensileStrength=150");
+        var response = await _client.GetAsync("/material/v1/materials?minTensileStrength=50&maxTensileStrength=150");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -286,7 +286,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
         var invalidId = Guid.NewGuid();
 
         // Act
-        var response = await _client.GetAsync($"/materials/v1/materials/{invalidId}");
+        var response = await _client.GetAsync($"/material/v1/materials/{invalidId}");
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -296,7 +296,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
     public async Task HealthCheck_Liveness_ReturnsHealthy()
     {
         // Act
-        var response = await _client.GetAsync("/materials/liveness");
+        var response = await _client.GetAsync("/material/liveness");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -306,7 +306,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
     public async Task HealthCheck_Readiness_ReturnsHealthy()
     {
         // Act
-        var response = await _client.GetAsync("/materials/readiness");
+        var response = await _client.GetAsync("/material/readiness");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -316,7 +316,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
     public async Task Metrics_Endpoint_ReturnsMetrics()
     {
         // Act
-        var response = await _client.GetAsync("/materials/metrics");
+        var response = await _client.GetAsync("/material/metrics");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

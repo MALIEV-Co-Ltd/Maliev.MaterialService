@@ -1,3 +1,4 @@
+using Maliev.MaterialService.Tests.Helpers;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -25,8 +26,8 @@ public class AuthorizationTests : IClassFixture<IntegrationTestWebAppFactory>, I
         
         _scope = _factory.Services.CreateScope();
         var dbContext = _scope.ServiceProvider.GetRequiredService<MaterialDbContext>();
-        dbContext.Database.EnsureDeleted();
-        dbContext.Database.Migrate();
+        // Clean database for each test (migrations already applied by factory)
+        _factory.CleanDatabaseAsync().GetAwaiter().GetResult();
         SeedData.Initialize(dbContext);
     }
     
@@ -35,29 +36,28 @@ public class AuthorizationTests : IClassFixture<IntegrationTestWebAppFactory>, I
         _scope.Dispose();
     }
 
-    [Fact]
-    public async Task WriteOperations_WithoutAuthToken_ReturnsUnauthorized()
-    {
-        // Arrange
-        var client = _factory.CreateClient(); // No auth token
-        var createRequest = new CreateMaterialRequest { Name = "test", Code = "test" };
-
-        // Act
-        var response = await client.PostAsJsonAsync("/materials/v1/materials", createRequest);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
+        [Fact]
+        public async Task WriteOperations_WithoutAuthToken_ReturnsUnauthorized()
+        {
+            // Arrange
+            var client = _factory.CreateClient(); // No auth token
+            var createRequest = new CreateMaterialRequest { Name = "test", Code = "test" };
     
-    [Fact]
-    public async Task ReadOperations_WithoutAuthToken_ReturnsUnauthorized()
-    {
-        // Arrange
-        var client = _factory.CreateClient(); // No auth token
-
-        // Act
-        var response = await client.GetAsync("/materials/v1/materials");
-
+            // Act
+            var response = await client.PostAsJsonAsync("/material/v1/materials", createRequest);
+    
+            // Assert
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
+    
+        [Fact]
+        public async Task ReadOperations_WithoutAuthToken_ReturnsUnauthorized()
+        {
+            // Arrange
+            var client = _factory.CreateClient(); // No auth token
+    
+            // Act
+            var response = await client.GetAsync("/material/v1/materials");
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -73,7 +73,7 @@ public class AuthorizationTests : IClassFixture<IntegrationTestWebAppFactory>, I
         var createRequest = new CreateMaterialRequest { Name = "test", Code = "test" };
 
         // Act
-        var response = await client.PostAsJsonAsync("/materials/v1/materials", createRequest);
+        var response = await client.PostAsJsonAsync("/material/v1/materials", createRequest);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -88,7 +88,7 @@ public class AuthorizationTests : IClassFixture<IntegrationTestWebAppFactory>, I
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         // Act
-        var response = await client.GetAsync("/materials/v1/materials");
+        var response = await client.GetAsync("/material/v1/materials");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
