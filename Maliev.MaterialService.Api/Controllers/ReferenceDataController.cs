@@ -12,7 +12,7 @@ namespace Maliev.MaterialService.Api.Controllers;
 /// </summary>
 [ApiController]
 [ApiVersion("1.0")]
-[Route("materials/v{version:apiVersion}/reference")]
+[Route("material/v{version:apiVersion}/reference")]
 public class ReferenceDataController : ControllerBase
 {
     private readonly ICacheService _cacheService;

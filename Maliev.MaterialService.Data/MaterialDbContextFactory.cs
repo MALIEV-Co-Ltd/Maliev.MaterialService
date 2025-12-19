@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Maliev.MaterialService.Data.DbContext;
+using Maliev.MaterialService.Data.Interceptors;
 
 namespace Maliev.MaterialService.Data;
 
@@ -10,8 +11,7 @@ public class MaterialDbContextFactory : IDesignTimeDbContextFactory<MaterialDbCo
     {
         var optionsBuilder = new DbContextOptionsBuilder<MaterialDbContext>();
         optionsBuilder.UseNpgsql("Host=localhost;Database=material_app_db;Username=postgres;Password=password");
-        optionsBuilder.UseSnakeCaseNamingConvention();
 
-        return new MaterialDbContext(optionsBuilder.Options);
+        return new MaterialDbContext(optionsBuilder.Options, null);
     }
 }

@@ -17,8 +17,8 @@ namespace Maliev.MaterialService.Api.Controllers;
 /// Controller for managing materials
 /// </summary>
 [ApiController]
-[ApiVersion("1.0")]
-[Route("materials/v{version:apiVersion}/[controller]")]
+[ApiVersion("1")]
+[Route("material/v{version:apiVersion}/materials")] 
 [Authorize] // All endpoints in this controller require authorization by default
 public class MaterialsController : ControllerBase
 {

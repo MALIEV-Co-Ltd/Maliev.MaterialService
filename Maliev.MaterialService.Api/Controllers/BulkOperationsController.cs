@@ -24,7 +24,7 @@ namespace Maliev.MaterialService.Api.Controllers;
 /// </summary>
 [ApiController]
 [ApiVersion("1.0")]
-[Route("materials/v{version:apiVersion}/bulk")]
+[Route("material/v{version:apiVersion}/bulk")]
 public class BulkOperationsController : ControllerBase
 {
     private readonly IBulkMaterialService _bulkMaterialService;

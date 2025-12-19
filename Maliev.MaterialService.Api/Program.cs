@@ -15,31 +15,22 @@ builder.AddGoogleSecretManagerVolume(); // Load secrets from /mnt/secrets if ava
 
 // --- Infrastructure & Observability ---
 builder.AddServiceDefaults(); // OpenTelemetry, health checks, resilience
-builder.AddServiceMeters("materials"); // Register service meters for OpenTelemetry business metrics
+builder.AddServiceMeters("materials-meter"); // Register service meters for OpenTelemetry business metrics
 
-// Database - using shared configuration for consistency
-builder.AddPostgresDbContext<MaterialDbContext>(
-    connectionStringName: "MaterialDbContext",
-    configureOptions: options =>
-    {
-        options.UseSnakeCaseNamingConvention()
-               .AddInterceptors(new DatabaseMetricsInterceptor());
-    });
+// Core application services
+// ServiceDefaults handles testing environment automatically for DatabaseMetricsInterceptor
+builder.Services.AddSingleton<DatabaseMetricsInterceptor>();
 
-// Redis cache - using shared configuration for consistency
-builder.AddRedisDistributedCache("Material");
+// Cache service - test setup/fixture handles environment-specific configuration
+builder.Services.AddSingleton<ICacheService, RedisCacheService>();
 
-// Register custom ICacheService based on whether Redis is available
-var redisConnectionString = builder.Configuration.GetConnectionString("redis");
-if (!builder.Environment.IsEnvironment("Testing") && !string.IsNullOrEmpty(redisConnectionString))
-{
-    builder.Services.AddSingleton<ICacheService, RedisCacheService>();
-    builder.Services.AddHostedService<Maliev.MaterialService.Api.BackgroundServices.CacheWarmingService>();
-}
-else
-{
-    builder.Services.AddSingleton<ICacheService, InMemoryCacheService>();
-}
+// Add PostgreSQL DbContext - test setup handles environment-specific configuration via connection string override
+builder.AddPostgresDbContext<MaterialDbContext>(connectionStringName: "MaterialDbContext"); // PostgreSQL with retry logic
+
+// Redis Distributed Cache (ServiceDefaults) - enforce Redis on all environments
+builder.AddRedisDistributedCache(instanceName: "material:");
+// Register CacheWarmingService
+builder.Services.AddHostedService<Maliev.MaterialService.Api.BackgroundServices.CacheWarmingService>();
 
 // --- API Configuration ---
 builder.AddDefaultCors(); // CORS from CORS:AllowedOrigins config
@@ -137,10 +128,10 @@ app.UseAuthorization();
 app.MapControllers();
 
 // Map Aspire default endpoints (/health, /alive, /metrics)
-app.MapDefaultEndpoints(servicePrefix: "materials");
+app.MapDefaultEndpoints(servicePrefix: "material");
 
 // Map OpenAPI and Scalar documentation (dev/staging only)
-app.MapApiDocumentation(servicePrefix: "materials");
+app.MapApiDocumentation(servicePrefix: "material");
 
 Log.ServiceStarted(logger);
 await app.RunAsync();

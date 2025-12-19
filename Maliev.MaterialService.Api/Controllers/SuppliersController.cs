@@ -9,7 +9,7 @@ namespace Maliev.MaterialService.Api.Controllers;
 /// </summary>
 [ApiController]
 [ApiVersion("1.0")]
-[Route("materials/v{version:apiVersion}/suppliers")]
+[Route("material/v{version:apiVersion}/suppliers")]
 public class SuppliersController : ControllerBase
 {
     private readonly IMaterialService _materialService;
