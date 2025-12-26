@@ -40,7 +40,11 @@ namespace Maliev.MaterialService.Tests.Integration
                     _factory.CleanDatabaseAsync().GetAwaiter().GetResult();
                     SeedData.Initialize(dbContext);
         
-                    var token = _factory.CreateTestJwtToken();
+                    var token = _factory.CreateTestJwtToken(permissions: new[] { 
+                        "material.materials.create", 
+                        "material.materials.export", 
+                        "material.materials.read" 
+                    });
                     _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
                 }
         public void Dispose()
