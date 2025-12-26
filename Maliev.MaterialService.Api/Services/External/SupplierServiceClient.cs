@@ -26,30 +26,12 @@ public class SupplierServiceClient : ISupplierServiceClient
         _httpClient = httpClient;
         _logger = logger;
 
-        var baseUrl = configuration["ExternalServices:SupplierService:BaseUrl"];
-        var timeoutSeconds = configuration.GetValue<int>("ExternalServices:SupplierService:TimeoutInSeconds", 180);
-
-        if (string.IsNullOrEmpty(baseUrl))
-        {
-            _logger.LogWarning("ExternalServices:SupplierService:BaseUrl is not configured.");
-        }
-        else
-        {
-            _httpClient.BaseAddress = new Uri(baseUrl);
-        }
-
-        _httpClient.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        _httpClient.Timeout = TimeSpan.FromSeconds(60);
     }
 
     /// <inheritdoc/>
     public async Task<bool> ValidateSupplierExistsAsync(Guid supplierId)
     {
-        if (_httpClient.BaseAddress == null)
-        {
-            _logger.LogError("Supplier Service Base URL is not configured. Cannot validate supplier.");
-            return false;
-        }
-
         try
         {
             var response = await _httpClient.GetAsync($"suppliers/{supplierId}");

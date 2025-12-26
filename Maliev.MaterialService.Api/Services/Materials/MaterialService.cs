@@ -6,8 +6,11 @@ using Maliev.MaterialService.Api.DTOs;
 using Maliev.MaterialService.Api.DTOs.Materials;
 using Maliev.MaterialService.Api.Mapping;
 using Maliev.MaterialService.Api.Services.Cache;
+using Maliev.MaterialService.Api.Contracts.Messaging;
+using Maliev.MessagingContracts.Generated;
 using Maliev.MaterialService.Data.DbContext;
 using Maliev.MaterialService.Data.Entities;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -20,6 +23,7 @@ public class MaterialService : IMaterialService
 {
     private readonly MaterialDbContext _context;
     private readonly ICacheService _cacheService;
+    private readonly IPublishEndpoint _publishEndpoint;
     private readonly ILogger<MaterialService> _logger;
     private const string CacheKeyPrefix = "material:";
 
@@ -28,14 +32,17 @@ public class MaterialService : IMaterialService
     /// </summary>
     /// <param name="context">Database context</param>
     /// <param name="cacheService">Cache service</param>
+    /// <param name="publishEndpoint">MassTransit publish endpoint</param>
     /// <param name="logger">Logger instance</param>
     public MaterialService(
         MaterialDbContext context,
         ICacheService cacheService,
+        IPublishEndpoint publishEndpoint,
         ILogger<MaterialService> logger)
     {
         _context = context;
         _cacheService = cacheService;
+        _publishEndpoint = publishEndpoint;
         _logger = logger;
     }
 
@@ -96,6 +103,20 @@ public class MaterialService : IMaterialService
 
         _logger.LogInformation("Material created successfully with ID: {MaterialId}", material.Id);
 
+        // Publish event
+        await _publishEndpoint.Publish(new MaterialCreatedEvent(
+            Guid.NewGuid(),
+            nameof(MaterialCreatedEvent),
+            MessageType.Event,
+            "1.0",
+            "MaterialService",
+            new List<string>(),
+            Guid.NewGuid(),
+            null,
+            DateTimeOffset.UtcNow,
+            true,
+            new MaterialCreatedEventPayload(material.Id, material.Code, material.Name, material.CreatedAt)));
+
         // Invalidate cache
         await InvalidateCacheAsync();
 
@@ -143,57 +164,87 @@ public class MaterialService : IMaterialService
     {
         _logger.LogInformation("Updating material with ID: {MaterialId}", id);
 
-        var material = await _context.Materials
-            .Include(m => m.ManufacturingProcesses)
-            .Include(m => m.AvailableColors)
-            .Include(m => m.PostProcessingMethods)
-            .Include(m => m.MechanicalProperties)
-            .FirstOrDefaultAsync(m => m.Id == id && m.Active);
+        var strategy = _context.Database.CreateExecutionStrategy();
 
-        if (material == null)
+        return await strategy.ExecuteAsync(async () =>
         {
-            return null;
-        }
+            using var transaction = await _context.Database.BeginTransactionAsync();
 
-        // Check optimistic concurrency
-        if (material.Version != request.Version)
-        {
-            throw new DbUpdateConcurrencyException("The material has been modified by another user.");
-        }
-
-        // Update basic properties
-        material.UpdateMaterial(request);
-        material.UpdatedBy = userId;
-
-        // Clear and reload related entities
-        material.ManufacturingProcesses.Clear();
-        material.AvailableColors.Clear();
-        material.PostProcessingMethods.Clear();
-        material.MechanicalProperties.Clear();
-
-        await _context.SaveChangesAsync();
-
-        await LoadRelatedEntitiesAsync(material, request.ManufacturingProcessIds, request.ColorIds, request.PostProcessingMethodIds);
-
-        // Add mechanical properties
-        foreach (var prop in request.MechanicalProperties)
-        {
-            material.MechanicalProperties.Add(new MaterialMechanicalProperty
+            try
             {
-                MaterialId = material.Id,
-                MechanicalPropertyId = prop.MechanicalPropertyId,
-                Value = prop.Value
-            });
-        }
+                var material = await _context.Materials
+                    .Include(m => m.ManufacturingProcesses)
+                    .Include(m => m.AvailableColors)
+                    .Include(m => m.PostProcessingMethods)
+                    .Include(m => m.MechanicalProperties)
+                    .FirstOrDefaultAsync(m => m.Id == id && m.Active);
 
-        await _context.SaveChangesAsync();
+                if (material == null)
+                {
+                    return null;
+                }
 
-        _logger.LogInformation("Material updated successfully with ID: {MaterialId}", material.Id);
+                // Check optimistic concurrency
+                if (material.Version != request.Version)
+                {
+                    throw new DbUpdateConcurrencyException("The material has been modified by another user.");
+                }
 
-        // Invalidate cache
-        await InvalidateCacheAsync(id);
+                // Update basic properties
+                material.UpdateMaterial(request);
+                material.UpdatedBy = userId;
 
-        return await GetMaterialByIdAsync(id);
+                // Clear and reload related entities
+                material.ManufacturingProcesses.Clear();
+                material.AvailableColors.Clear();
+                material.PostProcessingMethods.Clear();
+                material.MechanicalProperties.Clear();
+
+                await _context.SaveChangesAsync();
+
+                await LoadRelatedEntitiesAsync(material, request.ManufacturingProcessIds, request.ColorIds, request.PostProcessingMethodIds);
+
+                // Add mechanical properties
+                foreach (var prop in request.MechanicalProperties)
+                {
+                    material.MechanicalProperties.Add(new MaterialMechanicalProperty
+                    {
+                        MaterialId = material.Id,
+                        MechanicalPropertyId = prop.MechanicalPropertyId,
+                        Value = prop.Value
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                _logger.LogInformation("Material updated successfully with ID: {MaterialId}", material.Id);
+
+                // Publish event
+                await _publishEndpoint.Publish(new MaterialUpdatedEvent(
+                    Guid.NewGuid(),
+                    nameof(MaterialUpdatedEvent),
+                    MessageType.Event,
+                    "1.0",
+                    "MaterialService",
+                    new List<string>(),
+                    Guid.NewGuid(),
+                    null,
+                    DateTimeOffset.UtcNow,
+                    true,
+                    new MaterialUpdatedEventPayload(material.Id, material.Code, material.Name, material.UpdatedAt ?? DateTimeOffset.UtcNow, material.Version)));
+
+                // Invalidate cache
+                await InvalidateCacheAsync(id);
+
+                return await GetMaterialByIdAsync(id);
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        });
     }
 
     /// <inheritdoc/>
@@ -213,6 +264,20 @@ public class MaterialService : IMaterialService
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Material soft-deleted successfully with ID: {MaterialId}", material.Id);
+
+        // Publish event
+        await _publishEndpoint.Publish(new MaterialDeletedEvent(
+            Guid.NewGuid(),
+            nameof(MaterialDeletedEvent),
+            MessageType.Event,
+            "1.0",
+            "MaterialService",
+            new List<string>(),
+            Guid.NewGuid(),
+            null,
+            DateTimeOffset.UtcNow,
+            true,
+            new MaterialDeletedEventPayload(material.Id, DateTimeOffset.UtcNow)));
 
         // Invalidate cache
         await InvalidateCacheAsync(id);
@@ -306,7 +371,7 @@ public class MaterialService : IMaterialService
                 (!maxTensileStrength.HasValue || mp.Value <= maxTensileStrength.Value)
             ));
         }
-        
+
         // Include related entities
         query = query
             .Include(m => m.Supplier)

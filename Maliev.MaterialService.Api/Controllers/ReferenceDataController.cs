@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Asp.Versioning;
 using Maliev.MaterialService.Api.DTOs.Materials;
 using Maliev.MaterialService.Api.Services.Cache;
+using Maliev.Aspire.ServiceDefaults.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Maliev.MaterialService.Api.Controllers;
@@ -13,6 +14,7 @@ namespace Maliev.MaterialService.Api.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("material/v{version:apiVersion}/reference")]
+[RequirePermission("material.categories.read")]
 public class ReferenceDataController : ControllerBase
 {
     private readonly ICacheService _cacheService;

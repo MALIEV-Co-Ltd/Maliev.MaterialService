@@ -1,9 +1,10 @@
-using Maliev.MaterialService.Api.Middleware;
 using Maliev.MaterialService.Api.Services.Bulk;
 using Maliev.MaterialService.Api.Services.Cache;
 using Maliev.MaterialService.Api.Services.Materials;
+using Maliev.MaterialService.Api.Services.Auth;
 using Maliev.MaterialService.Data.DbContext;
 using Maliev.MaterialService.Data.Interceptors;
+using Maliev.Aspire.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using System.Threading.RateLimiting;
@@ -15,17 +16,28 @@ builder.AddGoogleSecretManagerVolume(); // Load secrets from /mnt/secrets if ava
 
 // --- Infrastructure & Observability ---
 builder.AddServiceDefaults(); // OpenTelemetry, health checks, resilience
-builder.AddServiceMeters("materials-meter"); // Register service meters for OpenTelemetry business metrics
+builder.AddStandardMiddleware(options =>
+{
+    options.EnableRequestLogging = true;
+});
+builder.AddServiceMeters("materials-meter", "materialservice-auth-meter"); // Register service meters for OpenTelemetry business metrics
+
+builder.Services.AddIAMClient(builder.Configuration, "MaterialService"); // Standard IAM Client integration
+builder.Services.AddIAMRegistration<MaterialIAMRegistrationService>(); // Register permissions with IAM on startup
 
 // Core application services
-// ServiceDefaults handles testing environment automatically for DatabaseMetricsInterceptor
+builder.Services.AddSingleton<Maliev.MaterialService.Api.Services.Auth.AuthMetrics>();
+builder.Services.AddSingleton<Maliev.Aspire.ServiceDefaults.Authorization.IAuthMetrics>(sp =>
+    sp.GetRequiredService<Maliev.MaterialService.Api.Services.Auth.AuthMetrics>());
 builder.Services.AddSingleton<DatabaseMetricsInterceptor>();
+
+builder.AddMassTransitWithRabbitMq(); // Standard messaging integration
 
 // Cache service - test setup/fixture handles environment-specific configuration
 builder.Services.AddSingleton<ICacheService, RedisCacheService>();
 
 // Add PostgreSQL DbContext - test setup handles environment-specific configuration via connection string override
-builder.AddPostgresDbContext<MaterialDbContext>(connectionStringName: "MaterialDbContext"); // PostgreSQL with retry logic
+builder.AddPostgresDbContext<MaterialDbContext>(connectionName: "MaterialDbContext"); // PostgreSQL with retry logic
 
 // Redis Distributed Cache (ServiceDefaults) - enforce Redis on all environments
 builder.AddRedisDistributedCache(instanceName: "material:");
@@ -39,40 +51,28 @@ builder.AddDefaultApiVersioning(); // API versioning with URL segment reader
 // JWT Authentication (tests override via PostConfigureAll with dynamic RSA keys)
 builder.AddJwtAuthentication();
 
+// Authorization
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider,
+    Maliev.Aspire.ServiceDefaults.Authorization.PermissionAuthorizationPolicyProvider>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler,
+    Maliev.Aspire.ServiceDefaults.Authorization.PermissionAuthorizationHandler>();
+builder.Services.AddAuthorizationBuilder();
+
 // Add OpenAPI (must be in Program.cs for XML comments to work via source generator)
 if (!builder.Environment.IsProduction())
 {
-    builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddOpenApi("v1", options =>
-    {
-        options.AddDocumentTransformer((document, context, cancellationToken) =>
-        {
-            document.Info = new()
-            {
-                Title = "Material Service API",
-                Version = "v1",
-                Description = "Material inventory management service. Provides CRUD operations for materials with supplier associations, bulk import/export capabilities, supplier validation, reference data for categories and units, and cached responses for high-performance lookups.",
-                Contact = new() { Name = "Maliev Support", Email = "support@maliev.com" }
-            };
-            return Task.CompletedTask;
-        });
-    });
+    builder.AddStandardOpenApi(
+        title: "MALIEV Material Service API",
+        description: "Material inventory management service. Provides CRUD operations for materials with supplier associations, bulk import/export capabilities, supplier validation, reference data for categories and units, and cached responses for high-performance lookups.");
 }
 
-builder.Services.AddHttpClient<Maliev.MaterialService.Api.Services.External.ISupplierServiceClient, Maliev.MaterialService.Api.Services.External.SupplierServiceClient>()
-    .AddStandardResilienceHandler();
+builder.AddServiceClient<Maliev.MaterialService.Api.Services.External.ISupplierServiceClient, Maliev.MaterialService.Api.Services.External.SupplierServiceClient>("SupplierService");
 
 builder.Services.AddScoped<IMaterialService, MaterialService>();
 builder.Services.AddScoped<IBulkMaterialService, BulkMaterialService>();
 
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("Customer", policy => policy.RequireRole("Customer"));
-    options.AddPolicy("Employee", policy => policy.RequireRole("Employee"));
-    options.AddPolicy("Manager", policy => policy.RequireRole("Manager"));
-    options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
-    options.AddPolicy("EmployeeOrHigher", policy => policy.RequireRole("Employee", "Manager", "Admin"));
-});
+builder.Services.AddPermissionAuthorization();
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -93,7 +93,11 @@ builder.Services.AddResponseCompression(options =>
     options.EnableForHttps = true;
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    // Register RequirePermissionAttribute if needed globally or just ensure it's handled
+    // Actually, IAsyncAuthorizationFilter should be picked up from attributes.
+});
 
 var app = builder.Build();
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
@@ -112,9 +116,7 @@ if (!app.Environment.IsEnvironment("Testing"))
     }
 }
 
-app.UseMiddleware<ExceptionHandlingMiddleware>();
-app.UseMiddleware<CorrelationIdMiddleware>();
-app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseStandardMiddleware();
 
 app.UseHttpsRedirection();
 app.UseResponseCompression();

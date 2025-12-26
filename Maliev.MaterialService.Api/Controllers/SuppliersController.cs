@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using Maliev.MaterialService.Api.Services.Materials;
+using Maliev.Aspire.ServiceDefaults.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Maliev.MaterialService.Api.Controllers;
@@ -10,6 +11,7 @@ namespace Maliev.MaterialService.Api.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("material/v{version:apiVersion}/suppliers")]
+[RequirePermission("material.suppliers.read")]
 public class SuppliersController : ControllerBase
 {
     private readonly IMaterialService _materialService;
