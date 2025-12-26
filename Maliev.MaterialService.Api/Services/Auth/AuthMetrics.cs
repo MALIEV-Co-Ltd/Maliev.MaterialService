@@ -1,0 +1,49 @@
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
+using Maliev.Aspire.ServiceDefaults.Authorization;
+using Microsoft.Extensions.Configuration;
+
+namespace Maliev.MaterialService.Api.Services.Auth;
+
+/// <summary>
+/// Service for recording authorization-related business metrics with mandatory tags.
+/// </summary>
+public class AuthMetrics : IAuthMetrics
+{
+    private readonly Counter<long> _authSuccessCounter;
+    private readonly Counter<long> _authFailureCounter;
+    private readonly KeyValuePair<string, object?>[] _defaultTags;
+
+    public AuthMetrics(IMeterFactory meterFactory, IConfiguration configuration)
+    {
+        var serviceName = configuration["Service:Name"] ?? "MaterialService";
+        var meter = meterFactory.Create($"{serviceName.ToLower()}-auth-meter");
+        _authSuccessCounter = meter.CreateCounter<long>("material_auth_success_total", description: "Total successful authorizations");
+        _authFailureCounter = meter.CreateCounter<long>("material_auth_failure_total", description: "Total failed authorizations");
+
+        _defaultTags = new[]
+        {
+            new KeyValuePair<string, object?>("service_name", serviceName),
+            new KeyValuePair<string, object?>("version", configuration["Service:Version"] ?? "1.0.0"),
+            new KeyValuePair<string, object?>("region", configuration["Service:Region"] ?? "global"),
+            new KeyValuePair<string, object?>("environment", configuration["ASPNETCORE_ENVIRONMENT"] ?? "Development")
+        };
+    }
+
+    public void RecordSuccess(string permission)
+    {
+        var tags = new TagList();
+        foreach (var tag in _defaultTags) tags.Add(tag);
+        tags.Add("permission", permission);
+        _authSuccessCounter.Add(1, tags);
+    }
+
+    public void RecordFailure(string permission, string reason)
+    {
+        var tags = new TagList();
+        foreach (var tag in _defaultTags) tags.Add(tag);
+        tags.Add("permission", permission);
+        tags.Add("reason", reason);
+        _authFailureCounter.Add(1, tags);
+    }
+}

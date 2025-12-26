@@ -6,6 +6,7 @@ using Asp.Versioning;
 using Maliev.MaterialService.Api.DTOs.Bulk;
 using Maliev.MaterialService.Api.DTOs.Materials;
 using Maliev.MaterialService.Api.Services.Bulk;
+using Maliev.Aspire.ServiceDefaults.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -45,7 +46,7 @@ public class BulkOperationsController : ControllerBase
     /// Bulk import materials from JSON file.
     /// </summary>
     [HttpPost("import")]
-    [Authorize(Policy = "EmployeeOrHigher")]
+    [RequirePermission("material.materials.create")]
     [Consumes("multipart/form-data")] // Specify content type for file upload
     [ProducesResponseType(typeof(BulkImportResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -112,7 +113,7 @@ public class BulkOperationsController : ControllerBase
     /// Bulk export all materials as JSON or CSV
     /// </summary>
     [HttpGet("export")]
-    [Authorize(Policy = "EmployeeOrHigher")]
+    [RequirePermission("material.materials.export")]
     [ProducesResponseType(typeof(IEnumerable<MaterialResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [Produces("application/json", "text/csv")] // Allow multiple content types
