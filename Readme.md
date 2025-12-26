@@ -29,8 +29,6 @@ A RESTful web service for managing material data with comprehensive CRUD operati
 - **Caching**: Redis (StackExchange.Redis)
 - **Messaging**: RabbitMQ (MassTransit)
 - **Logging**: Serilog
-- **Validation**: FluentValidation
-- **Mapping**: AutoMapper
 - **API Documentation**: OpenAPI 3.0 + Scalar
 - **Metrics**: Prometheus
 
@@ -144,9 +142,8 @@ Maliev.MaterialService/
 │   ├── Controllers/                     # API controllers
 │   ├── DTOs/                            # Data transfer objects
 │   ├── Services/                        # Business logic
-│   ├── Validators/                      # FluentValidation validators
-│   ├── Middleware/                      # Custom middleware
-│   └── MappingProfiles/                 # AutoMapper profiles
+│   ├── Mapping/                         # Explicit domain/DTO mappers
+│   └── Middleware/                      # Custom middleware
 ├── Maliev.MaterialService.Data/         # Data access layer
 │   ├── Entities/                        # Entity models
 │   ├── Configurations/                  # EF Core configurations
