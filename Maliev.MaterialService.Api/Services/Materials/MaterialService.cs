@@ -371,7 +371,7 @@ public class MaterialService : IMaterialService
                 (!maxTensileStrength.HasValue || mp.Value <= maxTensileStrength.Value)
             ));
         }
-        
+
         // Include related entities
         query = query
             .Include(m => m.Supplier)

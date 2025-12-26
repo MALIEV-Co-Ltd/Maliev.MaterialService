@@ -29,7 +29,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
     {
         _factory = factory;
         _client = _factory.CreateClient();
-        
+
         // This scope and DB context will be used for test setup
         _scope = _factory.Services.CreateScope();
         var dbContext = _scope.ServiceProvider.GetRequiredService<MaterialDbContext>();
@@ -39,15 +39,15 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
         SeedData.Initialize(dbContext);
 
         // Authorize the client
-        var token = _factory.CreateTestJwtToken(permissions: new[] { 
-            "material.materials.create", 
-            "material.materials.read", 
-            "material.materials.update", 
-            "material.materials.delete" 
+        var token = _factory.CreateTestJwtToken(permissions: new[] {
+            "material.materials.create",
+            "material.materials.read",
+            "material.materials.update",
+            "material.materials.delete"
         });
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
     }
-    
+
     public void Dispose()
     {
         // Clean up the scope after each test
@@ -58,13 +58,13 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
     public async Task PostGetUpdateDelete_Material_Lifecycle_HappyPath()
     {
         // Arrange: Create a dedicated client with all necessary permissions for this specific test
-        var clientForLifecycle = _factory.CreateAuthenticatedClient(permissions: new[] { 
-            "material.materials.create", 
-            "material.materials.read", 
-            "material.materials.update", 
-            "material.materials.delete" 
+        var clientForLifecycle = _factory.CreateAuthenticatedClient(permissions: new[] {
+            "material.materials.create",
+            "material.materials.read",
+            "material.materials.update",
+            "material.materials.delete"
         });
-        
+
         // 1. CREATE a new material
         var createRequest = new CreateMaterialRequest
         {
@@ -75,7 +75,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
         };
 
         var createResponse = await clientForLifecycle.PostAsJsonAsync("/material/v1/materials", createRequest);
-        
+
         // Assert CREATE
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         var createdMaterial = await createResponse.Content.ReadFromJsonAsync<MaterialResponse>();
@@ -105,7 +105,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
         };
 
         var updateResponse = await clientForLifecycle.PutAsJsonAsync($"/material/v1/materials/{newId}", updateRequest);
-        
+
         // Assert UPDATE
         Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
         var updatedMaterial = await updateResponse.Content.ReadFromJsonAsync<MaterialResponse>();
@@ -129,7 +129,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
         var getAfterDeleteResponse = await clientForLifecycle.GetAsync($"/material/v1/materials/{newId}");
         Assert.Equal(HttpStatusCode.NotFound, getAfterDeleteResponse.StatusCode);
     }
-    
+
     [Fact]
     public async Task Update_WhenUsingStaleVersion_ReturnsConflict()
     {
@@ -233,7 +233,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
     {
         // Act
         var response = await _client.GetAsync("/material/v1/materials?search=Polycarbonate");
-        
+
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<PagedResult<MaterialResponse>>();
@@ -284,7 +284,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
         Assert.Single(result.Items);
         Assert.Equal("Polycarbonate", result.Items.First().Name);
     }
-    
+
     [Fact]
     public async Task GetMaterialById_WithInvalidId_ReturnsNotFound()
     {

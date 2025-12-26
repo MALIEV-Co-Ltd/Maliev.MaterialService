@@ -78,7 +78,7 @@ public class BulkOperationsController : ControllerBase
         {
             materialsToImport = JsonSerializer.Deserialize<List<CreateMaterialRequest>>(fileContent,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            
+
             if (materialsToImport == null || materialsToImport.Count == 0)
             {
                 return BadRequest(new { message = "No materials found in the uploaded JSON file." });

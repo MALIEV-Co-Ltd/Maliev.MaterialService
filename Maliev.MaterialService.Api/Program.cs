@@ -26,8 +26,8 @@ builder.Services.AddIAMClient(builder.Configuration, "MaterialService"); // Stan
 builder.Services.AddIAMRegistration<MaterialIAMRegistrationService>(); // Register permissions with IAM on startup
 
 // Core application services
-builder.Services.AddSingleton<Maliev.MaterialService.Api.Services.Auth.AuthMetrics>(); 
-builder.Services.AddSingleton<Maliev.Aspire.ServiceDefaults.Authorization.IAuthMetrics>(sp => 
+builder.Services.AddSingleton<Maliev.MaterialService.Api.Services.Auth.AuthMetrics>();
+builder.Services.AddSingleton<Maliev.Aspire.ServiceDefaults.Authorization.IAuthMetrics>(sp =>
     sp.GetRequiredService<Maliev.MaterialService.Api.Services.Auth.AuthMetrics>());
 builder.Services.AddSingleton<DatabaseMetricsInterceptor>();
 

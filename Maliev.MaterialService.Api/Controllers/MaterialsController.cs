@@ -20,7 +20,7 @@ namespace Maliev.MaterialService.Api.Controllers;
 [ApiController]
 [ApiVersion("1")]
 [Authorize]
-[Route("material/v{version:apiVersion}/materials")] 
+[Route("material/v{version:apiVersion}/materials")]
 public class MaterialsController : ControllerBase
 {
     private readonly IMaterialService _materialService;

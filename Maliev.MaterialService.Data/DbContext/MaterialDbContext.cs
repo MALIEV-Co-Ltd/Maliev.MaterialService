@@ -43,7 +43,7 @@ public class MaterialDbContext : Microsoft.EntityFrameworkCore.DbContext
         if (_metricsInterceptor is not null)
         {
             optionsBuilder.AddInterceptors(_metricsInterceptor);
-    
+
         }
     }
 

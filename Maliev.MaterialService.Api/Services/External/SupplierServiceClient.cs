@@ -25,7 +25,7 @@ public class SupplierServiceClient : ISupplierServiceClient
     {
         _httpClient = httpClient;
         _logger = logger;
-        
+
         _httpClient.Timeout = TimeSpan.FromSeconds(60);
     }
 
