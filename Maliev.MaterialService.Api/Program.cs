@@ -103,18 +103,7 @@ var app = builder.Build();
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
 // Run database migrations on startup (skip in Testing environment)
-if (!app.Environment.IsEnvironment("Testing"))
-{
-    try
-    {
-        await app.MigrateDatabaseAsync<MaterialDbContext>();
-    }
-    catch (Exception ex)
-    {
-        Log.MigrationFailed(logger, ex);
-        // Don't throw - allow app to start for debugging
-    }
-}
+await app.MigrateDatabaseAsync<MaterialDbContext>();
 
 app.UseStandardMiddleware();
 
