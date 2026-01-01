@@ -11,6 +11,11 @@ public class MaterialIAMRegistrationService : IAMRegistrationService
 {
     private const string ServiceName = "MaterialService";
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MaterialIAMRegistrationService"/> class.
+    /// </summary>
+    /// <param name="httpClientFactory">The HTTP client factory.</param>
+    /// <param name="logger">The logger.</param>
     public MaterialIAMRegistrationService(
         IHttpClientFactory httpClientFactory,
         ILogger<MaterialIAMRegistrationService> logger)
@@ -18,6 +23,10 @@ public class MaterialIAMRegistrationService : IAMRegistrationService
     {
     }
 
+    /// <summary>
+    /// Gets the list of permissions to register.
+    /// </summary>
+    /// <returns>A collection of permission registrations.</returns>
     protected override IEnumerable<PermissionRegistration> GetPermissions()
     {
         return new List<PermissionRegistration>
@@ -46,6 +55,10 @@ public class MaterialIAMRegistrationService : IAMRegistrationService
         };
     }
 
+    /// <summary>
+    /// Gets the list of predefined roles to register.
+    /// </summary>
+    /// <returns>A collection of role registrations.</returns>
     protected override IEnumerable<RoleRegistration> GetPredefinedRoles()
     {
         var allPermissions = GetPermissions().Select(p => p.PermissionId).ToList();

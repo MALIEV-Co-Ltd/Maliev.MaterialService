@@ -31,11 +31,11 @@ public class IntegrationTestFixture : IAsyncLifetime
             .Build();
 
         _redisContainer = new RedisBuilder()
-            .WithImage("redis:7-alpine")
+            .WithImage("redis:8.4-alpine")
             .Build();
 
         _rabbitMqContainer = new RabbitMqBuilder()
-            .WithImage("rabbitmq:3-management-alpine")
+            .WithImage("rabbitmq:4.2-alpine")
             .WithUsername("guest")
             .WithPassword("guest")
             .Build();

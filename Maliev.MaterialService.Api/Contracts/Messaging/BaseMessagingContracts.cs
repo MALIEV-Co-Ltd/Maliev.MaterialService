@@ -11,6 +11,16 @@ namespace Maliev.MessagingContracts.Generated
     /// <summary>
     /// The base structure that all Maliev messaging contracts MUST adhere to.
     /// </summary>
+    /// <param name="MessageId">Unique identifier for the message.</param>
+    /// <param name="MessageName">Name of the message.</param>
+    /// <param name="MessageType">Type of the message.</param>
+    /// <param name="MessageVersion">Version of the message contract.</param>
+    /// <param name="PublishedBy">Service that published the message.</param>
+    /// <param name="ConsumedBy">List of services that consumed the message.</param>
+    /// <param name="CorrelationId">Correlation ID for tracking message flows.</param>
+    /// <param name="CausationId">Optional causation ID.</param>
+    /// <param name="OccurredAtUtc">Timestamp when the event occurred.</param>
+    /// <param name="IsPublic">Indicates if the message is public.</param>
     public record BaseMessage(
         [property: JsonPropertyName("messageId")] System.Guid MessageId,
         [property: JsonPropertyName("messageName")] string MessageName,
@@ -24,20 +34,43 @@ namespace Maliev.MessagingContracts.Generated
         [property: JsonPropertyName("isPublic")] bool IsPublic
     );
 
+    /// <summary>
+    /// Defines the type of message.
+    /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum MessageType
     {
+        /// <summary>A command message.</summary>
         Command,
+        /// <summary>An event message.</summary>
         Event,
+        /// <summary>A request message.</summary>
         Request,
+        /// <summary>A response message.</summary>
         Response
     }
 
     /// <summary>
-    /// CreateUserCommand
+    /// Payload for CreateUserCommand.
     /// </summary>
+    /// <param name="Username">Username.</param>
+    /// <param name="Email">Email.</param>
     public record CreateUserCommandPayload([property: JsonPropertyName("username")] string Username, [property: JsonPropertyName("email")] string Email);
 
+    /// <summary>
+    /// Command message for user creation.
+    /// </summary>
+    /// <param name="MessageId">Message ID.</param>
+    /// <param name="MessageName">Message Name.</param>
+    /// <param name="MessageType">Message Type.</param>
+    /// <param name="MessageVersion">Message Version.</param>
+    /// <param name="PublishedBy">Published By.</param>
+    /// <param name="ConsumedBy">Consumed By.</param>
+    /// <param name="CorrelationId">Correlation Id.</param>
+    /// <param name="CausationId">Causation Id.</param>
+    /// <param name="OccurredAtUtc">Occurred At UTC.</param>
+    /// <param name="IsPublic">Is Public.</param>
+    /// <param name="Payload">Payload.</param>
     public record CreateUserCommand(
         System.Guid MessageId,
         string MessageName,
@@ -53,10 +86,27 @@ namespace Maliev.MessagingContracts.Generated
     ) : BaseMessage(MessageId, MessageName, MessageType, MessageVersion, PublishedBy, ConsumedBy, CorrelationId, CausationId, OccurredAtUtc, IsPublic);
 
     /// <summary>
-    /// Response containing details for a specific customer.
+    /// Payload for CustomerDetailsResponse.
     /// </summary>
+    /// <param name="CustomerId">Customer ID.</param>
+    /// <param name="FullName">Full Name.</param>
+    /// <param name="Email">Email.</param>
     public record CustomerDetailsResponsePayload([property: JsonPropertyName("customerId")] System.Guid CustomerId, [property: JsonPropertyName("fullName")] string FullName, [property: JsonPropertyName("email")] string Email);
 
+    /// <summary>
+    /// Response message for customer details.
+    /// </summary>
+    /// <param name="MessageId">Message ID.</param>
+    /// <param name="MessageName">Message Name.</param>
+    /// <param name="MessageType">Message Type.</param>
+    /// <param name="MessageVersion">Message Version.</param>
+    /// <param name="PublishedBy">Published By.</param>
+    /// <param name="ConsumedBy">Consumed By.</param>
+    /// <param name="CorrelationId">Correlation Id.</param>
+    /// <param name="CausationId">Causation Id.</param>
+    /// <param name="OccurredAtUtc">Occurred At UTC.</param>
+    /// <param name="IsPublic">Is Public.</param>
+    /// <param name="Payload">Payload.</param>
     public record CustomerDetailsResponse(
         System.Guid MessageId,
         string MessageName,
@@ -72,10 +122,25 @@ namespace Maliev.MessagingContracts.Generated
     ) : BaseMessage(MessageId, MessageName, MessageType, MessageVersion, PublishedBy, ConsumedBy, CorrelationId, CausationId, OccurredAtUtc, IsPublic);
 
     /// <summary>
-    /// Request to retrieve details for a specific customer.
+    /// Payload for GetCustomerDetailsRequest.
     /// </summary>
+    /// <param name="CustomerId">Customer ID.</param>
     public record GetCustomerDetailsRequestPayload([property: JsonPropertyName("customerId")] System.Guid CustomerId);
 
+    /// <summary>
+    /// Request message for customer details.
+    /// </summary>
+    /// <param name="MessageId">Message ID.</param>
+    /// <param name="MessageName">Message Name.</param>
+    /// <param name="MessageType">Message Type.</param>
+    /// <param name="MessageVersion">Message Version.</param>
+    /// <param name="PublishedBy">Published By.</param>
+    /// <param name="ConsumedBy">Consumed By.</param>
+    /// <param name="CorrelationId">Correlation Id.</param>
+    /// <param name="CausationId">Causation Id.</param>
+    /// <param name="OccurredAtUtc">Occurred At UTC.</param>
+    /// <param name="IsPublic">Is Public.</param>
+    /// <param name="Payload">Payload.</param>
     public record GetCustomerDetailsRequest(
         System.Guid MessageId,
         string MessageName,
@@ -91,10 +156,29 @@ namespace Maliev.MessagingContracts.Generated
     ) : BaseMessage(MessageId, MessageName, MessageType, MessageVersion, PublishedBy, ConsumedBy, CorrelationId, CausationId, OccurredAtUtc, IsPublic);
 
     /// <summary>
-    /// Event published when a new permission is registered by a service in the IAM service.
+    /// Payload for PermissionRegisteredEvent.
     /// </summary>
+    /// <param name="PermissionId">Permission ID.</param>
+    /// <param name="ServiceName">Service Name.</param>
+    /// <param name="ResourceType">Resource Type.</param>
+    /// <param name="Action">Action.</param>
+    /// <param name="RegisteredAt">Registered At.</param>
     public record PermissionRegisteredEventPayload([property: JsonPropertyName("permissionId")] string PermissionId, [property: JsonPropertyName("serviceName")] string ServiceName, [property: JsonPropertyName("resourceType")] string ResourceType, [property: JsonPropertyName("action")] string Action, [property: JsonPropertyName("registeredAt")] System.DateTimeOffset RegisteredAt);
 
+    /// <summary>
+    /// Event message for permission registration.
+    /// </summary>
+    /// <param name="MessageId">Message ID.</param>
+    /// <param name="MessageName">Message Name.</param>
+    /// <param name="MessageType">Message Type.</param>
+    /// <param name="MessageVersion">Message Version.</param>
+    /// <param name="PublishedBy">Published By.</param>
+    /// <param name="ConsumedBy">Consumed By.</param>
+    /// <param name="CorrelationId">Correlation Id.</param>
+    /// <param name="CausationId">Causation Id.</param>
+    /// <param name="OccurredAtUtc">Occurred At UTC.</param>
+    /// <param name="IsPublic">Is Public.</param>
+    /// <param name="Payload">Payload.</param>
     public record PermissionRegisteredEvent(
         System.Guid MessageId,
         string MessageName,
@@ -110,10 +194,31 @@ namespace Maliev.MessagingContracts.Generated
     ) : BaseMessage(MessageId, MessageName, MessageType, MessageVersion, PublishedBy, ConsumedBy, CorrelationId, CausationId, OccurredAtUtc, IsPublic);
 
     /// <summary>
-    /// Event published when a role is granted to a principal (service account) in the IAM service.
+    /// Payload for PrincipalRoleGrantedEvent.
     /// </summary>
+    /// <param name="BindingId">Binding ID.</param>
+    /// <param name="PrincipalId">Principal ID.</param>
+    /// <param name="RoleId">Role ID.</param>
+    /// <param name="ResourceType">Resource Type.</param>
+    /// <param name="ResourceId">Resource ID.</param>
+    /// <param name="GrantedAt">Granted At.</param>
+    /// <param name="ExpiresAt">Expires At.</param>
     public record PrincipalRoleGrantedEventPayload([property: JsonPropertyName("bindingId")] System.Guid BindingId, [property: JsonPropertyName("principalId")] System.Guid PrincipalId, [property: JsonPropertyName("roleId")] string RoleId, [property: JsonPropertyName("resourceType")] string ResourceType, [property: JsonPropertyName("resourceId")] string ResourceId, [property: JsonPropertyName("grantedAt")] System.DateTimeOffset GrantedAt, [property: JsonPropertyName("expiresAt")] System.DateTimeOffset ExpiresAt);
 
+    /// <summary>
+    /// Event message for principal role grant.
+    /// </summary>
+    /// <param name="MessageId">Message ID.</param>
+    /// <param name="MessageName">Message Name.</param>
+    /// <param name="MessageType">Message Type.</param>
+    /// <param name="MessageVersion">Message Version.</param>
+    /// <param name="PublishedBy">Published By.</param>
+    /// <param name="ConsumedBy">Consumed By.</param>
+    /// <param name="CorrelationId">Correlation Id.</param>
+    /// <param name="CausationId">Causation Id.</param>
+    /// <param name="OccurredAtUtc">Occurred At UTC.</param>
+    /// <param name="IsPublic">Is Public.</param>
+    /// <param name="Payload">Payload.</param>
     public record PrincipalRoleGrantedEvent(
         System.Guid MessageId,
         string MessageName,
@@ -129,10 +234,28 @@ namespace Maliev.MessagingContracts.Generated
     ) : BaseMessage(MessageId, MessageName, MessageType, MessageVersion, PublishedBy, ConsumedBy, CorrelationId, CausationId, OccurredAtUtc, IsPublic);
 
     /// <summary>
-    /// Event published when a role is revoked from a principal (service account) in the IAM service.
+    /// Payload for PrincipalRoleRevokedEvent.
     /// </summary>
+    /// <param name="BindingId">Binding ID.</param>
+    /// <param name="PrincipalId">Principal ID.</param>
+    /// <param name="RoleId">Role ID.</param>
+    /// <param name="RevokedAt">Revoked At.</param>
     public record PrincipalRoleRevokedEventPayload([property: JsonPropertyName("bindingId")] System.Guid BindingId, [property: JsonPropertyName("principalId")] System.Guid PrincipalId, [property: JsonPropertyName("roleId")] string RoleId, [property: JsonPropertyName("revokedAt")] System.DateTimeOffset RevokedAt);
 
+    /// <summary>
+    /// Event message for principal role revocation.
+    /// </summary>
+    /// <param name="MessageId">Message ID.</param>
+    /// <param name="MessageName">Message Name.</param>
+    /// <param name="MessageType">Message Type.</param>
+    /// <param name="MessageVersion">Message Version.</param>
+    /// <param name="PublishedBy">Published By.</param>
+    /// <param name="ConsumedBy">Consumed By.</param>
+    /// <param name="CorrelationId">Correlation Id.</param>
+    /// <param name="CausationId">Causation Id.</param>
+    /// <param name="OccurredAtUtc">Occurred At UTC.</param>
+    /// <param name="IsPublic">Is Public.</param>
+    /// <param name="Payload">Payload.</param>
     public record PrincipalRoleRevokedEvent(
         System.Guid MessageId,
         string MessageName,
@@ -148,10 +271,27 @@ namespace Maliev.MessagingContracts.Generated
     ) : BaseMessage(MessageId, MessageName, MessageType, MessageVersion, PublishedBy, ConsumedBy, CorrelationId, CausationId, OccurredAtUtc, IsPublic);
 
     /// <summary>
-    /// Event published when a role's permissions are modified in the IAM service.
+    /// Payload for RoleUpdatedEvent.
     /// </summary>
+    /// <param name="RoleId">Role ID.</param>
+    /// <param name="ServiceName">Service Name.</param>
+    /// <param name="UpdatedAt">Updated At.</param>
     public record RoleUpdatedEventPayload([property: JsonPropertyName("roleId")] string RoleId, [property: JsonPropertyName("serviceName")] string ServiceName, [property: JsonPropertyName("updatedAt")] System.DateTimeOffset UpdatedAt);
 
+    /// <summary>
+    /// Event message for role update.
+    /// </summary>
+    /// <param name="MessageId">Message ID.</param>
+    /// <param name="MessageName">Message Name.</param>
+    /// <param name="MessageType">Message Type.</param>
+    /// <param name="MessageVersion">Message Version.</param>
+    /// <param name="PublishedBy">Published By.</param>
+    /// <param name="ConsumedBy">Consumed By.</param>
+    /// <param name="CorrelationId">Correlation Id.</param>
+    /// <param name="CausationId">Causation Id.</param>
+    /// <param name="OccurredAtUtc">Occurred At UTC.</param>
+    /// <param name="IsPublic">Is Public.</param>
+    /// <param name="Payload">Payload.</param>
     public record RoleUpdatedEvent(
         System.Guid MessageId,
         string MessageName,
@@ -167,10 +307,28 @@ namespace Maliev.MessagingContracts.Generated
     ) : BaseMessage(MessageId, MessageName, MessageType, MessageVersion, PublishedBy, ConsumedBy, CorrelationId, CausationId, OccurredAtUtc, IsPublic);
 
     /// <summary>
-    /// Command to create a new order.
+    /// Payload for CreateOrderCommand.
     /// </summary>
+    /// <param name="OrderId">Order ID.</param>
+    /// <param name="CustomerId">Customer ID.</param>
+    /// <param name="Amount">Amount.</param>
+    /// <param name="Currency">Currency.</param>
     public record CreateOrderCommandPayload([property: JsonPropertyName("orderId")] System.Guid OrderId, [property: JsonPropertyName("customerId")] System.Guid CustomerId, [property: JsonPropertyName("amount")] double Amount, [property: JsonPropertyName("currency")] string Currency);
 
+    /// <summary>
+    /// Command message for order creation.
+    /// </summary>
+    /// <param name="MessageId">Message ID.</param>
+    /// <param name="MessageName">Message Name.</param>
+    /// <param name="MessageType">Message Type.</param>
+    /// <param name="MessageVersion">Message Version.</param>
+    /// <param name="PublishedBy">Published By.</param>
+    /// <param name="ConsumedBy">Consumed By.</param>
+    /// <param name="CorrelationId">Correlation Id.</param>
+    /// <param name="CausationId">Causation Id.</param>
+    /// <param name="OccurredAtUtc">Occurred At UTC.</param>
+    /// <param name="IsPublic">Is Public.</param>
+    /// <param name="Payload">Payload.</param>
     public record CreateOrderCommand(
         System.Guid MessageId,
         string MessageName,
@@ -186,10 +344,28 @@ namespace Maliev.MessagingContracts.Generated
     ) : BaseMessage(MessageId, MessageName, MessageType, MessageVersion, PublishedBy, ConsumedBy, CorrelationId, CausationId, OccurredAtUtc, IsPublic);
 
     /// <summary>
-    /// Event indicating that a payment has been successfully processed.
+    /// Payload for PaymentCompletedEvent.
     /// </summary>
+    /// <param name="OrderId">Order ID.</param>
+    /// <param name="PaymentId">Payment ID.</param>
+    /// <param name="Amount">Amount.</param>
+    /// <param name="Currency">Currency.</param>
     public record PaymentCompletedEventPayload([property: JsonPropertyName("orderId")] System.Guid OrderId, [property: JsonPropertyName("paymentId")] System.Guid PaymentId, [property: JsonPropertyName("amount")] double Amount, [property: JsonPropertyName("currency")] string Currency);
 
+    /// <summary>
+    /// Event message for payment completion.
+    /// </summary>
+    /// <param name="MessageId">Message ID.</param>
+    /// <param name="MessageName">Message Name.</param>
+    /// <param name="MessageType">Message Type.</param>
+    /// <param name="MessageVersion">Message Version.</param>
+    /// <param name="PublishedBy">Published By.</param>
+    /// <param name="ConsumedBy">Consumed By.</param>
+    /// <param name="CorrelationId">Correlation Id.</param>
+    /// <param name="CausationId">Causation Id.</param>
+    /// <param name="OccurredAtUtc">Occurred At UTC.</param>
+    /// <param name="IsPublic">Is Public.</param>
+    /// <param name="Payload">Payload.</param>
     public record PaymentCompletedEvent(
         System.Guid MessageId,
         string MessageName,
@@ -205,10 +381,31 @@ namespace Maliev.MessagingContracts.Generated
     ) : BaseMessage(MessageId, MessageName, MessageType, MessageVersion, PublishedBy, ConsumedBy, CorrelationId, CausationId, OccurredAtUtc, IsPublic);
 
     /// <summary>
-    /// Event published when a payment transaction is initially created.
+    /// Payload for PaymentCreatedEvent.
     /// </summary>
+    /// <param name="TransactionId">Transaction ID.</param>
+    /// <param name="IdempotencyKey">Idempotency Key.</param>
+    /// <param name="Amount">Amount.</param>
+    /// <param name="Currency">Currency.</param>
+    /// <param name="CustomerId">Customer ID.</param>
+    /// <param name="OrderId">Order ID.</param>
+    /// <param name="ProviderName">Provider Name.</param>
     public record PaymentCreatedEventPayload([property: JsonPropertyName("transactionId")] System.Guid TransactionId, [property: JsonPropertyName("idempotencyKey")] string IdempotencyKey, [property: JsonPropertyName("amount")] double Amount, [property: JsonPropertyName("currency")] string Currency, [property: JsonPropertyName("customerId")] string CustomerId, [property: JsonPropertyName("orderId")] string OrderId, [property: JsonPropertyName("providerName")] string ProviderName);
 
+    /// <summary>
+    /// Event message for payment creation.
+    /// </summary>
+    /// <param name="MessageId">Message ID.</param>
+    /// <param name="MessageName">Message Name.</param>
+    /// <param name="MessageType">Message Type.</param>
+    /// <param name="MessageVersion">Message Version.</param>
+    /// <param name="PublishedBy">Published By.</param>
+    /// <param name="ConsumedBy">Consumed By.</param>
+    /// <param name="CorrelationId">Correlation Id.</param>
+    /// <param name="CausationId">Causation Id.</param>
+    /// <param name="OccurredAtUtc">Occurred At UTC.</param>
+    /// <param name="IsPublic">Is Public.</param>
+    /// <param name="Payload">Payload.</param>
     public record PaymentCreatedEvent(
         System.Guid MessageId,
         string MessageName,
@@ -224,10 +421,34 @@ namespace Maliev.MessagingContracts.Generated
     ) : BaseMessage(MessageId, MessageName, MessageType, MessageVersion, PublishedBy, ConsumedBy, CorrelationId, CausationId, OccurredAtUtc, IsPublic);
 
     /// <summary>
-    /// Event published when a payment transaction fails.
+    /// Payload for PaymentFailedEvent.
     /// </summary>
+    /// <param name="TransactionId">Transaction ID.</param>
+    /// <param name="IdempotencyKey">Idempotency Key.</param>
+    /// <param name="Amount">Amount.</param>
+    /// <param name="Currency">Currency.</param>
+    /// <param name="CustomerId">Customer ID.</param>
+    /// <param name="OrderId">Order ID.</param>
+    /// <param name="ProviderName">Provider Name.</param>
+    /// <param name="ErrorMessage">Error Message.</param>
+    /// <param name="ProviderErrorCode">Provider Error Code.</param>
+    /// <param name="FailedAt">Failed At.</param>
     public record PaymentFailedEventPayload([property: JsonPropertyName("transactionId")] System.Guid TransactionId, [property: JsonPropertyName("idempotencyKey")] string IdempotencyKey, [property: JsonPropertyName("amount")] double Amount, [property: JsonPropertyName("currency")] string Currency, [property: JsonPropertyName("customerId")] string CustomerId, [property: JsonPropertyName("orderId")] string OrderId, [property: JsonPropertyName("providerName")] string ProviderName, [property: JsonPropertyName("errorMessage")] string ErrorMessage, [property: JsonPropertyName("providerErrorCode")] string ProviderErrorCode, [property: JsonPropertyName("failedAt")] System.DateTimeOffset FailedAt);
 
+    /// <summary>
+    /// Event message for payment failure.
+    /// </summary>
+    /// <param name="MessageId">Message ID.</param>
+    /// <param name="MessageName">Message Name.</param>
+    /// <param name="MessageType">Message Type.</param>
+    /// <param name="MessageVersion">Message Version.</param>
+    /// <param name="PublishedBy">Published By.</param>
+    /// <param name="ConsumedBy">Consumed By.</param>
+    /// <param name="CorrelationId">Correlation Id.</param>
+    /// <param name="CausationId">Causation Id.</param>
+    /// <param name="OccurredAtUtc">Occurred At UTC.</param>
+    /// <param name="IsPublic">Is Public.</param>
+    /// <param name="Payload">Payload.</param>
     public record PaymentFailedEvent(
         System.Guid MessageId,
         string MessageName,
@@ -243,14 +464,44 @@ namespace Maliev.MessagingContracts.Generated
     ) : BaseMessage(MessageId, MessageName, MessageType, MessageVersion, PublishedBy, ConsumedBy, CorrelationId, CausationId, OccurredAtUtc, IsPublic);
 
     /// <summary>
-    /// Event published to trigger a notification to one or more users.
+    /// Target user for a notification.
     /// </summary>
+    /// <param name="UserId">User ID.</param>
+    /// <param name="UserType">User Type.</param>
     public record NotificationEventPayloadTargetUsersItem([property: JsonPropertyName("userId")] string UserId, [property: JsonPropertyName("userType")] string UserType);
 
+    /// <summary>
+    /// Metadata for NotificationEventPayload.
+    /// </summary>
+    /// <param name="Language">Language.</param>
+    /// <param name="Source">Source.</param>
     public record NotificationEventPayloadMetadata([property: JsonPropertyName("language")] string Language, [property: JsonPropertyName("source")] string Source);
 
+    /// <summary>
+    /// Payload for NotificationEvent.
+    /// </summary>
+    /// <param name="NotificationType">Notification Type.</param>
+    /// <param name="Priority">Priority.</param>
+    /// <param name="TargetUsers">Target Users.</param>
+    /// <param name="TemplateId">Template ID.</param>
+    /// <param name="Parameters">Parameters.</param>
+    /// <param name="Metadata">Metadata.</param>
     public record NotificationEventPayload([property: JsonPropertyName("notificationType")] string NotificationType, [property: JsonPropertyName("priority")] string Priority, [property: JsonPropertyName("targetUsers")] System.Collections.Generic.IReadOnlyList<NotificationEventPayloadTargetUsersItem> TargetUsers, [property: JsonPropertyName("templateId")] string TemplateId, [property: JsonPropertyName("parameters")] object Parameters, [property: JsonPropertyName("metadata")] NotificationEventPayloadMetadata Metadata);
 
+    /// <summary>
+    /// Event message for notifications.
+    /// </summary>
+    /// <param name="MessageId">Message ID.</param>
+    /// <param name="MessageName">Message Name.</param>
+    /// <param name="MessageType">Message Type.</param>
+    /// <param name="MessageVersion">Message Version.</param>
+    /// <param name="PublishedBy">Published By.</param>
+    /// <param name="ConsumedBy">Consumed By.</param>
+    /// <param name="CorrelationId">Correlation Id.</param>
+    /// <param name="CausationId">Causation Id.</param>
+    /// <param name="OccurredAtUtc">Occurred At UTC.</param>
+    /// <param name="IsPublic">Is Public.</param>
+    /// <param name="Payload">Payload.</param>
     public record NotificationEvent(
         System.Guid MessageId,
         string MessageName,

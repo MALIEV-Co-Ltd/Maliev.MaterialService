@@ -17,6 +17,11 @@ public class InventoryController : ControllerBase
     private readonly AuthMetrics _metrics;
     private readonly ILogger<InventoryController> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InventoryController"/> class.
+    /// </summary>
+    /// <param name="metrics">The auth metrics.</param>
+    /// <param name="logger">The logger.</param>
     public InventoryController(AuthMetrics metrics, ILogger<InventoryController> logger)
     {
         _metrics = metrics;
@@ -60,5 +65,17 @@ public class InventoryController : ControllerBase
     }
 }
 
+/// <summary>
+/// Request for inventory count
+/// </summary>
+/// <param name="MaterialId">Material ID</param>
+/// <param name="Count">Count</param>
 public record InventoryCountRequest(Guid MaterialId, int Count);
+
+/// <summary>
+/// Request for inventory adjustment
+/// </summary>
+/// <param name="MaterialId">Material ID</param>
+/// <param name="Adjustment">Adjustment amount</param>
+/// <param name="Reason">Reason for adjustment</param>
 public record InventoryAdjustmentRequest(Guid MaterialId, int Adjustment, string Reason);
