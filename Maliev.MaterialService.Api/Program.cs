@@ -1,5 +1,4 @@
 using Maliev.MaterialService.Api.Services.Bulk;
-using Maliev.MaterialService.Api.Services.Cache;
 using Maliev.MaterialService.Api.Services.Materials;
 using Maliev.MaterialService.Api.Services.Auth;
 using Maliev.MaterialService.Data.DbContext;
@@ -32,9 +31,6 @@ builder.Services.AddSingleton<Maliev.Aspire.ServiceDefaults.Authorization.IAuthM
 builder.Services.AddSingleton<DatabaseMetricsInterceptor>();
 
 builder.AddMassTransitWithRabbitMq(); // Standard messaging integration
-
-// Cache service - test setup/fixture handles environment-specific configuration
-builder.Services.AddSingleton<ICacheService, RedisCacheService>();
 
 // Add PostgreSQL DbContext - test setup handles environment-specific configuration via connection string override
 builder.AddPostgresDbContext<MaterialDbContext>(connectionName: "MaterialDbContext"); // PostgreSQL with retry logic

@@ -5,8 +5,7 @@ using System.Threading.Tasks;
 using Maliev.MaterialService.Api.DTOs;
 using Maliev.MaterialService.Api.DTOs.Materials;
 using Maliev.MaterialService.Api.Mapping;
-using Maliev.MaterialService.Api.Services.Cache;
-using Maliev.MaterialService.Api.Contracts.Messaging;
+using Maliev.Aspire.ServiceDefaults.Caching;
 using Maliev.MessagingContracts.Generated;
 using Maliev.MaterialService.Data.DbContext;
 using Maliev.MaterialService.Data.Entities;
@@ -104,18 +103,28 @@ public class MaterialService : IMaterialService
         _logger.LogInformation("Material created successfully with ID: {MaterialId}", material.Id);
 
         // Publish event
-        await _publishEndpoint.Publish(new MaterialCreatedEvent(
-            Guid.NewGuid(),
-            nameof(MaterialCreatedEvent),
-            MessageType.Event,
-            "1.0",
-            "MaterialService",
-            new List<string>(),
-            Guid.NewGuid(),
-            null,
-            DateTimeOffset.UtcNow,
-            true,
-            new MaterialCreatedEventPayload(material.Id, material.Code, material.Name, material.CreatedAt)));
+        await _publishEndpoint.Publish(new MessagingContracts.Generated.MaterialCreatedEvent(
+            MessageId: Guid.NewGuid(),
+            MessageName: "MaterialCreatedEvent",
+            MessageType: MessageType.Event,
+            MessageVersion: "1.0.0",
+            PublishedBy: "MaterialService",
+            ConsumedBy: ["InventoryService", "NotificationService"],
+            CorrelationId: Guid.NewGuid(),
+            CausationId: null,
+            OccurredAtUtc: DateTimeOffset.UtcNow,
+            IsPublic: false,
+            Payload: new MessagingContracts.Generated.MaterialCreatedEventPayload(
+                MaterialId: material.Id,
+                Code: material.Code,
+                Name: material.Name,
+                PricePerUnit: (double)material.PricePerUnit,
+                StockLevel: material.StockLevel,
+                CreatedAt: material.CreatedAt
+            )
+        ));
+
+        _logger.LogInformation("Published MaterialCreatedEvent for material {MaterialId}", material.Id);
 
         // Invalidate cache
         await InvalidateCacheAsync();
@@ -221,18 +230,27 @@ public class MaterialService : IMaterialService
                 _logger.LogInformation("Material updated successfully with ID: {MaterialId}", material.Id);
 
                 // Publish event
-                await _publishEndpoint.Publish(new MaterialUpdatedEvent(
-                    Guid.NewGuid(),
-                    nameof(MaterialUpdatedEvent),
-                    MessageType.Event,
-                    "1.0",
-                    "MaterialService",
-                    new List<string>(),
-                    Guid.NewGuid(),
-                    null,
-                    DateTimeOffset.UtcNow,
-                    true,
-                    new MaterialUpdatedEventPayload(material.Id, material.Code, material.Name, material.UpdatedAt ?? DateTimeOffset.UtcNow, material.Version)));
+                await _publishEndpoint.Publish(new MessagingContracts.Generated.MaterialUpdatedEvent(
+                    MessageId: Guid.NewGuid(),
+                    MessageName: "MaterialUpdatedEvent",
+                    MessageType: MessageType.Event,
+                    MessageVersion: "1.0.0",
+                    PublishedBy: "MaterialService",
+                    ConsumedBy: ["InventoryService", "NotificationService"],
+                    CorrelationId: Guid.NewGuid(),
+                    CausationId: null,
+                    OccurredAtUtc: DateTimeOffset.UtcNow,
+                    IsPublic: false,
+                    Payload: new MessagingContracts.Generated.MaterialUpdatedEventPayload(
+                        MaterialId: material.Id,
+                        Code: material.Code,
+                        Name: material.Name,
+                        UpdatedAt: material.UpdatedAt ?? DateTimeOffset.UtcNow,
+                        Version: material.Version
+                    )
+                ));
+
+                _logger.LogInformation("Published MaterialUpdatedEvent for material {MaterialId}", material.Id);
 
                 // Invalidate cache
                 await InvalidateCacheAsync(id);
@@ -266,18 +284,24 @@ public class MaterialService : IMaterialService
         _logger.LogInformation("Material soft-deleted successfully with ID: {MaterialId}", material.Id);
 
         // Publish event
-        await _publishEndpoint.Publish(new MaterialDeletedEvent(
-            Guid.NewGuid(),
-            nameof(MaterialDeletedEvent),
-            MessageType.Event,
-            "1.0",
-            "MaterialService",
-            new List<string>(),
-            Guid.NewGuid(),
-            null,
-            DateTimeOffset.UtcNow,
-            true,
-            new MaterialDeletedEventPayload(material.Id, DateTimeOffset.UtcNow)));
+        await _publishEndpoint.Publish(new MessagingContracts.Generated.MaterialDiscontinuedEvent(
+            MessageId: Guid.NewGuid(),
+            MessageName: "MaterialDiscontinuedEvent",
+            MessageType: MessageType.Event,
+            MessageVersion: "1.0.0",
+            PublishedBy: "MaterialService",
+            ConsumedBy: ["InventoryService", "NotificationService"],
+            CorrelationId: Guid.NewGuid(),
+            CausationId: null,
+            OccurredAtUtc: DateTimeOffset.UtcNow,
+            IsPublic: false,
+            Payload: new MessagingContracts.Generated.MaterialDiscontinuedEventPayload(
+                MaterialId: material.Id,
+                DiscontinuedAt: DateTimeOffset.UtcNow
+            )
+        ));
+
+        _logger.LogInformation("Published MaterialDiscontinuedEvent for material {MaterialId}", material.Id);
 
         // Invalidate cache
         await InvalidateCacheAsync(id);

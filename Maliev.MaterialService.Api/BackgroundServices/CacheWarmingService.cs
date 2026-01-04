@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Maliev.MaterialService.Api.DTOs.Materials;
 using Maliev.MaterialService.Api.Mapping;
-using Maliev.MaterialService.Api.Services.Cache;
+using Maliev.Aspire.ServiceDefaults.Caching;
 using Maliev.MaterialService.Data.DbContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
