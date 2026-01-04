@@ -51,15 +51,15 @@ public class AuthorizationTests : IClassFixture<IntegrationTestWebAppFactory>, I
     }
 
     [Fact]
-    public async Task ReadOperations_WithoutAuthToken_ReturnsOk()
+    public async Task ReadOperations_WithoutAuthToken_ReturnsUnauthorized()
     {
         // Arrange
-        var client = _factory.CreateClient(); // No auth token (public access)
+        var client = _factory.CreateClient(); // No auth token
 
         // Act
         var response = await client.GetAsync("/material/v1/materials");
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
@@ -153,19 +153,19 @@ public class AuthorizationTests : IClassFixture<IntegrationTestWebAppFactory>, I
     }
 
     [Fact]
-    public async Task AnonymousUser_CanReadMaterials_ButNotInventory()
+    public async Task AnonymousUser_CannotAccessMaterials_OrInventory()
     {
         // Arrange
         var client = _factory.CreateClient(); // No auth
 
-        // Act 1: Read materials (Should be permitted via AllowAnonymous)
+        // Act 1: Read materials (Should be unauthorized)
         var materialsResponse = await client.GetAsync("/material/v1/materials");
 
         // Act 2: Read inventory (Should be unauthorized)
         var inventoryResponse = await client.GetAsync($"/material/v1/inventory/{Guid.NewGuid()}");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, materialsResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, materialsResponse.StatusCode);
         // Standard behavior for [Authorize] or [RequirePermission] without token is Unauthorized (401)
         Assert.Equal(HttpStatusCode.Unauthorized, inventoryResponse.StatusCode);
     }
