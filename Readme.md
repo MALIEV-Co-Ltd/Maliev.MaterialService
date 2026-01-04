@@ -22,6 +22,21 @@ A RESTful web service for managing material data with comprehensive CRUD operati
 - ✅ **CORS**: Configurable cross-origin resource sharing
 - ✅ **Database Migrations**: EF Core migrations for PostgreSQL
 
+## Constitution Rules
+
+**Banned Libraries** (NOT used in this service):
+- ❌ AutoMapper - Uses explicit manual mapping
+- ❌ FluentValidation - Uses Data Annotations for validation
+- ❌ FluentAssertions - Uses xUnit `Assert.*` methods
+- ❌ In-memory test DB - Uses Testcontainers with real PostgreSQL
+
+**Mandatory Practices**:
+- ✅ **TreatWarningsAsErrors** enabled in all `.csproj` files
+- ✅ **XML Documentation** on ALL public methods, properties, and classes
+- ✅ **No Secrets in Code** - All secrets via environment variables
+- ✅ **No Test Config in Program.js** - Test configuration in test fixtures only
+- ✅ **IAM Integration** - Uses GCP-style permission naming: `material.{resource}.{action}`
+
 ## Tech Stack
 
 - **Framework**: ASP.NET Core 10.0

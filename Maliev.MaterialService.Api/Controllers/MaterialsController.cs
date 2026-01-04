@@ -7,6 +7,7 @@ using Maliev.MaterialService.Api.DTOs;
 using Maliev.MaterialService.Api.DTOs.Materials;
 using Maliev.MaterialService.Api.Services.Materials;
 using Maliev.Aspire.ServiceDefaults.Authorization;
+using Maliev.MaterialService.Api.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -46,7 +47,7 @@ public class MaterialsController : ControllerBase
     /// </remarks>
     /// <response code="200">Returns the requested page of materials.</response>
     [HttpGet]
-    [AllowAnonymous]
+    [RequirePermission(MaterialPermissions.MaterialsRead)]
     [ProducesResponseType(typeof(PagedResult<MaterialResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<PagedResult<MaterialResponse>>> GetMaterials(
         [FromQuery] int page = 1,
@@ -81,11 +82,10 @@ public class MaterialsController : ControllerBase
     /// <remarks>
     /// Fetches full technical details and supplier information for a specific material.
     /// </remarks>
-    /// <response code="200">Returns the material details.</response>
     /// <response code="403">If the user lacks `material.materials.read` permission.</response>
     /// <response code="404">If the material ID is not found.</response>
     [HttpGet("{id}")]
-    [RequirePermission("material.materials.read")]
+    [RequirePermission(MaterialPermissions.MaterialsRead)]
     [ProducesResponseType(typeof(MaterialResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<MaterialResponse>> GetMaterialById(Guid id)
@@ -107,13 +107,12 @@ public class MaterialsController : ControllerBase
     /// <remarks>
     /// Adds a new material to the catalog.
     /// </remarks>
-    /// <response code="201">Material created successfully.</response>
+    /// <response code="400">If the request data is invalid.</response>
     /// <response code="403">If the user lacks `material.materials.create` permission.</response>
     [HttpPost]
-    [RequirePermission("material.materials.create")]
+    [RequirePermission(MaterialPermissions.MaterialsCreate)]
     [ProducesResponseType(typeof(MaterialResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<MaterialResponse>> CreateMaterial([FromBody] CreateMaterialRequest request)
     {
         _logger.LogInformation("Creating new material with code: {Code}", request.Code);
@@ -145,7 +144,7 @@ public class MaterialsController : ControllerBase
     /// <response code="403">If the user lacks `material.materials.update` permission.</response>
     /// <response code="409">If the material was modified by another user since it was fetched.</response>
     [HttpPut("{id}")]
-    [RequirePermission("material.materials.update")]
+    [RequirePermission(MaterialPermissions.MaterialsUpdate)]
     [ProducesResponseType(typeof(MaterialResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -188,7 +187,7 @@ public class MaterialsController : ControllerBase
     /// <response code="204">Successfully deleted.</response>
     /// <response code="403">If the user lacks `material.materials.delete` permission.</response>
     [HttpDelete("{id}")]
-    [RequirePermission("material.materials.delete", IsCritical = true)]
+    [RequirePermission(MaterialPermissions.MaterialsDelete, IsCritical = true)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

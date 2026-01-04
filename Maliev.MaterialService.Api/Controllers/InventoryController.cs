@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Maliev.MaterialService.Api.Services.Auth;
 using Maliev.Aspire.ServiceDefaults.Authorization;
+using Maliev.MaterialService.Api.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Maliev.MaterialService.Api.Controllers;
@@ -32,10 +33,10 @@ public class InventoryController : ControllerBase
     /// Get stock level for a material
     /// </summary>
     [HttpGet("{materialId:guid}")]
-    [RequirePermission("material.inventory.view")]
+    [RequirePermission(MaterialPermissions.InventoryView)]
     public IActionResult GetStockLevel(Guid materialId)
     {
-        _metrics.RecordSuccess("material.inventory.view");
+        _metrics.RecordSuccess(MaterialPermissions.InventoryView);
         _logger.LogInformation("Retrieving inventory level for material {MaterialId}", materialId);
         return Ok(new { materialId, stockLevel = 100 });
     }
@@ -44,10 +45,10 @@ public class InventoryController : ControllerBase
     /// Perform an inventory count for a material
     /// </summary>
     [HttpPost("count")]
-    [RequirePermission("material.inventory.count")]
+    [RequirePermission(MaterialPermissions.InventoryCount)]
     public IActionResult RecordCount([FromBody] InventoryCountRequest request)
     {
-        _metrics.RecordSuccess("material.inventory.count");
+        _metrics.RecordSuccess(MaterialPermissions.InventoryCount);
         _logger.LogInformation("Recording inventory count for material {MaterialId}", request.MaterialId);
         return Ok(new { message = "Count recorded successfully" });
     }
@@ -56,10 +57,10 @@ public class InventoryController : ControllerBase
     /// Adjust inventory level for a material
     /// </summary>
     [HttpPost("adjust")]
-    [RequirePermission("material.inventory.adjust", IsCritical = true)]
+    [RequirePermission(MaterialPermissions.InventoryAdjust, IsCritical = true)]
     public IActionResult AdjustStock([FromBody] InventoryAdjustmentRequest request)
     {
-        _metrics.RecordSuccess("material.inventory.adjust");
+        _metrics.RecordSuccess(MaterialPermissions.InventoryAdjust);
         _logger.LogInformation("Adjusting inventory for material {MaterialId} by {Amount}", request.MaterialId, request.Adjustment);
         return Ok(new { message = "Adjustment successful" });
     }
