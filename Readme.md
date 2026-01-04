@@ -1,279 +1,139 @@
-# Material Service API
+# Maliev Material Service
 
-A RESTful web service for managing material data with comprehensive CRUD operations, advanced querying, and enterprise-grade features.
+[![Build Status](https://img.shields.io/badge/Build-Passing-success)](https://github.com/ORGANIZATION/Maliev.MaterialService)
+[![.NET Version](https://img.shields.io/badge/.NET-10.0-blue)](https://dotnet.microsoft.com/download/dotnet/10.0)
+[![Database](https://img.shields.io/badge/Database-PostgreSQL%2018-blue)](https://www.postgresql.org/)
 
-## Features
+Enterprise-grade material catalog and manufacturing resource management service.
 
-### Core Functionality
-- ✅ **Material Management**: Full CRUD operations for materials
-- ✅ **Advanced Querying**: Pagination, filtering, sorting, and search
-- ✅ **Related Data**: Manufacturing processes, colors, mechanical properties, suppliers
-- ✅ **Soft Delete**: Materials are marked inactive instead of being physically deleted
-- ✅ **Optimistic Concurrency**: Version-based conflict detection
+**Role in MALIEV Architecture**: The authoritative repository for all manufacturing inputs. It manages the detailed properties of materials, manufacturing processes, and technical specifications used across the platform to calculate quotes, drive production, and manage supplier relationships.
 
-### Enterprise Features
-- ✅ **Authentication & Authorization**: JWT-based with role-based access control
-- ✅ **Caching**: Redis distributed caching with automatic invalidation
-- ✅ **Logging**: Structured logging with Serilog
-- ✅ **API Documentation**: OpenAPI 3.0 with Scalar UI
-- ✅ **Health Checks**: Liveness and readiness endpoints
-- ✅ **Metrics**: Prometheus metrics for monitoring
-- ✅ **Rate Limiting**: Built-in ASP.NET Core rate limiting
-- ✅ **CORS**: Configurable cross-origin resource sharing
-- ✅ **Database Migrations**: EF Core migrations for PostgreSQL
+---
 
-## Constitution Rules
+## 🏗️ Architecture & Tech Stack
 
-**Banned Libraries** (NOT used in this service):
-- ❌ AutoMapper - Uses explicit manual mapping
-- ❌ FluentValidation - Uses Data Annotations for validation
-- ❌ FluentAssertions - Uses xUnit `Assert.*` methods
-- ❌ In-memory test DB - Uses Testcontainers with real PostgreSQL
+- **Framework**: ASP.NET Core 10.0 (C# 13)
+- **Database**: PostgreSQL 18 with Entity Framework Core 10.x
+- **Distributed Cache**: Redis 7.x (High-performance catalog discovery)
+- **Messaging**: RabbitMQ via MassTransit
+- **API Documentation**: OpenAPI 3.1 + Scalar UI
+- **Observability**: OpenTelemetry (Metrics, Traces, Logging)
 
-**Mandatory Practices**:
-- ✅ **TreatWarningsAsErrors** enabled in all `.csproj` files
-- ✅ **XML Documentation** on ALL public methods, properties, and classes
-- ✅ **No Secrets in Code** - All secrets via environment variables
-- ✅ **No Test Config in Program.js** - Test configuration in test fixtures only
-- ✅ **IAM Integration** - Uses GCP-style permission naming: `material.{resource}.{action}`
+---
 
-## Tech Stack
+## ⚖️ Constitution Rules
 
-- **Framework**: ASP.NET Core 10.0
-- **Database**: PostgreSQL with Entity Framework Core
-- **Caching**: Redis (StackExchange.Redis)
-- **Messaging**: RabbitMQ (MassTransit)
-- **Logging**: Serilog
-- **API Documentation**: OpenAPI 3.0 + Scalar
-- **Metrics**: Prometheus
+This service strictly adheres to the platform development mandates:
 
-## Prerequisites
+### Banned Libraries
+To maintain high performance and low complexity, the following are **NOT** used:
+- ❌ **AutoMapper**: Explicit manual mapping only.
+- ❌ **FluentValidation**: Standard Data Annotations (`[Required]`, `[EmailAddress]`) only.
+- ❌ **FluentAssertions**: Standard xUnit `Assert` methods only.
+- ❌ **In-memory Test DB**: All integration tests use **Testcontainers** with real PostgreSQL 18.
 
-- [.NET 10.0 SDK](https://dotnet.microsoft.com/download)
-- [Docker](https://www.docker.com/) (for PostgreSQL and Redis)
-- [Docker Compose](https://docs.docker.com/compose/)
+### Mandatory Practices
+- ✅ **TreatWarningsAsErrors**: Enabled in all `.csproj` files.
+- ✅ **XML Documentation**: Required on all public methods and properties.
+- ✅ **No Secrets in Code**: All sensitive configuration injected via environment variables.
+- ✅ **No Test Config in Program.cs**: Test configuration in test fixtures only.
+- ✅ **IAM Integration**: Self-registers permissions with the IAM Service using GCP-style naming: `{service}.{resource}.{action}`.
 
-## Quick Start
+---
 
-### 1. Start Infrastructure Services
+## ✨ Key Features
 
-```powershell
-# Start PostgreSQL and Redis using Docker Compose
-docker-compose -f docker-compose.dev.yml up -d
+- **Rich Material Catalog**: Comprehensive management of physical materials including mechanical properties, colors, and pricing.
+- **Process Hierarchy**: Detailed modeling of manufacturing processes (3D Printing, CNC, etc.) and their specific technical constraints.
+- **Bulk Integration Engine**: High-performance import/export tools for large-scale material list management and supplier updates.
+- **Intelligent Search**: Advanced filtering and search capabilities based on technical specifications and stock levels.
+- **Conflict-Free Updates**: Version-based optimistic concurrency ensures data integrity during multi-user catalog management.
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+- .NET 10.0 SDK
+- Docker Desktop (for infrastructure)
+- PostgreSQL 18 (Alpine)
+
+### Local Development Setup
+
+1. **Clone the repository**
+```bash
+git clone https://github.com/ORGANIZATION/Maliev.MaterialService.git
+cd Maliev.MaterialService
 ```
 
-### 2. Apply Database Migrations
-
-```powershell
-# Navigate to the solution directory
-cd r:\maliev\Maliev.MaterialService
-
-# Apply migrations
-dotnet ef database update --project Maliev.MaterialService.Data --startup-project Maliev.MaterialService.Api
+2. **Spin up Infrastructure**
+```bash
+docker run --name material-db -e POSTGRES_PASSWORD=YOUR_PASSWORD -p 5432:5432 -d postgres:18-alpine
+docker run --name material-redis -p 6379:6379 -d redis:7-alpine
 ```
 
-### 3. Run the Application
-
+3. **Configure Environment**
 ```powershell
-# Run the API
+# Windows PowerShell
+$env:ConnectionStrings__MaterialDbContext="YOUR_POSTGRES_CONNECTION_STRING"
+$env:ConnectionStrings__Cache="YOUR_REDIS_CONNECTION_STRING"
+```
+
+4. **Apply Migrations & Run**
+```bash
+dotnet ef database update --project Maliev.MaterialService.Data
 dotnet run --project Maliev.MaterialService.Api
 ```
 
-The API will start at:
-- **HTTP**: `http://localhost:5007`
-- **HTTPS**: `https://localhost:7133`
+The service will be available at `http://localhost:5000/materials`. Access the interactive documentation at `http://localhost:5000/materials/scalar`.
 
-The **Scalar UI** will automatically open in your browser at:
-- `https://localhost:7133/scalar/v1`
+---
 
-## API Endpoints
+## 📡 API Endpoints
 
-### Materials
+All endpoints are prefixed with `/materials/v1/`.
 
-| Method | Endpoint | Description | Authorization |
-|--------|----------|-------------|---------------|
-| GET | `/materials/v1/materials` | Get materials (with filtering, pagination, sorting) | None |
-| GET | `/materials/v1/materials/{id}` | Get material by ID | None |
-| POST | `/materials/v1/materials` | Create new material | EmployeeOrHigher |
-| PUT | `/materials/v1/materials/{id}` | Update material | EmployeeOrHigher |
-| DELETE | `/materials/v1/materials/{id}` | Delete material (soft delete) | Manager |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/materials` | Search and filter the material catalog |
+| POST | `/materials` | Register a new material resource |
+| POST | `/bulk/import` | Bulk upload material records |
+| GET | `/materials/{id}` | Retrieve detailed technical specifications |
 
-### Bulk Operations
+---
 
-| Method | Endpoint | Description | Authorization |
-|--------|----------|-------------|---------------|
-| POST | `/materials/v1/bulk/import` | Bulk import materials | EmployeeOrHigher |
-| GET | `/materials/v1/bulk/export` | Bulk export materials | Employee |
+## 🏥 Health & Monitoring
 
-### Query Parameters (GET /materials/v1/materials)
+Standardized health probes for Kubernetes orchestration:
+- **Liveness**: `GET /materials/liveness`
+- **Readiness**: `GET /materials/readiness` (Checks DB and Redis connectivity)
+- **Metrics**: `GET /materials/metrics` (Prometheus format)
 
-- `page` - Page number (default: 1)
-- `pageSize` - Items per page (default: 10, max: 100)
-- `search` - Search in name, code, or description
-- `sortBy` - Sort field: `name`, `code`, `price`, `stock`, `createdat`
-- `sortDesc` - Sort descending (default: false)
-- `minPrice` - Minimum price filter
-- `maxPrice` - Maximum price filter
-- `supplierId` - Filter by supplier ID
+---
 
-### Health & Monitoring
+## 🧪 Testing
 
-| Endpoint | Description |
-|----------|-------------|
-| `/liveness` | Liveness probe |
-| `/readiness` | Readiness probe (checks DB, Redis) |
-| `/metrics` | Prometheus metrics |
+We prioritize reliable tests over mock-heavy unit tests.
 
-## Configuration
-
-### Connection Strings
-
-Update `appsettings.json`:
-
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=material_app_db;Username=postgres;Password=password",
-    "Redis": "localhost:6379",
-    "RabbitMq": "amqp://guest:guest@localhost:5672"
-  }
-}
+```bash
+# Run all tests using Testcontainers
+dotnet test --verbosity normal
 ```
 
-### Authorization Roles
+- **Integration Tests**: Use real PostgreSQL 18 containers.
+- **Contract Tests**: Ensure API stability for consumers.
 
-- **Customer**: Read-only access
-- **Employee**: Can create and update materials
-- **Manager**: Can delete materials
-- **Admin**: Full access
+---
 
-## Development
+## 📦 Deployment
 
-### Project Structure
+Infrastructure management is handled via GitOps patterns.
 
-```
-Maliev.MaterialService/
-├── Maliev.MaterialService.Api/          # Web API project
-│   ├── Controllers/                     # API controllers
-│   ├── DTOs/                            # Data transfer objects
-│   ├── Services/                        # Business logic
-│   ├── Mapping/                         # Explicit domain/DTO mappers
-│   └── Middleware/                      # Custom middleware
-├── Maliev.MaterialService.Data/         # Data access layer
-│   ├── Entities/                        # Entity models
-│   ├── Configurations/                  # EF Core configurations
-│   ├── DbContext/                       # Database context
-│   └── Migrations/                      # EF Core migrations
-└── Maliev.MaterialService.Tests/        # Test project
-```
+- **Docker Image**: `REGION-docker.pkg.dev/PROJECT_ID/REPOSITORY/maliev-material-service:{sha}`
+- **Environments**: Development, Staging, Production
 
-### Build
+---
 
-```powershell
-dotnet build
-```
+## 📄 License
 
-### Run Tests
-
-```powershell
-dotnet test
-```
-
-### Create Migration
-
-```powershell
-dotnet ef migrations add MigrationName --project Maliev.MaterialService.Data --startup-project Maliev.MaterialService.Api
-```
-
-### Apply Migration
-
-```powershell
-dotnet ef database update --project Maliev.MaterialService.Data --startup-project Maliev.MaterialService.Api
-```
-
-## Docker
-
-### Build Docker Image
-
-```powershell
-docker build -t material-service:latest -f Maliev.MaterialService.Api/Dockerfile .
-```
-
-### Run with Docker
-
-```powershell
-docker run -d -p 5007:80 --name material-service material-service:latest
-```
-
-## Example Requests
-
-### Create Material
-
-```http
-POST /materials/v1/materials
-Content-Type: application/json
-Authorization: Bearer {token}
-
-{
-  "name": "PLA Filament",
-  "code": "PLA-001",
-  "description": "3D printing filament",
-  "pricePerUnit": 25.99,
-  "stockLevel": 100,
-  "manufacturingProcessIds": [],
-  "colorIds": [],
-  "postProcessingMethodIds": [],
-  "mechanicalProperties": []
-}
-```
-
-### Get Materials with Filters
-
-```http
-GET /materials/v1/materials?page=1&pageSize=10&search=PLA&sortBy=price&minPrice=20&maxPrice=50
-```
-
-### Update Material
-
-```http
-PUT /materials/v1/materials/{id}
-Content-Type: application/json
-Authorization: Bearer {token}
-
-{
-  "name": "PLA Filament Updated",
-  "code": "PLA-001",
-  "description": "Updated description",
-  "pricePerUnit": 27.99,
-  "stockLevel": 150,
-  "version": 1,
-  "manufacturingProcessIds": [],
-  "colorIds": [],
-  "postProcessingMethodIds": [],
-  "mechanicalProperties": []
-}
-```
-
-## Monitoring
-
-### Prometheus Metrics
-
-Access metrics at `/metrics` for:
-- HTTP request duration
-- HTTP request count
-- Database query duration
-- Database query count
-- Custom business metrics
-
-### Health Checks
-
-- **Liveness**: `/liveness` - Returns 200 if the app is running
-- **Readiness**: `/readiness` - Returns 200 if the app can serve requests (DB + Redis healthy)
-
-## License
-
-Proprietary - MALIEV Co., Ltd.
-
-## Support
-
-For issues or questions, contact the development team.
+Proprietary - © 2025 MALIEV Co., Ltd. All rights reserved.
