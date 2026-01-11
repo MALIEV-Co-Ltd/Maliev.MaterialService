@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -10,45 +10,23 @@ namespace Maliev.MaterialService.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(name: "version", table: "materials");
-            migrationBuilder.AddColumn<byte[]>(name: "version", table: "materials", type: "bytea", rowVersion: true, nullable: false, defaultValue: new byte[0]);
-
-            migrationBuilder.DropColumn(name: "version", table: "colors");
-            migrationBuilder.AddColumn<byte[]>(name: "version", table: "colors", type: "bytea", rowVersion: true, nullable: false, defaultValue: new byte[0]);
-
-            migrationBuilder.DropColumn(name: "version", table: "manufacturing_processes");
-            migrationBuilder.AddColumn<byte[]>(name: "version", table: "manufacturing_processes", type: "bytea", rowVersion: true, nullable: false, defaultValue: new byte[0]);
-
-            migrationBuilder.DropColumn(name: "version", table: "mechanical_properties");
-            migrationBuilder.AddColumn<byte[]>(name: "version", table: "mechanical_properties", type: "bytea", rowVersion: true, nullable: false, defaultValue: new byte[0]);
-
-            migrationBuilder.DropColumn(name: "version", table: "post_processing_methods");
-            migrationBuilder.AddColumn<byte[]>(name: "version", table: "post_processing_methods", type: "bytea", rowVersion: true, nullable: false, defaultValue: new byte[0]);
-
-            migrationBuilder.DropColumn(name: "version", table: "suppliers");
-            migrationBuilder.AddColumn<byte[]>(name: "version", table: "suppliers", type: "bytea", rowVersion: true, nullable: false, defaultValue: new byte[0]);
+            migrationBuilder.Sql("ALTER TABLE materials ALTER COLUMN version TYPE bytea USING decode(lpad(to_hex(version), 8, '0'), 'hex');");
+            migrationBuilder.Sql("ALTER TABLE colors ALTER COLUMN version TYPE bytea USING decode(lpad(to_hex(version), 8, '0'), 'hex');");
+            migrationBuilder.Sql("ALTER TABLE manufacturing_processes ALTER COLUMN version TYPE bytea USING decode(lpad(to_hex(version), 8, '0'), 'hex');");
+            migrationBuilder.Sql("ALTER TABLE mechanical_properties ALTER COLUMN version TYPE bytea USING decode(lpad(to_hex(version), 8, '0'), 'hex');");
+            migrationBuilder.Sql("ALTER TABLE post_processing_methods ALTER COLUMN version TYPE bytea USING decode(lpad(to_hex(version), 8, '0'), 'hex');");
+            migrationBuilder.Sql("ALTER TABLE suppliers ALTER COLUMN version TYPE bytea USING decode(lpad(to_hex(version), 8, '0'), 'hex');");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(name: "version", table: "materials");
-            migrationBuilder.AddColumn<int>(name: "version", table: "materials", type: "integer", nullable: false, defaultValue: 0);
-
-            migrationBuilder.DropColumn(name: "version", table: "colors");
-            migrationBuilder.AddColumn<int>(name: "version", table: "colors", type: "integer", nullable: false, defaultValue: 0);
-
-            migrationBuilder.DropColumn(name: "version", table: "manufacturing_processes");
-            migrationBuilder.AddColumn<int>(name: "version", table: "manufacturing_processes", type: "integer", nullable: false, defaultValue: 0);
-
-            migrationBuilder.DropColumn(name: "version", table: "mechanical_properties");
-            migrationBuilder.AddColumn<int>(name: "version", table: "mechanical_properties", type: "integer", nullable: false, defaultValue: 0);
-
-            migrationBuilder.DropColumn(name: "version", table: "post_processing_methods");
-            migrationBuilder.AddColumn<int>(name: "version", table: "post_processing_methods", type: "integer", nullable: false, defaultValue: 0);
-
-            migrationBuilder.DropColumn(name: "version", table: "suppliers");
-            migrationBuilder.AddColumn<int>(name: "version", table: "suppliers", type: "integer", nullable: false, defaultValue: 0);
+            migrationBuilder.Sql("ALTER TABLE materials ALTER COLUMN version TYPE integer USING ('x' || encode(version, 'hex'))::bit(32)::integer;");
+            migrationBuilder.Sql("ALTER TABLE colors ALTER COLUMN version TYPE integer USING ('x' || encode(version, 'hex'))::bit(32)::integer;");
+            migrationBuilder.Sql("ALTER TABLE manufacturing_processes ALTER COLUMN version TYPE integer USING ('x' || encode(version, 'hex'))::bit(32)::integer;");
+            migrationBuilder.Sql("ALTER TABLE mechanical_properties ALTER COLUMN version TYPE integer USING ('x' || encode(version, 'hex'))::bit(32)::integer;");
+            migrationBuilder.Sql("ALTER TABLE post_processing_methods ALTER COLUMN version TYPE integer USING ('x' || encode(version, 'hex'))::bit(32)::integer;");
+            migrationBuilder.Sql("ALTER TABLE suppliers ALTER COLUMN version TYPE integer USING ('x' || encode(version, 'hex'))::bit(32)::integer;");
         }
     }
 }
