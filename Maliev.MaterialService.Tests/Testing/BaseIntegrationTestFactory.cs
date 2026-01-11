@@ -133,7 +133,8 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Service:Name"] = "MaterialService",
-                ["Service:Version"] = "1.0.0-test"
+                ["Service:Version"] = "1.0.0-test",
+                ["Jwt:SecurityKey"] = "test-secret-key-at-least-32-characters-long"
             });
         });
 
