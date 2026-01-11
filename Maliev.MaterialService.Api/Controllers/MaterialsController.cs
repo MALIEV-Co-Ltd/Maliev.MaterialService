@@ -7,7 +7,7 @@ using Maliev.MaterialService.Api.DTOs;
 using Maliev.MaterialService.Api.DTOs.Materials;
 using Maliev.MaterialService.Api.Services.Materials;
 using Maliev.Aspire.ServiceDefaults.Authorization;
-using Maliev.MaterialService.Api.Authorization;
+using Maliev.MaterialService.Api.Services.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -174,6 +174,10 @@ public class MaterialsController : ControllerBase
         catch (InvalidOperationException ex)
         {
             _logger.LogWarning(ex, "Failed to update material");
+            if (ex.Message.Contains("modified by another user"))
+            {
+                return Conflict(new { message = ex.Message });
+            }
             return BadRequest(new { message = ex.Message });
         }
     }

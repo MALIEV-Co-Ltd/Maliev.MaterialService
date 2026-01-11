@@ -53,5 +53,5 @@ public class UpdateMaterialRequest
     /// <summary>
     /// Version for optimistic concurrency
     /// </summary>
-    public int Version { get; set; }
+    public byte[] Version { get; set; } = Array.Empty<byte>();
 }
