@@ -68,13 +68,15 @@ public class MaterialDbContext : Microsoft.EntityFrameworkCore.DbContext
             {
                 entry.Entity.CreatedAt = DateTimeOffset.UtcNow;
                 if (string.IsNullOrEmpty(entry.Entity.CreatedBy)) entry.Entity.CreatedBy = "System";
-                entry.Entity.Version = 1;
+                entry.Entity.Version = BitConverter.GetBytes(1);
             }
             else if (entry.State == EntityState.Modified)
             {
                 entry.Entity.UpdatedAt = DateTimeOffset.UtcNow;
                 if (string.IsNullOrEmpty(entry.Entity.UpdatedBy)) entry.Entity.UpdatedBy = "System";
-                entry.Entity.Version++;
+
+                int currentVersion = entry.Entity.Version.Length >= 4 ? BitConverter.ToInt32(entry.Entity.Version, 0) : 0;
+                entry.Entity.Version = BitConverter.GetBytes(currentVersion + 1);
             }
         }
     }
