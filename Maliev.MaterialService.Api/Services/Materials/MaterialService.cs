@@ -194,7 +194,7 @@ public class MaterialService : IMaterialService
                 }
 
                 // Check optimistic concurrency
-                if (material.Version != request.Version)
+                if (!material.Version.SequenceEqual(request.Version))
                 {
                     throw new DbUpdateConcurrencyException("The material has been modified by another user.");
                 }
@@ -208,8 +208,6 @@ public class MaterialService : IMaterialService
                 material.AvailableColors.Clear();
                 material.PostProcessingMethods.Clear();
                 material.MechanicalProperties.Clear();
-
-                await _context.SaveChangesAsync();
 
                 await LoadRelatedEntitiesAsync(material, request.ManufacturingProcessIds, request.ColorIds, request.PostProcessingMethodIds);
 
@@ -225,7 +223,6 @@ public class MaterialService : IMaterialService
                 }
 
                 await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
 
                 _logger.LogInformation("Material updated successfully with ID: {MaterialId}", material.Id);
 
@@ -246,20 +243,33 @@ public class MaterialService : IMaterialService
                         Code: material.Code,
                         Name: material.Name,
                         UpdatedAt: material.UpdatedAt ?? DateTimeOffset.UtcNow,
-                        Version: material.Version
+                        Version: (material.Version != null && material.Version.Length >= 4) ? BitConverter.ToInt32(material.Version, 0) : 0
                     )
                 ));
 
                 _logger.LogInformation("Published MaterialUpdatedEvent for material {MaterialId}", material.Id);
+
+                await transaction.CommitAsync();
 
                 // Invalidate cache
                 await InvalidateCacheAsync(id);
 
                 return await GetMaterialByIdAsync(id);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Error updating material {MaterialId}", id);
+                if (transaction.TransactionId != Guid.Empty)
+                {
+                    try
+                    {
+                        await transaction.RollbackAsync();
+                    }
+                    catch (Exception rbEx)
+                    {
+                        _logger.LogError(rbEx, "Failed to rollback transaction");
+                    }
+                }
                 throw;
             }
         });
@@ -390,7 +400,8 @@ public class MaterialService : IMaterialService
         if (minTensileStrength.HasValue || maxTensileStrength.HasValue)
         {
             query = query.Where(m => m.MechanicalProperties.Any(mp =>
-                mp.MechanicalProperty.Name == "Tensile Strength" &&
+                mp.MechanicalProperty.Active &&
+                mp.MechanicalProperty.Name.ToLower() == "tensile strength" &&
                 (!minTensileStrength.HasValue || mp.Value >= minTensileStrength.Value) &&
                 (!maxTensileStrength.HasValue || mp.Value <= maxTensileStrength.Value)
             ));
@@ -399,10 +410,10 @@ public class MaterialService : IMaterialService
         // Include related entities
         query = query
             .Include(m => m.Supplier)
-            .Include(m => m.ManufacturingProcesses)
-            .Include(m => m.AvailableColors)
-            .Include(m => m.PostProcessingMethods)
-            .Include(m => m.MechanicalProperties)
+            .Include(m => m.ManufacturingProcesses.Where(mp => mp.Active))
+            .Include(m => m.AvailableColors.Where(c => c.Active))
+            .Include(m => m.PostProcessingMethods.Where(ppm => ppm.Active))
+            .Include(m => m.MechanicalProperties.Where(mp => mp.MechanicalProperty.Active))
                 .ThenInclude(mp => mp.MechanicalProperty);
 
         // Get total count before pagination
@@ -460,7 +471,7 @@ public class MaterialService : IMaterialService
         if (manufacturingProcessIds != null && manufacturingProcessIds.Any())
         {
             var processes = await _context.ManufacturingProcesses
-                .Where(mp => manufacturingProcessIds.Contains(mp.Id))
+                .Where(mp => mp.Active && manufacturingProcessIds.Contains(mp.Id))
                 .ToListAsync();
             foreach (var process in processes)
             {
@@ -471,7 +482,7 @@ public class MaterialService : IMaterialService
         if (colorIds != null && colorIds.Any())
         {
             var colors = await _context.Colors
-                .Where(c => colorIds.Contains(c.Id))
+                .Where(c => c.Active && colorIds.Contains(c.Id))
                 .ToListAsync();
             foreach (var color in colors)
             {
@@ -482,7 +493,7 @@ public class MaterialService : IMaterialService
         if (postProcessingMethodIds != null && postProcessingMethodIds.Any())
         {
             var methods = await _context.PostProcessingMethods
-                .Where(ppm => postProcessingMethodIds.Contains(ppm.Id))
+                .Where(ppm => ppm.Active && postProcessingMethodIds.Contains(ppm.Id))
                 .ToListAsync();
             foreach (var method in methods)
             {

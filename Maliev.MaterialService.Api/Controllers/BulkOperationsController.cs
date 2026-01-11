@@ -7,7 +7,7 @@ using Maliev.MaterialService.Api.DTOs.Bulk;
 using Maliev.MaterialService.Api.DTOs.Materials;
 using Maliev.MaterialService.Api.Services.Bulk;
 using Maliev.Aspire.ServiceDefaults.Authorization;
-using Maliev.MaterialService.Api.Authorization;
+using Maliev.MaterialService.Api.Services.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -68,16 +68,11 @@ public class BulkOperationsController : ControllerBase
             return StatusCode(StatusCodes.Status415UnsupportedMediaType, new { message = "Unsupported media type. Only application/json is accepted." });
         }
 
-        string fileContent;
-        using (var reader = new StreamReader(file.OpenReadStream()))
-        {
-            fileContent = await reader.ReadToEndAsync();
-        }
-
         List<CreateMaterialRequest>? materialsToImport;
         try
         {
-            materialsToImport = JsonSerializer.Deserialize<List<CreateMaterialRequest>>(fileContent,
+            using var stream = file.OpenReadStream();
+            materialsToImport = await JsonSerializer.DeserializeAsync<List<CreateMaterialRequest>>(stream,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             if (materialsToImport == null || materialsToImport.Count == 0)
@@ -125,17 +120,14 @@ public class BulkOperationsController : ControllerBase
 
         if (format.Equals("csv", StringComparison.OrdinalIgnoreCase))
         {
-            using (var memoryStream = new MemoryStream())
-            {
-                using (var streamWriter = new StreamWriter(memoryStream, Encoding.UTF8))
-                using (var csv = new CsvWriter(streamWriter, CultureInfo.InvariantCulture))
-                {
-                    csv.Context.RegisterClassMap<MaterialResponseMap>();
-                    csv.WriteRecords(materials);
-                }
-                var csvBytes = memoryStream.ToArray();
-                return File(csvBytes, "text/csv", "materials.csv");
-            }
+            var stream = new MemoryStream();
+            var writer = new StreamWriter(stream, Encoding.UTF8, leaveOpen: true);
+            var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
+            csv.Context.RegisterClassMap<MaterialResponseMap>();
+            await csv.WriteRecordsAsync(materials);
+            await writer.FlushAsync();
+            stream.Position = 0;
+            return File(stream, "text/csv", "materials.csv");
         }
 
         return Ok(materials);

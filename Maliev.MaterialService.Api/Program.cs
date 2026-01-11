@@ -1,11 +1,10 @@
+using Maliev.Aspire.ServiceDefaults;
+using Maliev.MaterialService.Api.Services.Auth;
 using Maliev.MaterialService.Api.Services.Bulk;
 using Maliev.MaterialService.Api.Services.Materials;
-using Maliev.MaterialService.Api.Services.Auth;
 using Maliev.MaterialService.Data.DbContext;
 using Maliev.MaterialService.Data.Interceptors;
-using Maliev.Aspire.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,10 +18,10 @@ builder.AddStandardMiddleware(options =>
 {
     options.EnableRequestLogging = true;
 });
-builder.AddServiceMeters("materials-meter", "materialservice-auth-meter"); // Register service meters for OpenTelemetry business metrics
+builder.AddServiceMeters("materials-meter"); // Register service meters for OpenTelemetry business metrics
 
-builder.Services.AddIAMClient(builder.Configuration, "MaterialService"); // Standard IAM Client integration
-builder.Services.AddIAMRegistration<MaterialIAMRegistrationService>(); // Register permissions with IAM on startup
+builder.AddIAMServiceClient("material");
+builder.Services.AddIAMRegistration<MaterialIAMRegistrationService>("material");
 
 // Core application services
 builder.Services.AddSingleton<Maliev.MaterialService.Api.Services.Auth.AuthMetrics>();
@@ -103,7 +102,10 @@ await app.MigrateDatabaseAsync<MaterialDbContext>();
 
 app.UseStandardMiddleware();
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseResponseCompression();
 app.UseCors();
 app.UseRateLimiter();

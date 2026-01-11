@@ -12,7 +12,7 @@ public abstract class BaseEntity
     public string? UpdatedBy { get; set; }
 
     [ConcurrencyCheck]
-    public int Version { get; set; }
+    public byte[] Version { get; set; } = Array.Empty<byte>();
 
     public bool Active { get; set; } = true;
 }

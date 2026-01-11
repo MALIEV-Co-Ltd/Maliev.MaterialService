@@ -22,7 +22,7 @@ public class AuthMetrics : IAuthMetrics
     public AuthMetrics(IMeterFactory meterFactory, IConfiguration configuration)
     {
         var serviceName = configuration["Service:Name"] ?? "MaterialService";
-        var meter = meterFactory.Create($"{serviceName.ToLower()}-auth-meter");
+        var meter = meterFactory.Create("materials-meter");
         _authSuccessCounter = meter.CreateCounter<long>("material_auth_success_total", description: "Total successful authorizations");
         _authFailureCounter = meter.CreateCounter<long>("material_auth_failure_total", description: "Total failed authorizations");
 
