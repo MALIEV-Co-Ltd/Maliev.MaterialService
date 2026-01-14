@@ -1,4 +1,3 @@
-#pragma warning disable CA1848 // For improved performance, use the LoggerMessage delegates
 using Maliev.Aspire.ServiceDefaults;
 using Maliev.MaterialService.Api.Services.Auth;
 using Maliev.MaterialService.Api.Services.Bulk;
@@ -15,7 +14,7 @@ var bootstrapLogger = loggerFactory.CreateLogger("Program");
 
 try
 {
-    bootstrapLogger.LogInformation("Starting Material Service host");
+    Log.StartingHost(bootstrapLogger, "Material Service");
 
     var builder = WebApplication.CreateBuilder(args);
 
@@ -133,12 +132,12 @@ try
     // Map OpenAPI and Scalar documentation (dev/staging only)
     app.MapApiDocumentation(servicePrefix: "material");
 
-    logger.LogInformation("MaterialService started successfully");
+    Log.ServiceStarted(logger, "Material Service");
     await app.RunAsync();
 }
 catch (Exception ex)
 {
-    bootstrapLogger.LogCritical(ex, "Material Service host terminated unexpectedly during startup");
+    Log.HostTerminated(bootstrapLogger, ex, "Material Service");
     throw;
 }
 finally
@@ -153,8 +152,14 @@ public partial class Program
 {
     internal static partial class Log
     {
-        [LoggerMessage(Level = LogLevel.Information, Message = "MaterialService started successfully")]
-        public static partial void ServiceStarted(ILogger logger);
+        [LoggerMessage(Level = LogLevel.Information, Message = "Starting {ServiceName} host")]
+        public static partial void StartingHost(ILogger logger, string serviceName);
+
+        [LoggerMessage(Level = LogLevel.Critical, Message = "{ServiceName} host terminated unexpectedly during startup")]
+        public static partial void HostTerminated(ILogger logger, Exception ex, string serviceName);
+
+        [LoggerMessage(Level = LogLevel.Information, Message = "{ServiceName} started successfully")]
+        public static partial void ServiceStarted(ILogger logger, string serviceName);
 
         [LoggerMessage(Level = LogLevel.Error, Message = "Database migration failed - application may not function correctly")]
         public static partial void MigrationFailed(ILogger logger, Exception exception);
