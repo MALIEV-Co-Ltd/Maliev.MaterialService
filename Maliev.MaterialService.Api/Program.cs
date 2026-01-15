@@ -138,6 +138,9 @@ try
 catch (Exception ex)
 {
     Log.HostTerminated(bootstrapLogger, ex, "Material Service");
+    // Force flush to ensure Aspire captures the error before process exits
+    Console.Out.Flush();
+    Console.Error.Flush();
     throw;
 }
 finally
