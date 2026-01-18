@@ -5,7 +5,6 @@ using Maliev.MaterialService.Api.Services.Materials;
 using Maliev.MaterialService.Data.DbContext;
 using Maliev.MaterialService.Data.Interceptors;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using System.Threading.RateLimiting;
 
 // Initialize bootstrap logging

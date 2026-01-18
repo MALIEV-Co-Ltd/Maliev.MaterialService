@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Maliev.MaterialService.Api.DTOs.Materials;
 using Maliev.MaterialService.Api.DTOs;
+using Maliev.MaterialService.Api.DTOs.Materials;
 
 namespace Maliev.MaterialService.Api.Services.Materials;
 

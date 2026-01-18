@@ -1,7 +1,6 @@
+using Maliev.MaterialService.Data.DbContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using Maliev.MaterialService.Data.DbContext;
-using Maliev.MaterialService.Data.Interceptors;
 
 namespace Maliev.MaterialService.Data;
 

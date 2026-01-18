@@ -1,6 +1,4 @@
 using Maliev.Aspire.ServiceDefaults.IAM;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace Maliev.MaterialService.Api.Services.Auth;
 

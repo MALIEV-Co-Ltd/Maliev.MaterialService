@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace Maliev.MaterialService.Data.Entities;
 
 public class Supplier : BaseEntity

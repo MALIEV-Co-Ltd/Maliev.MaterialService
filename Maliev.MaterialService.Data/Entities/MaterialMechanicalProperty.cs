@@ -1,5 +1,3 @@
-using System;
-
 namespace Maliev.MaterialService.Data.Entities;
 
 public class MaterialMechanicalProperty

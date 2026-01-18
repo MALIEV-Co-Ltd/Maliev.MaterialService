@@ -1,16 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Maliev.MaterialService.Api.DTOs.Materials;
-using Maliev.MaterialService.Api.Mapping;
 using Maliev.Aspire.ServiceDefaults.Caching;
+using Maliev.MaterialService.Api.Mapping;
 using Maliev.MaterialService.Data.DbContext;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace Maliev.MaterialService.Api.BackgroundServices;
 

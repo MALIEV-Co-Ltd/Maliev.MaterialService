@@ -1,17 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Maliev.Aspire.ServiceDefaults.Caching;
 using Maliev.MaterialService.Api.DTOs;
 using Maliev.MaterialService.Api.DTOs.Materials;
 using Maliev.MaterialService.Api.Mapping;
-using Maliev.Aspire.ServiceDefaults.Caching;
-using Maliev.MessagingContracts.Generated;
 using Maliev.MaterialService.Data.DbContext;
 using Maliev.MaterialService.Data.Entities;
+using Maliev.MessagingContracts.Generated;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Maliev.MaterialService.Api.Services.Materials;
 
