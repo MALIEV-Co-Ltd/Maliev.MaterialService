@@ -19,7 +19,8 @@ public class IntegrationTestWebAppFactory : BaseIntegrationTestFactory<Program, 
     private string GetConnectionString()
     {
         // Get connection string from environment variable set by BaseIntegrationTestFactory
-        return Environment.GetEnvironmentVariable($"ConnectionStrings__{DbConnectionStringName}")
+        return _postgresContainer?.GetConnectionString()
+            ?? Environment.GetEnvironmentVariable($"ConnectionStrings__{DbConnectionStringName}")
             ?? throw new InvalidOperationException("Database connection string not found");
     }
 }

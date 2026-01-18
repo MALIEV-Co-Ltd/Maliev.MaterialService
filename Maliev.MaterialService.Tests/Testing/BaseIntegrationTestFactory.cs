@@ -32,9 +32,9 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     where TProgram : class
     where TDbContext : DbContext
 {
-    private static PostgreSqlContainer? _postgresContainer;
-    private static RedisContainer? _redisContainer;
-    private static RabbitMqContainer? _rabbitmqContainer;
+    protected static PostgreSqlContainer? _postgresContainer;
+    protected static RedisContainer? _redisContainer;
+    protected static RabbitMqContainer? _rabbitmqContainer;
     private static bool _containersStarted;
     private static readonly SemaphoreSlim _initLock = new(1, 1);
 
@@ -231,7 +231,14 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     /// </summary>
     public virtual TDbContext CreateDbContext()
     {
-        var connectionString = _postgresContainer!.GetConnectionString();
+        var connectionString = _postgresContainer?.GetConnectionString()
+            ?? Environment.GetEnvironmentVariable($"ConnectionStrings__{DbConnectionStringName}");
+
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            throw new InvalidOperationException("Database connection string not found");
+        }
+
         var optionsBuilder = new DbContextOptionsBuilder<TDbContext>();
         optionsBuilder.UseNpgsql(connectionString);
         return (TDbContext)Activator.CreateInstance(typeof(TDbContext), optionsBuilder.Options)!;
