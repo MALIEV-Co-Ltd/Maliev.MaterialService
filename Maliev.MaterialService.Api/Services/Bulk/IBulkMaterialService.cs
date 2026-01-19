@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Maliev.MaterialService.Api.DTOs.Bulk;
 using Maliev.MaterialService.Api.DTOs.Materials;
 

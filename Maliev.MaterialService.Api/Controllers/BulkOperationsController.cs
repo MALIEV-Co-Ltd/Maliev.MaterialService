@@ -1,23 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.Security.Claims;
-using System.Threading.Tasks;
 using Asp.Versioning;
+using Maliev.Aspire.ServiceDefaults.Authorization;
 using Maliev.MaterialService.Api.DTOs.Bulk;
 using Maliev.MaterialService.Api.DTOs.Materials;
-using Maliev.MaterialService.Api.Services.Bulk;
-using Maliev.Aspire.ServiceDefaults.Authorization;
 using Maliev.MaterialService.Api.Services.Auth;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
+using Maliev.MaterialService.Api.Services.Bulk;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using System.IO;
+using System.Globalization;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
-using CsvHelper;
-using System.Globalization;
-using CsvHelper.Configuration;
 
 namespace Maliev.MaterialService.Api.Controllers;
 
@@ -122,14 +113,32 @@ public class BulkOperationsController : ControllerBase
         {
             var stream = new MemoryStream();
             var writer = new StreamWriter(stream, Encoding.UTF8, leaveOpen: true);
-            var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
-            csv.Context.RegisterClassMap<MaterialResponseMap>();
-            await csv.WriteRecordsAsync(materials);
+
+            // Write Header
+            await writer.WriteLineAsync("Code,Name,PricePerUnit,StockLevel");
+
+            // Write Records
+            foreach (var m in materials)
+            {
+                var line = $"{EscapeCsv(m.Code)},{EscapeCsv(m.Name)},{m.PricePerUnit.ToString(CultureInfo.InvariantCulture)},{m.StockLevel}";
+                await writer.WriteLineAsync(line);
+            }
+
             await writer.FlushAsync();
             stream.Position = 0;
             return File(stream, "text/csv", "materials.csv");
         }
 
         return Ok(materials);
+    }
+
+    private static string EscapeCsv(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return string.Empty;
+        if (value.Contains(",") || value.Contains("\"") || value.Contains("\n") || value.Contains("\r"))
+        {
+            return $"\"{value.Replace("\"", "\"\"")}\"";
+        }
+        return value;
     }
 }

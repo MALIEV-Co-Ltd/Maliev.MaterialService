@@ -1,5 +1,3 @@
-using System;
-
 namespace Maliev.MaterialService.Api.DTOs.Materials;
 
 /// <summary>

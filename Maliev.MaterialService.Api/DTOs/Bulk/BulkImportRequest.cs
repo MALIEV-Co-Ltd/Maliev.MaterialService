@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Maliev.MaterialService.Api.DTOs.Materials;
 
 namespace Maliev.MaterialService.Api.DTOs.Bulk;

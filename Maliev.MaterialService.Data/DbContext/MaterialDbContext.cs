@@ -1,10 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using Maliev.Aspire.ServiceDefaults.Database;
 using Maliev.MaterialService.Data.Entities;
-using System.Threading;
-using System.Threading.Tasks;
-using System;
 using Maliev.MaterialService.Data.Interceptors;
+using Microsoft.EntityFrameworkCore;
 
 namespace Maliev.MaterialService.Data.DbContext;
 
