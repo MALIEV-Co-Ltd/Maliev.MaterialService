@@ -5,8 +5,6 @@ using Maliev.MaterialService.Api.Services.Materials;
 using Maliev.MaterialService.Data.DbContext;
 using Maliev.MaterialService.Data.Interceptors;
 using Microsoft.EntityFrameworkCore;
-using System.Threading.RateLimiting;
-
 // Initialize bootstrap logging
 using var loggerFactory = LoggerFactory.Create(logBuilder => logBuilder.AddConsole());
 var bootstrapLogger = loggerFactory.CreateLogger("Program");
@@ -43,12 +41,12 @@ try
     builder.AddPostgresDbContext<MaterialDbContext>(connectionName: "MaterialDbContext"); // PostgreSQL with retry logic
 
     // Redis Distributed Cache (ServiceDefaults) - enforce Redis on all environments
-    builder.AddRedisDistributedCache(instanceName: "material:");
+    builder.AddStandardCache("material:"); // Redis + in-memory fallback, memory-optimized
     // Register CacheWarmingService
     builder.Services.AddHostedService<Maliev.MaterialService.Api.BackgroundServices.CacheWarmingService>();
 
     // --- API Configuration ---
-    builder.AddDefaultCors(); // CORS from CORS:AllowedOrigins config
+    builder.AddStandardCors(); // CORS with fail-fast validation
     builder.AddDefaultApiVersioning(); // API versioning with URL segment reader
 
     // JWT Authentication (tests override via PostConfigureAll with dynamic RSA keys)
@@ -77,20 +75,7 @@ try
 
     builder.Services.AddPermissionAuthorization();
 
-    builder.Services.AddRateLimiter(options =>
-    {
-        options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
-            RateLimitPartition.GetFixedWindowLimiter(
-                partitionKey: httpContext.User.Identity?.Name ?? httpContext.Request.Headers.Host.ToString(),
-                factory: partition => new FixedWindowRateLimiterOptions
-                {
-                    AutoReplenishment = true,
-                    PermitLimit = 100,
-                    QueueLimit = 0,
-                    Window = TimeSpan.FromMinutes(1)
-                }));
-    });
-
+    builder.AddStandardRateLimiting(); // Memory-optimized for low-spec nodes
     builder.Services.AddResponseCompression(options =>
     {
         options.EnableForHttps = true;
