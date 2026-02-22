@@ -18,16 +18,6 @@ public static class MaterialPermissions
     /// <summary>Permission to export material data.</summary>
     public const string MaterialsExport = "material.materials.export";
 
-    // Inventory Operations
-    /// <summary>Permission to view inventory levels.</summary>
-    public const string InventoryView = "material.inventory.view";
-    /// <summary>Permission to adjust inventory quantities.</summary>
-    public const string InventoryAdjust = "material.inventory.adjust";
-    /// <summary>Permission to transfer materials between locations.</summary>
-    public const string InventoryTransfer = "material.inventory.transfer";
-    /// <summary>Permission to perform inventory counts.</summary>
-    public const string InventoryCount = "material.inventory.count";
-
     // Category Operations
     /// <summary>Permission to create material categories.</summary>
     public const string CategoriesCreate = "material.categories.create";
@@ -52,10 +42,6 @@ public static class MaterialPermissions
         { MaterialsUpdate, "Update material information" },
         { MaterialsDelete, "Delete materials" },
         { MaterialsExport, "Export material data" },
-        { InventoryView, "View inventory levels" },
-        { InventoryAdjust, "Adjust inventory quantities" },
-        { InventoryTransfer, "Transfer materials between locations" },
-        { InventoryCount, "Perform inventory counts" },
         { CategoriesCreate, "Create material categories" },
         { CategoriesRead, "Read categories" },
         { CategoriesUpdate, "Update categories" },

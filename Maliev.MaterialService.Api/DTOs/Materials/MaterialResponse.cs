@@ -36,6 +36,21 @@ public class MaterialResponse
     public int StockLevel { get; set; }
 
     /// <summary>
+    /// Material density in g/cm³
+    /// </summary>
+    public decimal Density { get; set; }
+
+    /// <summary>
+    /// Cost per kilogram in THB
+    /// </summary>
+    public decimal CostPerKg { get; set; }
+
+    /// <summary>
+    /// Technology-specific process parameters
+    /// </summary>
+    public Dictionary<string, string> ProcessParameters { get; set; } = new();
+
+    /// <summary>
     /// Supplier ID if associated
     /// </summary>
     public Guid? SupplierId { get; set; }

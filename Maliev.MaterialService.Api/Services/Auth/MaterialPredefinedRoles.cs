@@ -9,8 +9,6 @@ public static class MaterialPredefinedRoles
     public const string Admin = "roles.material.admin";
     /// <summary>Role for material managers.</summary>
     public const string Manager = "roles.material.manager";
-    /// <summary>Role for inventory clerks.</summary>
-    public const string Clerk = "roles.material.clerk";
     /// <summary>Role for read-only viewers.</summary>
     public const string Viewer = "roles.material.viewer";
 
@@ -21,16 +19,12 @@ public static class MaterialPredefinedRoles
     {
         (Admin, "Full access to all material service operations", MaterialPermissions.All.ToArray()),
 
-        (Manager, "Manage materials, inventory, and categories", new[]
+        (Manager, "Manage materials and categories", new[]
         {
             MaterialPermissions.MaterialsCreate,
             MaterialPermissions.MaterialsRead,
             MaterialPermissions.MaterialsUpdate,
             MaterialPermissions.MaterialsExport,
-            MaterialPermissions.InventoryView,
-            MaterialPermissions.InventoryAdjust,
-            MaterialPermissions.InventoryTransfer,
-            MaterialPermissions.InventoryCount,
             MaterialPermissions.CategoriesCreate,
             MaterialPermissions.CategoriesRead,
             MaterialPermissions.CategoriesUpdate,
@@ -38,19 +32,9 @@ public static class MaterialPredefinedRoles
             MaterialPermissions.SuppliersRead
         }),
 
-        (Clerk, "Daily inventory operations and material recording", new[]
-        {
-            MaterialPermissions.MaterialsCreate,
-            MaterialPermissions.MaterialsRead,
-            MaterialPermissions.MaterialsUpdate,
-            MaterialPermissions.InventoryView,
-            MaterialPermissions.InventoryCount
-        }),
-
-        (Viewer, "Read-only access to materials and inventory", new[]
+        (Viewer, "Read-only access to materials", new[]
         {
             MaterialPermissions.MaterialsRead,
-            MaterialPermissions.InventoryView,
             MaterialPermissions.CategoriesRead,
             MaterialPermissions.SuppliersRead
         })

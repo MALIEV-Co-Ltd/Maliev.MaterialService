@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Maliev.MaterialService.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -37,6 +38,25 @@ public class MaterialConfiguration : IEntityTypeConfiguration<Material>
             .IsRequired();
 
         builder.Property(m => m.StockLevel)
+            .IsRequired();
+
+        builder.Property(m => m.Density)
+            .HasPrecision(18, 4)
+            .HasDefaultValue(0m)
+            .IsRequired();
+
+        builder.Property(m => m.CostPerKg)
+            .HasPrecision(18, 2)
+            .HasDefaultValue(0m)
+            .IsRequired();
+
+        builder.Property(m => m.ProcessParameters)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<Dictionary<string, string>>(v, (JsonSerializerOptions?)null) ?? new Dictionary<string, string>()
+            )
+            .HasColumnType("jsonb")
+            .HasDefaultValueSql("'{}'::jsonb")
             .IsRequired();
 
         // Navigation properties

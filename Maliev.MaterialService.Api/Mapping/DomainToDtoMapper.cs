@@ -21,6 +21,9 @@ public static class DomainToDtoMapper
             SupplierName = material.Supplier?.Name,
             PricePerUnit = material.PricePerUnit,
             StockLevel = material.StockLevel,
+            Density = material.Density,
+            CostPerKg = material.CostPerKg,
+            ProcessParameters = material.ProcessParameters,
             Active = material.Active,
             CreatedAt = material.CreatedAt,
             CreatedBy = material.CreatedBy,
@@ -44,7 +47,10 @@ public static class DomainToDtoMapper
             Description = request.Description,
             SupplierId = request.SupplierId,
             PricePerUnit = request.PricePerUnit,
-            StockLevel = request.StockLevel
+            StockLevel = request.StockLevel,
+            Density = request.Density,
+            CostPerKg = request.CostPerKg,
+            ProcessParameters = request.ProcessParameters
         };
     }
 
@@ -57,6 +63,9 @@ public static class DomainToDtoMapper
         material.SupplierId = request.SupplierId;
         material.PricePerUnit = request.PricePerUnit;
         material.StockLevel = request.StockLevel;
+        material.Density = request.Density;
+        material.CostPerKg = request.CostPerKg;
+        material.ProcessParameters = request.ProcessParameters;
     }
 
     /// <summary>Maps ManufacturingProcess to ManufacturingProcessResponse</summary>
