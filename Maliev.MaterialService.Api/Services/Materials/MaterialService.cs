@@ -4,6 +4,7 @@ using Maliev.MaterialService.Api.DTOs.Materials;
 using Maliev.MaterialService.Api.Mapping;
 using Maliev.MaterialService.Data.DbContext;
 using Maliev.MaterialService.Data.Entities;
+using Maliev.MessagingContracts.Contracts.Materials;
 using Maliev.MessagingContracts.Generated;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -98,7 +99,7 @@ public class MaterialService : IMaterialService
         _logger.LogInformation("Material created successfully with ID: {MaterialId}", material.Id);
 
         // Publish event
-        await _publishEndpoint.Publish(new MessagingContracts.Generated.MaterialCreatedEvent(
+        await _publishEndpoint.Publish(new MaterialCreatedEvent(
             MessageId: Guid.NewGuid(),
             MessageName: "MaterialCreatedEvent",
             MessageType: MessageType.Event,
@@ -109,7 +110,7 @@ public class MaterialService : IMaterialService
             CausationId: null,
             OccurredAtUtc: DateTimeOffset.UtcNow,
             IsPublic: false,
-            Payload: new MessagingContracts.Generated.MaterialCreatedEventPayload(
+            Payload: new MaterialCreatedEventPayload(
                 MaterialId: material.Id,
                 Code: material.Code,
                 Name: material.Name,
@@ -222,7 +223,7 @@ public class MaterialService : IMaterialService
                 _logger.LogInformation("Material updated successfully with ID: {MaterialId}", material.Id);
 
                 // Publish event
-                await _publishEndpoint.Publish(new MessagingContracts.Generated.MaterialUpdatedEvent(
+                await _publishEndpoint.Publish(new MaterialUpdatedEvent(
                     MessageId: Guid.NewGuid(),
                     MessageName: "MaterialUpdatedEvent",
                     MessageType: MessageType.Event,
@@ -233,7 +234,7 @@ public class MaterialService : IMaterialService
                     CausationId: null,
                     OccurredAtUtc: DateTimeOffset.UtcNow,
                     IsPublic: false,
-                    Payload: new MessagingContracts.Generated.MaterialUpdatedEventPayload(
+                    Payload: new MaterialUpdatedEventPayload(
                         MaterialId: material.Id,
                         Code: material.Code,
                         Name: material.Name,
@@ -289,7 +290,7 @@ public class MaterialService : IMaterialService
         _logger.LogInformation("Material soft-deleted successfully with ID: {MaterialId}", material.Id);
 
         // Publish event
-        await _publishEndpoint.Publish(new MessagingContracts.Generated.MaterialDiscontinuedEvent(
+        await _publishEndpoint.Publish(new MaterialDiscontinuedEvent(
             MessageId: Guid.NewGuid(),
             MessageName: "MaterialDiscontinuedEvent",
             MessageType: MessageType.Event,
@@ -300,7 +301,7 @@ public class MaterialService : IMaterialService
             CausationId: null,
             OccurredAtUtc: DateTimeOffset.UtcNow,
             IsPublic: false,
-            Payload: new MessagingContracts.Generated.MaterialDiscontinuedEventPayload(
+            Payload: new MaterialDiscontinuedEventPayload(
                 MaterialId: material.Id,
                 DiscontinuedAt: DateTimeOffset.UtcNow
             )
