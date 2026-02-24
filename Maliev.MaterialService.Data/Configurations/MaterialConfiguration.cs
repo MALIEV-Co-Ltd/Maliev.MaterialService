@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Maliev.MaterialService.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Maliev.MaterialService.Data.Configurations;
@@ -55,6 +56,15 @@ public class MaterialConfiguration : IEntityTypeConfiguration<Material>
                 v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
                 v => JsonSerializer.Deserialize<Dictionary<string, string>>(v, (JsonSerializerOptions?)null) ?? new Dictionary<string, string>()
             )
+            .Metadata.SetValueComparer(
+                new ValueComparer<Dictionary<string, string>>(
+                    (c1, c2) => c1 != null && c2 != null && c1.Count == c2.Count && !c1.Except(c2).Any(),
+                    c => c == null ? 0 : c.Aggregate(0, (a, kv) => HashCode.Combine(a, kv.Key, kv.Value)),
+                    c => c == null ? new Dictionary<string, string>() : c.ToDictionary(kv => kv.Key, kv => kv.Value)
+                )
+            );
+
+        builder.Property(m => m.ProcessParameters)
             .HasColumnType("jsonb")
             .HasDefaultValueSql("'{}'::jsonb")
             .IsRequired();

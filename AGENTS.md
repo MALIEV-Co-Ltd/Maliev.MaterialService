@@ -2,6 +2,15 @@
 
 This document contains instructions for AI agents operating in this codebase.
 
+## Active Technologies
+
+- .NET 10.0 / C# 14 + ASP.NET Core, Entity Framework Core 10, Npgsql (001-material-pricing-fields)
+- PostgreSQL with JSONB (001-material-pricing-fields)
+
+## Recent Changes
+
+- 001-material-pricing-fields: Added .NET 10.0 / C# 14 + ASP.NET Core, Entity Framework Core 10, Npgsql
+
 ## 1. Environment & Build Commands
 
 This is a **.NET 10.0** project using Visual Studio Solution (.slnx).
