@@ -5,7 +5,7 @@ using Maliev.MaterialService.Api.Mapping;
 using Maliev.MaterialService.Data.DbContext;
 using Maliev.MaterialService.Data.Entities;
 using Maliev.MessagingContracts.Contracts.Materials;
-using Maliev.MessagingContracts.Generated;
+using Maliev.MessagingContracts;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
