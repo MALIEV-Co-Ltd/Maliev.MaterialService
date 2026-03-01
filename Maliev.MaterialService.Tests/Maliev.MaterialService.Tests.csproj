@@ -38,7 +38,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Maliev.MaterialService.Api\Maliev.MaterialService.Api.csproj" />
-    <ProjectReference Include="..\Maliev.MaterialService.Data\Maliev.MaterialService.Data.csproj" />
+    <ProjectReference Include="..\Maliev.MaterialService.Infrastructure\Maliev.MaterialService.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

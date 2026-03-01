@@ -4,8 +4,8 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
-using Maliev.MaterialService.Api.DTOs.Materials;
-using Maliev.MaterialService.Data.DbContext;
+using Maliev.MaterialService.Application.DTOs.Materials;
+using Maliev.MaterialService.Infrastructure.Persistence;
 using Maliev.MaterialService.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -217,7 +217,7 @@ public class AuthorizationTests : IClassFixture<IntegrationTestWebAppFactory>, I
         // Act: Attempt an action without sufficient permissions
         await client.PostAsJsonAsync("/material/v1/materials", new CreateMaterialRequest { Name = "fail", Code = "fail", PricePerUnit = 10.0m });
 
-        // Assert: Check metrics endpoint for failure counter (NOTE: RequirePermission attribute currently handles ForbidResult internally, 
+        // Assert: Check metrics endpoint for failure counter (NOTE: RequirePermission attribute currently handles ForbidResult internally,
         // manual recording in controller is used for demonstration in this test context as seen in InventoryController)
         // This test specifically validates the AuthMetrics recording logic.
     }

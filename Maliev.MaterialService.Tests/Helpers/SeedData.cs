@@ -1,5 +1,5 @@
-using Maliev.MaterialService.Data.DbContext;
-using Maliev.MaterialService.Data.Entities;
+using Maliev.MaterialService.Domain.Entities;
+using Maliev.MaterialService.Infrastructure.Persistence;
 using System.Collections.Generic;
 
 namespace Maliev.MaterialService.Tests.Helpers;

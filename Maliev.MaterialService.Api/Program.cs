@@ -1,9 +1,9 @@
 using Maliev.Aspire.ServiceDefaults;
 using Maliev.MaterialService.Api.Services.Auth;
-using Maliev.MaterialService.Api.Services.Bulk;
-using Maliev.MaterialService.Api.Services.Materials;
-using Maliev.MaterialService.Data.DbContext;
-using Maliev.MaterialService.Data.Interceptors;
+using Maliev.MaterialService.Application.Services;
+using Maliev.MaterialService.Infrastructure.Persistence;
+using Maliev.MaterialService.Infrastructure.Persistence.Interceptors;
+using Maliev.MaterialService.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 // Initialize bootstrap logging
 using var loggerFactory = LoggerFactory.Create(logBuilder => logBuilder.AddConsole());
@@ -30,9 +30,9 @@ try
     builder.Services.AddIAMRegistration<MaterialIAMRegistrationService>("material");
 
     // Core application services
-    builder.Services.AddSingleton<Maliev.MaterialService.Api.Services.Auth.AuthMetrics>();
+    builder.Services.AddSingleton<AuthMetrics>();
     builder.Services.AddSingleton<Maliev.Aspire.ServiceDefaults.Authorization.IAuthMetrics>(sp =>
-        sp.GetRequiredService<Maliev.MaterialService.Api.Services.Auth.AuthMetrics>());
+        sp.GetRequiredService<AuthMetrics>());
     builder.Services.AddSingleton<DatabaseMetricsInterceptor>();
 
     builder.AddMassTransitWithRabbitMq(); // Standard messaging integration
@@ -43,7 +43,7 @@ try
     // Redis Distributed Cache (ServiceDefaults) - enforce Redis on all environments
     builder.AddStandardCache("material:"); // Redis + in-memory fallback, memory-optimized
     // Register CacheWarmingService
-    builder.Services.AddHostedService<Maliev.MaterialService.Api.BackgroundServices.CacheWarmingService>();
+    builder.Services.AddHostedService<Maliev.MaterialService.Infrastructure.BackgroundServices.CacheWarmingService>();
 
     // --- API Configuration ---
     builder.AddStandardCors(); // CORS with fail-fast validation
@@ -68,10 +68,10 @@ try
             description: "Material inventory management service. Provides CRUD operations for materials with supplier associations, bulk import/export capabilities, supplier validation, reference data for categories and units, and cached responses for high-performance lookups.");
     }
 
-    builder.AddServiceClient<Maliev.MaterialService.Api.Services.External.ISupplierServiceClient, Maliev.MaterialService.Api.Services.External.SupplierServiceClient>("SupplierService");
+    builder.AddServiceClient<Maliev.MaterialService.Application.Services.ISupplierServiceClient, Maliev.MaterialService.Infrastructure.Services.SupplierServiceClient>("SupplierService");
 
-    builder.Services.AddScoped<IMaterialService, MaterialService>();
-    builder.Services.AddScoped<IBulkMaterialService, BulkMaterialService>();
+    builder.Services.AddScoped<IMaterialService, Maliev.MaterialService.Infrastructure.Services.MaterialService>();
+    builder.Services.AddScoped<IBulkMaterialService, Maliev.MaterialService.Infrastructure.Services.BulkMaterialService>();
 
     builder.Services.AddPermissionAuthorization();
 

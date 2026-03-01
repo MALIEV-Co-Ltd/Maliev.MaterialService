@@ -1,7 +1,7 @@
-using Maliev.MaterialService.Data.DbContext;
+using Maliev.MaterialService.Infrastructure.Persistence;
+using Maliev.MaterialService.Infrastructure.Persistence.Interceptors;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
-using Maliev.MaterialService.Data.Interceptors;
 
 namespace Maliev.MaterialService.Tests.Infrastructure;
 
@@ -17,6 +17,6 @@ public class ModelIntegrityTests
         using var context = new MaterialDbContext(options, null);
         var hasChanges = context.Database.HasPendingModelChanges();
 
-        Assert.False(hasChanges, "Run 'dotnet ef migrations add <Name> --project Maliev.MaterialService.Data --startup-project Maliev.MaterialService.Api'");
+        Assert.False(hasChanges, "Run 'dotnet ef migrations add <Name> --project Maliev.MaterialService.Infrastructure --startup-project Maliev.MaterialService.Api'");
     }
 }

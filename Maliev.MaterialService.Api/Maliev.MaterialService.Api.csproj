@@ -21,7 +21,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Maliev.MaterialService.Data\Maliev.MaterialService.Data.csproj" />
+    <ProjectReference Include="..\Maliev.MaterialService.Application\Maliev.MaterialService.Application.csproj" />
+    <ProjectReference Include="..\Maliev.MaterialService.Infrastructure\Maliev.MaterialService.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

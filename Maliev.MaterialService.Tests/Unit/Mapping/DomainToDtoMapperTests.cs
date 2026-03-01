@@ -1,6 +1,6 @@
-using Maliev.MaterialService.Api.Mapping;
-using Maliev.MaterialService.Api.DTOs.Materials;
-using Maliev.MaterialService.Data.Entities;
+using Maliev.MaterialService.Application.DTOs.Materials;
+using Maliev.MaterialService.Domain.Entities;
+using Maliev.MaterialService.Infrastructure.Mapping;
 using Xunit;
 
 namespace Maliev.MaterialService.Tests.Unit.Mapping;
