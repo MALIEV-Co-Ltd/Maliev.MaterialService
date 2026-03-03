@@ -5,6 +5,7 @@ using Maliev.MaterialService.Application.Services;
 using Maliev.MaterialService.Domain.Entities;
 using Maliev.MaterialService.Infrastructure.Mapping;
 using Maliev.MaterialService.Infrastructure.Persistence;
+using Maliev.MessagingContracts;
 using Maliev.MessagingContracts.Contracts.Materials;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -98,7 +99,7 @@ public class MaterialService : IMaterialService
         await _publishEndpoint.Publish(new MaterialCreatedEvent(
             MessageId: Guid.NewGuid(),
             MessageName: "MaterialCreatedEvent",
-            MessageType: Maliev.MessagingContracts.MessageType.Event,
+            MessageType: MessageType.Event,
             MessageVersion: "1.0.0",
             PublishedBy: "MaterialService",
             ConsumedBy: ["InventoryService", "NotificationService"],
@@ -214,7 +215,7 @@ public class MaterialService : IMaterialService
                 await _publishEndpoint.Publish(new MaterialUpdatedEvent(
                     MessageId: Guid.NewGuid(),
                     MessageName: "MaterialUpdatedEvent",
-                    MessageType: Maliev.MessagingContracts.MessageType.Event,
+                    MessageType: MessageType.Event,
                     MessageVersion: "1.0.0",
                     PublishedBy: "MaterialService",
                     ConsumedBy: ["InventoryService", "NotificationService"],
@@ -278,7 +279,7 @@ public class MaterialService : IMaterialService
         await _publishEndpoint.Publish(new MaterialDiscontinuedEvent(
             MessageId: Guid.NewGuid(),
             MessageName: "MaterialDiscontinuedEvent",
-            MessageType: Maliev.MessagingContracts.MessageType.Event,
+            MessageType: MessageType.Event,
             MessageVersion: "1.0.0",
             PublishedBy: "MaterialService",
             ConsumedBy: ["InventoryService", "NotificationService"],
