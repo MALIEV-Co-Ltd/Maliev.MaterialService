@@ -26,8 +26,12 @@ This is a **.NET 10.0** project using Visual Studio Solution (.slnx).
 
 ## 2. Project Structure
 
-*   **`Maliev.MaterialService.Api`**: Main Web API project (Controllers, Services, DTOs).
-*   **`Maliev.MaterialService.Data`**: Data Access Layer (EF Core DbContext, Entities, Migrations).
+**Architecture**: Clean Architecture (Api, Application, Domain, Infrastructure, Tests)
+
+*   **`Maliev.MaterialService.Api`**: Controllers, Middleware.
+*   **`Maliev.MaterialService.Application`**: Use cases, handlers, DTOs.
+*   **`Maliev.MaterialService.Domain`**: Entities, interfaces, value objects.
+*   **`Maliev.MaterialService.Infrastructure`**: EF Core, repositories.
 *   **`Maliev.MaterialService.Tests`**: xUnit Test project (Integration and Unit tests).
 
 ## 3. Code Style & Conventions
