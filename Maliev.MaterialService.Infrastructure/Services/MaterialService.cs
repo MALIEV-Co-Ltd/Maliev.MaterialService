@@ -205,6 +205,8 @@ public class MaterialService : IMaterialService
 
                 await _context.SaveChangesAsync();
 
+                var version = (int)_context.Entry(material).Property<uint>("xmin").CurrentValue;
+
                 _logger.LogInformation("Material updated successfully with ID: {MaterialId}", material.Id);
 
                 await _publishEndpoint.Publish(new MaterialUpdatedEvent(
@@ -223,7 +225,7 @@ public class MaterialService : IMaterialService
                         Code: material.Code,
                         Name: material.Name,
                         UpdatedAt: material.UpdatedAt ?? DateTimeOffset.UtcNow,
-                        Version: 0
+                        Version: version
                     )
                 ));
 
