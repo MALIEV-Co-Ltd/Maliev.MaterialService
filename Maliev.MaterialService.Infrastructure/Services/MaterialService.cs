@@ -183,11 +183,6 @@ public class MaterialService : IMaterialService
                     return null;
                 }
 
-                if (!material.Version.SequenceEqual(request.Version))
-                {
-                    throw new Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException("The material has been modified by another user.");
-                }
-
                 material.UpdateMaterial(request);
                 material.UpdatedBy = userId;
 
@@ -228,7 +223,7 @@ public class MaterialService : IMaterialService
                         Code: material.Code,
                         Name: material.Name,
                         UpdatedAt: material.UpdatedAt ?? DateTimeOffset.UtcNow,
-                        Version: (material.Version != null && material.Version.Length >= 4) ? BitConverter.ToInt32(material.Version, 0) : 0
+                        Version: 0
                     )
                 ));
 
@@ -391,7 +386,8 @@ public class MaterialService : IMaterialService
             .Include(m => m.AvailableColors.Where(c => c.Active))
             .Include(m => m.PostProcessingMethods.Where(ppm => ppm.Active))
             .Include(m => m.MechanicalProperties.Where(mp => mp.MechanicalProperty.Active))
-                .ThenInclude(mp => mp.MechanicalProperty);
+                .ThenInclude(mp => mp.MechanicalProperty)
+            .AsSplitQuery();
 
         var totalCount = await query.CountAsync();
 

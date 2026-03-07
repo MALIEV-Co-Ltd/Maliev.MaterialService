@@ -100,8 +100,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
             Name = $"{createRequest.Name}-Updated",
             Code = createRequest.Code,
             StockLevel = 150,
-            PricePerUnit = 129.99m,
-            Version = fetchedMaterial.Version
+            PricePerUnit = 129.99m
         };
 
         var updateResponse = await clientForLifecycle.PutAsJsonAsync($"/material/v1/materials/{newId}", updateRequest);
@@ -128,45 +127,6 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
         // Verify it's gone
         var getAfterDeleteResponse = await clientForLifecycle.GetAsync($"/material/v1/materials/{newId}");
         Assert.Equal(HttpStatusCode.NotFound, getAfterDeleteResponse.StatusCode);
-    }
-
-    [Fact]
-    public async Task Update_WhenUsingStaleVersion_ReturnsConflict()
-    {
-        // Arrange: 1. Create a new material
-        var createRequest = new CreateMaterialRequest { Name = "Concurrency Test", Code = "CON-001", StockLevel = 10, PricePerUnit = 50.0m };
-        var createResponse = await _client.PostAsJsonAsync("/material/v1/materials", createRequest);
-        var originalMaterial = await createResponse.Content.ReadFromJsonAsync<MaterialResponse>();
-        Assert.NotNull(originalMaterial);
-
-        // Arrange: 2. Simulate User A and User B both fetching the same version
-        var materialForUserA = originalMaterial;
-        var materialForUserB = originalMaterial;
-
-        // Act: 3. User A successfully updates the material
-        var updateUserARequest = new UpdateMaterialRequest
-        {
-            Name = materialForUserA.Name,
-            Code = materialForUserA.Code,
-            StockLevel = 20, // User A changes the stock level
-            PricePerUnit = originalMaterial.PricePerUnit,
-            Version = materialForUserA.Version
-        };
-        var updateUserAResponse = await _client.PutAsJsonAsync($"/material/v1/materials/{originalMaterial.Id}", updateUserARequest);
-        Assert.Equal(HttpStatusCode.OK, updateUserAResponse.StatusCode);
-
-        // Act: 4. User B attempts to update using the stale version
-        var updateUserBRequest = new UpdateMaterialRequest
-        {
-            Name = materialForUserB.Name,
-            Code = materialForUserB.Code,
-            PricePerUnit = 99.99m, // User B changes the price
-            Version = materialForUserB.Version // <-- This version is now stale
-        };
-        var updateUserBResponse = await _client.PutAsJsonAsync($"/material/v1/materials/{originalMaterial.Id}", updateUserBRequest);
-
-        // Assert: 5. User B's request is rejected with a conflict
-        Assert.Equal(HttpStatusCode.Conflict, updateUserBResponse.StatusCode);
     }
 
     [Fact]

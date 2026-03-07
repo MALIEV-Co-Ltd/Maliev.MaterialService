@@ -14,6 +14,11 @@ public class ManufacturingProcessConfiguration : IEntityTypeConfiguration<Manufa
     {
         builder.HasKey(mp => mp.Id);
 
+        builder.Property<uint>("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
+
         builder.Property(mp => mp.Name)
             .IsRequired()
             .HasMaxLength(100);

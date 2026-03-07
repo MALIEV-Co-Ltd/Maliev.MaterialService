@@ -22,8 +22,7 @@ public class DomainToDtoMapperTests
             CreatedAt = DateTime.UtcNow,
             CreatedBy = "creator",
             UpdatedAt = DateTime.UtcNow,
-            UpdatedBy = "updater",
-            Version = new byte[] { 1, 2, 3 }
+            UpdatedBy = "updater"
         };
 
         var response = material.ToMaterialResponse();
@@ -39,7 +38,6 @@ public class DomainToDtoMapperTests
         Assert.Equal(material.CreatedBy, response.CreatedBy);
         Assert.Equal(material.UpdatedAt, response.UpdatedAt);
         Assert.Equal(material.UpdatedBy, response.UpdatedBy);
-        Assert.Equal(material.Version, response.Version);
     }
 
     [Fact]

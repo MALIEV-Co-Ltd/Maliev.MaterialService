@@ -54,9 +54,4 @@ public class UpdateMaterialRequest
     /// Mechanical properties.
     /// </summary>
     public List<MaterialMechanicalPropertyRequest> MechanicalProperties { get; set; } = new();
-
-    /// <summary>
-    /// Version for optimistic concurrency.
-    /// </summary>
-    public byte[] Version { get; set; } = Array.Empty<byte>();
 }

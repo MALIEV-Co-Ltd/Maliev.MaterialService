@@ -14,6 +14,11 @@ public class MaterialConfiguration : IEntityTypeConfiguration<Material>
     {
         builder.HasKey(m => m.Id);
 
+        builder.Property<uint>("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
+
         builder.Property(m => m.Name)
             .IsRequired()
             .HasMaxLength(200);

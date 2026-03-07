@@ -14,6 +14,11 @@ public class SupplierConfiguration : IEntityTypeConfiguration<Supplier>
     {
         builder.HasKey(s => s.Id);
 
+        builder.Property<uint>("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
+
         builder.Property(s => s.Name)
             .IsRequired()
             .HasMaxLength(200);

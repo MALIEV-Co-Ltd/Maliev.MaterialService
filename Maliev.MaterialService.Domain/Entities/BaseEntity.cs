@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace Maliev.MaterialService.Domain.Entities;
 
 /// <summary>
@@ -31,12 +29,6 @@ public abstract class BaseEntity
     /// User who last updated the entity.
     /// </summary>
     public string? UpdatedBy { get; set; }
-
-    /// <summary>
-    /// Row version for optimistic concurrency control.
-    /// </summary>
-    [ConcurrencyCheck]
-    public byte[] Version { get; set; } = Array.Empty<byte>();
 
     /// <summary>
     /// Whether the entity is active (soft-delete flag).

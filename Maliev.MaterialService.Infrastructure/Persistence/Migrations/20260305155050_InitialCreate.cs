@@ -1,3 +1,4 @@
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -21,7 +22,6 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
                     created_by = table.Column<string>(type: "text", nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     updated_by = table.Column<string>(type: "text", nullable: true),
-                    version = table.Column<int>(type: "integer", nullable: false),
                     active = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
@@ -39,7 +39,6 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
                     created_by = table.Column<string>(type: "text", nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     updated_by = table.Column<string>(type: "text", nullable: true),
-                    version = table.Column<int>(type: "integer", nullable: false),
                     active = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
@@ -58,7 +57,6 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
                     created_by = table.Column<string>(type: "text", nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     updated_by = table.Column<string>(type: "text", nullable: true),
-                    version = table.Column<int>(type: "integer", nullable: false),
                     active = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
@@ -76,7 +74,6 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
                     created_by = table.Column<string>(type: "text", nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     updated_by = table.Column<string>(type: "text", nullable: true),
-                    version = table.Column<int>(type: "integer", nullable: false),
                     active = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
@@ -95,7 +92,6 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
                     created_by = table.Column<string>(type: "text", nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     updated_by = table.Column<string>(type: "text", nullable: true),
-                    version = table.Column<int>(type: "integer", nullable: false),
                     active = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
@@ -118,7 +114,6 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
                     created_by = table.Column<string>(type: "text", nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     updated_by = table.Column<string>(type: "text", nullable: true),
-                    version = table.Column<int>(type: "integer", nullable: false),
                     active = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>

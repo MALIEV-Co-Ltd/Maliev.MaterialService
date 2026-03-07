@@ -127,13 +127,7 @@ public class MaterialEntityTests
         Assert.True(material.Active);
     }
 
-    [Fact]
-    public void Material_HasEmptyVersionByDefault()
-    {
-        var material = new Material();
-        Assert.NotNull(material.Version);
-        Assert.Empty(material.Version);
-    }
+
 }
 
 public class ColorEntityTests

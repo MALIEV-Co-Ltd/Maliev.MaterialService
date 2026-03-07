@@ -14,6 +14,11 @@ public class ColorConfiguration : IEntityTypeConfiguration<Color>
     {
         builder.HasKey(c => c.Id);
 
+        builder.Property<uint>("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
+
         builder.Property(c => c.Name)
             .IsRequired()
             .HasMaxLength(100);

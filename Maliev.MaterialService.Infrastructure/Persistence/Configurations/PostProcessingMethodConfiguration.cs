@@ -14,6 +14,11 @@ public class PostProcessingMethodConfiguration : IEntityTypeConfiguration<PostPr
     {
         builder.HasKey(ppm => ppm.Id);
 
+        builder.Property<uint>("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
+
         builder.Property(ppm => ppm.Name)
             .IsRequired()
             .HasMaxLength(100);

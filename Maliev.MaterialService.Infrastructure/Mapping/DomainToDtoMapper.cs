@@ -28,7 +28,6 @@ public static class DomainToDtoMapper
             CreatedBy = material.CreatedBy,
             UpdatedAt = material.UpdatedAt,
             UpdatedBy = material.UpdatedBy,
-            Version = material.Version,
             ManufacturingProcesses = material.ManufacturingProcesses?.Select(ToManufacturingProcessResponse).ToList() ?? new List<ManufacturingProcessResponse>(),
             AvailableColors = material.AvailableColors?.Select(ToColorResponse).ToList() ?? new List<ColorResponse>(),
             PostProcessingMethods = material.PostProcessingMethods?.Select(ToPostProcessingMethodResponse).ToList() ?? new List<PostProcessingMethodResponse>(),
