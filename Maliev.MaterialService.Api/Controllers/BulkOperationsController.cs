@@ -1,9 +1,9 @@
 using Asp.Versioning;
 using Maliev.Aspire.ServiceDefaults.Authorization;
-using Maliev.MaterialService.Api.DTOs.Bulk;
-using Maliev.MaterialService.Api.DTOs.Materials;
 using Maliev.MaterialService.Api.Services.Auth;
-using Maliev.MaterialService.Api.Services.Bulk;
+using Maliev.MaterialService.Application.DTOs.Bulk;
+using Maliev.MaterialService.Application.DTOs.Materials;
+using Maliev.MaterialService.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Globalization;
 using System.Security.Claims;

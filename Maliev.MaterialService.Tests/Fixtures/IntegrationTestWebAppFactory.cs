@@ -1,4 +1,4 @@
-using Maliev.MaterialService.Data.DbContext;
+using Maliev.MaterialService.Infrastructure.Persistence;
 using Maliev.MaterialService.Tests.Testing;
 using Microsoft.EntityFrameworkCore;
 

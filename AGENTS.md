@@ -26,8 +26,12 @@ This is a **.NET 10.0** project using Visual Studio Solution (.slnx).
 
 ## 2. Project Structure
 
-*   **`Maliev.MaterialService.Api`**: Main Web API project (Controllers, Services, DTOs).
-*   **`Maliev.MaterialService.Data`**: Data Access Layer (EF Core DbContext, Entities, Migrations).
+**Architecture**: Clean Architecture (Api, Application, Domain, Infrastructure, Tests)
+
+*   **`Maliev.MaterialService.Api`**: Controllers, Middleware.
+*   **`Maliev.MaterialService.Application`**: Use cases, handlers, DTOs.
+*   **`Maliev.MaterialService.Domain`**: Entities, interfaces, value objects.
+*   **`Maliev.MaterialService.Infrastructure`**: EF Core, repositories.
 *   **`Maliev.MaterialService.Tests`**: xUnit Test project (Integration and Unit tests).
 
 ## 3. Code Style & Conventions
@@ -89,3 +93,23 @@ Follow the existing patterns in the codebase strictly.
     *   `400 Bad Request`: Validation failures.
     *   `404 Not Found`: Resource does not exist.
     *   `409 Conflict`: Concurrency issues or duplicate keys.
+
+
+## Database & EF Core — Mandatory Rules
+
+### EF Core Design Package
+- ❌ `Microsoft.EntityFrameworkCore.Design` MUST NOT be in Api projects
+- ✅ It belongs ONLY in the Infrastructure (or Data) project where migrations live
+- Migration commands must target Infrastructure as both project and startup-project (since EF Core Design package is in Infrastructure):
+  ```
+  dotnet ef migrations add <Name> --project Maliev.<Domain>Service.Infrastructure --startup-project Maliev.<Domain>Service.Infrastructure
+  ```
+
+### PostgreSQL xmin Concurrency — Mandatory Pattern
+Use shadow property ONLY. Never add a Xmin/xmin property to domain entities.
+```csharp
+entity.Property<uint>("xmin").HasColumnType("xid").IsRowVersion();
+```
+- ❌ Never use `UseXminAsConcurrencyToken()` (removed in Npgsql EF v7)
+- ❌ Never use entity property `public uint Xmin { get; set; }` or `public uint xmin { get; set; }`
+- ❌ Never use `.Ignore(e => e.Xmin)` — remove the entity property instead

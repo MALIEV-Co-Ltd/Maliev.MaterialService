@@ -1,9 +1,9 @@
 using Asp.Versioning;
 using Maliev.Aspire.ServiceDefaults.Authorization;
-using Maliev.MaterialService.Api.DTOs;
-using Maliev.MaterialService.Api.DTOs.Materials;
 using Maliev.MaterialService.Api.Services.Auth;
-using Maliev.MaterialService.Api.Services.Materials;
+using Maliev.MaterialService.Application.DTOs;
+using Maliev.MaterialService.Application.DTOs.Materials;
+using Maliev.MaterialService.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -14,8 +14,7 @@ namespace Maliev.MaterialService.Api.Controllers;
 /// Controller for managing materials
 /// </summary>
 [ApiController]
-[ApiVersion("1")]
-[Authorize]
+[ApiVersion("1.0")]
 [Route("material/v{version:apiVersion}/materials")]
 public class MaterialsController : ControllerBase
 {
