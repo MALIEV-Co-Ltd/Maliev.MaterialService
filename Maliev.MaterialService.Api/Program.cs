@@ -54,11 +54,6 @@ try
 
     // Authorization
     builder.Services.AddHttpContextAccessor();
-    builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider,
-        Maliev.Aspire.ServiceDefaults.Authorization.PermissionAuthorizationPolicyProvider>();
-    builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler,
-        Maliev.Aspire.ServiceDefaults.Authorization.PermissionAuthorizationHandler>();
-    builder.Services.AddAuthorizationBuilder();
 
     // Add OpenAPI (must be in Program.cs for XML comments to work via source generator)
     if (!builder.Environment.IsProduction())
