@@ -11,7 +11,7 @@ namespace Maliev.MaterialService.Api.Controllers;
 /// Controller for retrieving reference data (colors, processes, methods)
 /// </summary>
 [ApiController]
-[ApiVersion("1.0")]
+[ApiVersion("1")]
 [Route("material/v{version:apiVersion}/reference")]
 [RequirePermission(MaterialPermissions.CategoriesRead)]
 public class ReferenceDataController : ControllerBase

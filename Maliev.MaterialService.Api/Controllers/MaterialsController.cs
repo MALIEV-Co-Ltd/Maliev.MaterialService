@@ -14,7 +14,7 @@ namespace Maliev.MaterialService.Api.Controllers;
 /// Controller for managing materials
 /// </summary>
 [ApiController]
-[ApiVersion("1.0")]
+[ApiVersion("1")]
 [Route("material/v{version:apiVersion}/materials")]
 public class MaterialsController : ControllerBase
 {

@@ -10,7 +10,7 @@ namespace Maliev.MaterialService.Api.Controllers;
 /// Controller for supplier-related queries in the Material Service
 /// </summary>
 [ApiController]
-[ApiVersion("1.0")]
+[ApiVersion("1")]
 [Route("material/v{version:apiVersion}/suppliers")]
 [RequirePermission(MaterialPermissions.SuppliersRead)]
 public class SuppliersController : ControllerBase

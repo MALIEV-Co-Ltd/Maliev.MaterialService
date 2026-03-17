@@ -16,7 +16,7 @@ namespace Maliev.MaterialService.Api.Controllers;
 /// Controller for bulk material operations
 /// </summary>
 [ApiController]
-[ApiVersion("1.0")]
+[ApiVersion("1")]
 [Route("material/v{version:apiVersion}/bulk")]
 public class BulkOperationsController : ControllerBase
 {

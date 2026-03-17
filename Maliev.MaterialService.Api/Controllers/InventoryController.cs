@@ -9,7 +9,7 @@ namespace Maliev.MaterialService.Api.Controllers;
 /// Controller for inventory-related operations
 /// </summary>
 [ApiController]
-[ApiVersion("1.0")]
+[ApiVersion("1")]
 [Microsoft.AspNetCore.Authorization.Authorize]
 [Route("material/v{version:apiVersion}/inventory")]
 public class InventoryController : ControllerBase
