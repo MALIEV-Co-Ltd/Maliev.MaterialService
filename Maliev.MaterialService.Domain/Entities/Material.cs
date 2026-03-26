@@ -31,6 +31,26 @@ public class Material : BaseEntity
     public int StockLevel { get; set; }
 
     /// <summary>
+    /// Material category (e.g. "Metal", "Polymer", "Resin", "Sheet").
+    /// </summary>
+    public string Category { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Material density in g/cm³ (used for weight/pricing calculations).
+    /// </summary>
+    public decimal? DensityGCm3 { get; set; }
+
+    /// <summary>
+    /// CNC machinability rating 1–5 (higher = easier to machine).
+    /// </summary>
+    public decimal? MachinabilityRating { get; set; }
+
+    /// <summary>
+    /// Display ordering for UI lists.
+    /// </summary>
+    public int SortOrder { get; set; }
+
+    /// <summary>
     /// Optional supplier ID reference.
     /// </summary>
     public Guid? SupplierId { get; set; }
@@ -59,4 +79,9 @@ public class Material : BaseEntity
     /// Mechanical properties associated with this material.
     /// </summary>
     public ICollection<MaterialMechanicalProperty> MechanicalProperties { get; set; } = new List<MaterialMechanicalProperty>();
+
+    /// <summary>
+    /// Surface finishes compatible with this material.
+    /// </summary>
+    public ICollection<SurfaceFinish> SurfaceFinishes { get; set; } = new List<SurfaceFinish>();
 }

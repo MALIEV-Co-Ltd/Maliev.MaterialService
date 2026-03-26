@@ -9,7 +9,7 @@ public static class SeedData
     public static void Initialize(MaterialDbContext context)
     {
         // Seed test data for materials with relationships
-        if (!context.Materials.Any())
+        if (!context.Materials.Any() && !context.ManufacturingProcesses.Any())
         {
             // Create colors
             var blueColor = new Color { Name = "Blue", HexCode = "#0000FF" };
@@ -17,8 +17,8 @@ public static class SeedData
             context.Colors.AddRange(blueColor, silverColor);
 
             // Create manufacturing processes
-            var cncMachining = new ManufacturingProcess { Name = "CNC Machining" };
-            var injectionMolding = new ManufacturingProcess { Name = "Injection Molding" };
+            var cncMachining = new ManufacturingProcess { Name = "CNC Machining", Code = "CNC-MACHINING" };
+            var injectionMolding = new ManufacturingProcess { Name = "Injection Molding", Code = "INJECTION-MOLDING" };
             context.ManufacturingProcesses.AddRange(cncMachining, injectionMolding);
 
             // Create mechanical properties

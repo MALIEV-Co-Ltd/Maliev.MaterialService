@@ -1,6 +1,7 @@
 using Maliev.Aspire.ServiceDefaults;
 using Maliev.MaterialService.Api.Services.Auth;
 using Maliev.MaterialService.Application.Services;
+using Maliev.MaterialService.Infrastructure.Data.SeedData;
 using Maliev.MaterialService.Infrastructure.Persistence;
 using Maliev.MaterialService.Infrastructure.Persistence.Interceptors;
 using Maliev.MaterialService.Infrastructure.Services;
@@ -87,6 +88,7 @@ try
 
     // Run database migrations on startup (skip in Testing environment)
     await app.MigrateDatabaseAsync<MaterialDbContext>();
+    await app.SeedManufacturingCatalogAsync();
 
     app.UseStandardMiddleware();
 

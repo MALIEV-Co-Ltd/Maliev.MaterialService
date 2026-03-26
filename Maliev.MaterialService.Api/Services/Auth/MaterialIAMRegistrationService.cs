@@ -1,4 +1,5 @@
 using Maliev.Aspire.ServiceDefaults.IAM;
+using Maliev.MaterialService.Application.Authorization;
 
 namespace Maliev.MaterialService.Api.Services.Auth;
 

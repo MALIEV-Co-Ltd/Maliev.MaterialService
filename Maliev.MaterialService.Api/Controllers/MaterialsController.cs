@@ -1,6 +1,6 @@
 using Asp.Versioning;
 using Maliev.Aspire.ServiceDefaults.Authorization;
-using Maliev.MaterialService.Api.Services.Auth;
+using Maliev.MaterialService.Application.Authorization;
 using Maliev.MaterialService.Application.DTOs;
 using Maliev.MaterialService.Application.DTOs.Materials;
 using Maliev.MaterialService.Application.Services;

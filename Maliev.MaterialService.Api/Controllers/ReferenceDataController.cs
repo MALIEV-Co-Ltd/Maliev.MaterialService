@@ -1,7 +1,7 @@
 using Asp.Versioning;
 using Maliev.Aspire.ServiceDefaults.Authorization;
 using Maliev.Aspire.ServiceDefaults.Caching;
-using Maliev.MaterialService.Api.Services.Auth;
+using Maliev.MaterialService.Application.Authorization;
 using Maliev.MaterialService.Application.DTOs.Materials;
 using Microsoft.AspNetCore.Mvc;
 

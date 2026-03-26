@@ -25,5 +25,22 @@ public class ManufacturingProcessConfiguration : IEntityTypeConfiguration<Manufa
 
         builder.HasIndex(mp => mp.Name)
             .IsUnique();
+
+        builder.Property(mp => mp.Code)
+            .IsRequired()
+            .HasMaxLength(50);
+
+        builder.HasIndex(mp => mp.Code)
+            .IsUnique();
+
+        builder.Property(mp => mp.Description)
+            .HasMaxLength(500);
+
+        builder.Property(mp => mp.SortOrder)
+            .IsRequired()
+            .HasDefaultValue(0);
+
+        builder.HasIndex(mp => mp.Active);
+        builder.HasIndex(mp => mp.SortOrder);
     }
 }

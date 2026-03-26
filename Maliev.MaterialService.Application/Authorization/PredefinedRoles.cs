@@ -1,4 +1,4 @@
-namespace Maliev.MaterialService.Api.Services.Auth;
+namespace Maliev.MaterialService.Application.Authorization;
 
 /// <summary>
 /// Predefined roles for the Material Service.

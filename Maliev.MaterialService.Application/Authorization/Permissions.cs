@@ -1,4 +1,4 @@
-namespace Maliev.MaterialService.Api.Services.Auth;
+namespace Maliev.MaterialService.Application.Authorization;
 
 /// <summary>
 /// Constants for Material Service permissions.
@@ -6,7 +6,6 @@ namespace Maliev.MaterialService.Api.Services.Auth;
 /// </summary>
 public static class MaterialPermissions
 {
-    // Material Operations
     /// <summary>Permission to create new materials.</summary>
     public const string MaterialsCreate = "material.materials.create";
     /// <summary>Permission to read material details.</summary>
@@ -18,7 +17,6 @@ public static class MaterialPermissions
     /// <summary>Permission to export material data.</summary>
     public const string MaterialsExport = "material.materials.export";
 
-    // Inventory Operations
     /// <summary>Permission to view inventory levels.</summary>
     public const string InventoryView = "material.inventory.view";
     /// <summary>Permission to adjust inventory quantities.</summary>
@@ -28,7 +26,6 @@ public static class MaterialPermissions
     /// <summary>Permission to perform inventory counts.</summary>
     public const string InventoryCount = "material.inventory.count";
 
-    // Category Operations
     /// <summary>Permission to create material categories.</summary>
     public const string CategoriesCreate = "material.categories.create";
     /// <summary>Permission to read categories.</summary>
@@ -38,7 +35,6 @@ public static class MaterialPermissions
     /// <summary>Permission to delete categories.</summary>
     public const string CategoriesDelete = "material.categories.delete";
 
-    // Supplier Operations
     /// <summary>Permission to read supplier reference counts.</summary>
     public const string SuppliersRead = "material.suppliers.read";
 

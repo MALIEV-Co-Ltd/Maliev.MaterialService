@@ -69,5 +69,27 @@ public class MaterialConfiguration : IEntityTypeConfiguration<Material>
             .WithOne(mmp => mmp.Material)
             .HasForeignKey(mmp => mmp.MaterialId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Property(m => m.Category)
+            .IsRequired()
+            .HasMaxLength(50)
+            .HasDefaultValue(string.Empty);
+
+        builder.Property(m => m.DensityGCm3)
+            .HasPrecision(8, 4);
+
+        builder.Property(m => m.MachinabilityRating)
+            .HasPrecision(4, 2);
+
+        builder.Property(m => m.SortOrder)
+            .IsRequired()
+            .HasDefaultValue(0);
+
+        builder.HasIndex(m => m.Category);
+        builder.HasIndex(m => m.SortOrder);
+
+        builder.HasMany(m => m.SurfaceFinishes)
+            .WithMany(sf => sf.CompatibleMaterials)
+            .UsingEntity(j => j.ToTable("surface_finish_materials"));
     }
 }

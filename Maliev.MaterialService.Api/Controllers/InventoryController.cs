@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Maliev.Aspire.ServiceDefaults.Authorization;
 using Maliev.MaterialService.Api.Services.Auth;
+using Maliev.MaterialService.Application.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Maliev.MaterialService.Api.Controllers;

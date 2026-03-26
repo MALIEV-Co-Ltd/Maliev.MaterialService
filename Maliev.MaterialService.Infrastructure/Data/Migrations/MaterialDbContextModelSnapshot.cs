@@ -8,7 +8,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
+namespace Maliev.MaterialService.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(MaterialDbContext))]
     partial class MaterialDbContextModelSnapshot : ModelSnapshot
@@ -17,7 +17,7 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.3")
+                .HasAnnotation("ProductVersion", "10.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -111,6 +111,12 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("active");
 
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("code");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -120,11 +126,22 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("created_by");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("name");
+
+                    b.Property<int>("SortOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("sort_order");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -143,9 +160,19 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_manufacturing_processes");
 
+                    b.HasIndex("Active")
+                        .HasDatabaseName("ix_manufacturing_processes_active");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_manufacturing_processes_code");
+
                     b.HasIndex("Name")
                         .IsUnique()
                         .HasDatabaseName("ix_manufacturing_processes_name");
+
+                    b.HasIndex("SortOrder")
+                        .HasDatabaseName("ix_manufacturing_processes_sort_order");
 
                     b.ToTable("manufacturing_processes");
                 });
@@ -160,6 +187,14 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
                     b.Property<bool>("Active")
                         .HasColumnType("boolean")
                         .HasColumnName("active");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("")
+                        .HasColumnName("category");
 
                     b.Property<string>("Code")
                         .IsRequired()
@@ -176,10 +211,20 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("created_by");
 
+                    b.Property<decimal?>("DensityGCm3")
+                        .HasPrecision(8, 4)
+                        .HasColumnType("numeric(8,4)")
+                        .HasColumnName("density_g_cm3");
+
                     b.Property<string>("Description")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("description");
+
+                    b.Property<decimal?>("MachinabilityRating")
+                        .HasPrecision(4, 2)
+                        .HasColumnType("numeric(4,2)")
+                        .HasColumnName("machinability_rating");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -191,6 +236,12 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("price_per_unit");
+
+                    b.Property<int>("SortOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("sort_order");
 
                     b.Property<int>("StockLevel")
                         .HasColumnType("integer")
@@ -220,6 +271,9 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
                     b.HasIndex("Active")
                         .HasDatabaseName("ix_materials_active");
 
+                    b.HasIndex("Category")
+                        .HasDatabaseName("ix_materials_category");
+
                     b.HasIndex("Code")
                         .IsUnique()
                         .HasDatabaseName("ix_materials_code");
@@ -233,6 +287,9 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("PricePerUnit")
                         .HasDatabaseName("ix_materials_price_per_unit");
+
+                    b.HasIndex("SortOrder")
+                        .HasDatabaseName("ix_materials_sort_order");
 
                     b.HasIndex("SupplierId")
                         .HasDatabaseName("ix_materials_supplier_id");
@@ -370,6 +427,105 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
                     b.ToTable("post_processing_methods");
                 });
 
+            modelBuilder.Entity("Maliev.MaterialService.Domain.Entities.ProcessConfigOption", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean")
+                        .HasColumnName("active");
+
+                    b.Property<string>("ConfigKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("config_key");
+
+                    b.Property<string>("ConfigType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("config_type");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("DefaultValue")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("default_value");
+
+                    b.Property<string>("HelpText")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("help_text");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_required");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("label");
+
+                    b.Property<Guid>("ManufacturingProcessId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("manufacturing_process_id");
+
+                    b.Property<string>("OptionsJson")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("options_json");
+
+                    b.Property<int>("SortOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("sort_order");
+
+                    b.Property<string>("Unit")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("unit");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text")
+                        .HasColumnName("updated_by");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_process_config_options");
+
+                    b.HasIndex("Active")
+                        .HasDatabaseName("ix_process_config_options_active");
+
+                    b.HasIndex("ManufacturingProcessId", "ConfigKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_process_config_options_manufacturing_process_id_config_key");
+
+                    b.ToTable("process_config_options");
+                });
+
             modelBuilder.Entity("Maliev.MaterialService.Domain.Entities.Supplier", b =>
                 {
                     b.Property<Guid>("Id")
@@ -421,6 +577,183 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
                     b.ToTable("suppliers");
                 });
 
+            modelBuilder.Entity("Maliev.MaterialService.Domain.Entities.SurfaceFinish", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean")
+                        .HasColumnName("active");
+
+                    b.Property<decimal>("AdditionalCostPercent")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("additional_cost_percent");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<decimal?>("RaValueUm")
+                        .HasPrecision(8, 4)
+                        .HasColumnType("numeric(8,4)")
+                        .HasColumnName("ra_value_um");
+
+                    b.Property<int>("SortOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("sort_order");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text")
+                        .HasColumnName("updated_by");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_surface_finishes");
+
+                    b.HasIndex("Active")
+                        .HasDatabaseName("ix_surface_finishes_active");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_surface_finishes_code");
+
+                    b.HasIndex("SortOrder")
+                        .HasDatabaseName("ix_surface_finishes_sort_order");
+
+                    b.ToTable("surface_finishes");
+                });
+
+            modelBuilder.Entity("Maliev.MaterialService.Domain.Entities.ToleranceClass", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean")
+                        .HasColumnName("active");
+
+                    b.Property<decimal>("AdditionalCostPercent")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("additional_cost_percent");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Grade")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("grade");
+
+                    b.Property<string>("IsoStandard")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("iso_standard");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("SortOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("sort_order");
+
+                    b.Property<string>("ToleranceRange")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("tolerance_range");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text")
+                        .HasColumnName("updated_by");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_tolerance_classes");
+
+                    b.HasIndex("Active")
+                        .HasDatabaseName("ix_tolerance_classes_active");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_tolerance_classes_code");
+
+                    b.HasIndex("SortOrder")
+                        .HasDatabaseName("ix_tolerance_classes_sort_order");
+
+                    b.ToTable("tolerance_classes");
+                });
+
             modelBuilder.Entity("ManufacturingProcessMaterial", b =>
                 {
                     b.Property<Guid>("ManufacturingProcessesId")
@@ -440,6 +773,44 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
                     b.ToTable("material_manufacturing_processes", (string)null);
                 });
 
+            modelBuilder.Entity("ManufacturingProcessSurfaceFinish", b =>
+                {
+                    b.Property<Guid>("AvailableForProcessesId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("available_for_processes_id");
+
+                    b.Property<Guid>("SurfaceFinishesId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("surface_finishes_id");
+
+                    b.HasKey("AvailableForProcessesId", "SurfaceFinishesId")
+                        .HasName("pk_surface_finish_processes");
+
+                    b.HasIndex("SurfaceFinishesId")
+                        .HasDatabaseName("ix_surface_finish_processes_surface_finishes_id");
+
+                    b.ToTable("surface_finish_processes", (string)null);
+                });
+
+            modelBuilder.Entity("ManufacturingProcessToleranceClass", b =>
+                {
+                    b.Property<Guid>("AvailableForProcessesId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("available_for_processes_id");
+
+                    b.Property<Guid>("ToleranceClassesId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tolerance_classes_id");
+
+                    b.HasKey("AvailableForProcessesId", "ToleranceClassesId")
+                        .HasName("pk_tolerance_class_processes");
+
+                    b.HasIndex("ToleranceClassesId")
+                        .HasDatabaseName("ix_tolerance_class_processes_tolerance_classes_id");
+
+                    b.ToTable("tolerance_class_processes", (string)null);
+                });
+
             modelBuilder.Entity("MaterialPostProcessingMethod", b =>
                 {
                     b.Property<Guid>("MaterialsId")
@@ -457,6 +828,25 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_material_post_processing_methods_post_processing_methods_id");
 
                     b.ToTable("material_post_processing_methods", (string)null);
+                });
+
+            modelBuilder.Entity("MaterialSurfaceFinish", b =>
+                {
+                    b.Property<Guid>("CompatibleMaterialsId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("compatible_materials_id");
+
+                    b.Property<Guid>("SurfaceFinishesId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("surface_finishes_id");
+
+                    b.HasKey("CompatibleMaterialsId", "SurfaceFinishesId")
+                        .HasName("pk_surface_finish_materials");
+
+                    b.HasIndex("SurfaceFinishesId")
+                        .HasDatabaseName("ix_surface_finish_materials_surface_finishes_id");
+
+                    b.ToTable("surface_finish_materials", (string)null);
                 });
 
             modelBuilder.Entity("ColorMaterial", b =>
@@ -508,6 +898,18 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
                     b.Navigation("MechanicalProperty");
                 });
 
+            modelBuilder.Entity("Maliev.MaterialService.Domain.Entities.ProcessConfigOption", b =>
+                {
+                    b.HasOne("Maliev.MaterialService.Domain.Entities.ManufacturingProcess", "ManufacturingProcess")
+                        .WithMany("ConfigOptions")
+                        .HasForeignKey("ManufacturingProcessId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_process_config_options_manufacturing_processes_manufacturin~");
+
+                    b.Navigation("ManufacturingProcess");
+                });
+
             modelBuilder.Entity("ManufacturingProcessMaterial", b =>
                 {
                     b.HasOne("Maliev.MaterialService.Domain.Entities.ManufacturingProcess", null)
@@ -525,6 +927,40 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_material_manufacturing_processes_materials_materials_id");
                 });
 
+            modelBuilder.Entity("ManufacturingProcessSurfaceFinish", b =>
+                {
+                    b.HasOne("Maliev.MaterialService.Domain.Entities.ManufacturingProcess", null)
+                        .WithMany()
+                        .HasForeignKey("AvailableForProcessesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_surface_finish_processes_manufacturing_processes_available_~");
+
+                    b.HasOne("Maliev.MaterialService.Domain.Entities.SurfaceFinish", null)
+                        .WithMany()
+                        .HasForeignKey("SurfaceFinishesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_surface_finish_processes_surface_finishes_surface_finishes_~");
+                });
+
+            modelBuilder.Entity("ManufacturingProcessToleranceClass", b =>
+                {
+                    b.HasOne("Maliev.MaterialService.Domain.Entities.ManufacturingProcess", null)
+                        .WithMany()
+                        .HasForeignKey("AvailableForProcessesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_tolerance_class_processes_manufacturing_processes_available~");
+
+                    b.HasOne("Maliev.MaterialService.Domain.Entities.ToleranceClass", null)
+                        .WithMany()
+                        .HasForeignKey("ToleranceClassesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_tolerance_class_processes_tolerance_classes_tolerance_class~");
+                });
+
             modelBuilder.Entity("MaterialPostProcessingMethod", b =>
                 {
                     b.HasOne("Maliev.MaterialService.Domain.Entities.Material", null)
@@ -540,6 +976,28 @@ namespace Maliev.MaterialService.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_material_post_processing_methods_post_processing_methods_po~");
+                });
+
+            modelBuilder.Entity("MaterialSurfaceFinish", b =>
+                {
+                    b.HasOne("Maliev.MaterialService.Domain.Entities.Material", null)
+                        .WithMany()
+                        .HasForeignKey("CompatibleMaterialsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_surface_finish_materials_materials_compatible_materials_id");
+
+                    b.HasOne("Maliev.MaterialService.Domain.Entities.SurfaceFinish", null)
+                        .WithMany()
+                        .HasForeignKey("SurfaceFinishesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_surface_finish_materials_surface_finishes_surface_finishes_~");
+                });
+
+            modelBuilder.Entity("Maliev.MaterialService.Domain.Entities.ManufacturingProcess", b =>
+                {
+                    b.Navigation("ConfigOptions");
                 });
 
             modelBuilder.Entity("Maliev.MaterialService.Domain.Entities.Material", b =>

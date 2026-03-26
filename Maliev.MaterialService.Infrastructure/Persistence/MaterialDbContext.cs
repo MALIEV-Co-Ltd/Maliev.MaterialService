@@ -45,6 +45,15 @@ public class MaterialDbContext : Microsoft.EntityFrameworkCore.DbContext
     /// <summary>Material mechanical properties join data set.</summary>
     public DbSet<MaterialMechanicalProperty> MaterialMechanicalProperties => Set<MaterialMechanicalProperty>();
 
+    /// <summary>Surface finishes data set.</summary>
+    public DbSet<SurfaceFinish> SurfaceFinishes => Set<SurfaceFinish>();
+
+    /// <summary>Tolerance classes data set.</summary>
+    public DbSet<ToleranceClass> ToleranceClasses => Set<ToleranceClass>();
+
+    /// <summary>Process configuration options data set.</summary>
+    public DbSet<ProcessConfigOption> ProcessConfigOptions => Set<ProcessConfigOption>();
+
     /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
