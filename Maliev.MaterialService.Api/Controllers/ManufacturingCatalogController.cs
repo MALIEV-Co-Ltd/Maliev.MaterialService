@@ -19,9 +19,10 @@ public class ManufacturingCatalogController(MaterialDbContext db) : ControllerBa
 {
     /// <summary>Returns all active manufacturing processes.</summary>
     [HttpGet("processes")]
-    public async Task<ActionResult<IEnumerable<ProcessCatalogResponse>>> GetProcesses()
+    public async Task<ActionResult<IEnumerable<ProcessCatalogResponse>>> GetProcesses(CancellationToken cancellationToken)
     {
         var processes = await db.ManufacturingProcesses
+            .AsNoTracking()
             .Where(p => p.Active)
             .OrderBy(p => p.SortOrder)
             .Select(p => new ProcessCatalogResponse
@@ -32,24 +33,26 @@ public class ManufacturingCatalogController(MaterialDbContext db) : ControllerBa
                 Description = p.Description,
                 SortOrder = p.SortOrder,
             })
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return Ok(processes);
     }
 
     /// <summary>Returns all active materials for the given process code.</summary>
     [HttpGet("processes/{processCode}/materials")]
-    public async Task<ActionResult<IEnumerable<MaterialCatalogResponse>>> GetMaterialsByProcess(string processCode)
+    public async Task<ActionResult<IEnumerable<MaterialCatalogResponse>>> GetMaterialsByProcess(string processCode, CancellationToken cancellationToken)
     {
-        var process = await db.ManufacturingProcesses
+        var processId = await db.ManufacturingProcesses
+            .AsNoTracking()
             .Where(p => p.Active && p.Code == processCode.ToUpperInvariant())
-            .Include(p => p.Materials)
-            .FirstOrDefaultAsync();
+            .Select(p => (Guid?)p.Id)
+            .FirstOrDefaultAsync(cancellationToken);
 
-        if (process is null) return NotFound();
+        if (processId is null) return NotFound();
 
-        var materials = process.Materials
-            .Where(m => m.Active)
+        var materials = await db.Materials
+            .AsNoTracking()
+            .Where(m => m.Active && m.ManufacturingProcesses.Any(p => p.Id == processId.Value))
             .OrderBy(m => m.SortOrder)
             .Select(m => new MaterialCatalogResponse
             {
@@ -61,23 +64,25 @@ public class ManufacturingCatalogController(MaterialDbContext db) : ControllerBa
                 Description = m.Description,
                 SortOrder = m.SortOrder,
             })
-            .ToList();
+            .ToListAsync(cancellationToken);
 
         return Ok(materials);
     }
 
     /// <summary>Returns all active surface finishes for the given process code.</summary>
     [HttpGet("processes/{processCode}/finishes")]
-    public async Task<ActionResult<IEnumerable<SurfaceFinishCatalogResponse>>> GetFinishesByProcess(string processCode)
+    public async Task<ActionResult<IEnumerable<SurfaceFinishCatalogResponse>>> GetFinishesByProcess(string processCode, CancellationToken cancellationToken)
     {
         var processId = await db.ManufacturingProcesses
+            .AsNoTracking()
             .Where(p => p.Active && p.Code == processCode.ToUpperInvariant())
             .Select(p => (Guid?)p.Id)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (processId is null) return NotFound();
 
         var finishes = await db.SurfaceFinishes
+            .AsNoTracking()
             .Where(sf => sf.Active && sf.AvailableForProcesses.Any(p => p.Id == processId))
             .OrderBy(sf => sf.SortOrder)
             .Select(sf => new SurfaceFinishCatalogResponse
@@ -90,23 +95,25 @@ public class ManufacturingCatalogController(MaterialDbContext db) : ControllerBa
                 Description = sf.Description,
                 SortOrder = sf.SortOrder,
             })
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return Ok(finishes);
     }
 
     /// <summary>Returns all active tolerance classes for the given process code.</summary>
     [HttpGet("processes/{processCode}/tolerances")]
-    public async Task<ActionResult<IEnumerable<ToleranceClassCatalogResponse>>> GetTolerancesByProcess(string processCode)
+    public async Task<ActionResult<IEnumerable<ToleranceClassCatalogResponse>>> GetTolerancesByProcess(string processCode, CancellationToken cancellationToken)
     {
         var processId = await db.ManufacturingProcesses
+            .AsNoTracking()
             .Where(p => p.Active && p.Code == processCode.ToUpperInvariant())
             .Select(p => (Guid?)p.Id)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (processId is null) return NotFound();
 
         var tolerances = await db.ToleranceClasses
+            .AsNoTracking()
             .Where(tc => tc.Active && tc.AvailableForProcesses.Any(p => p.Id == processId))
             .OrderBy(tc => tc.SortOrder)
             .Select(tc => new ToleranceClassCatalogResponse
@@ -120,23 +127,25 @@ public class ManufacturingCatalogController(MaterialDbContext db) : ControllerBa
                 AdditionalCostPercent = tc.AdditionalCostPercent,
                 SortOrder = tc.SortOrder,
             })
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return Ok(tolerances);
     }
 
     /// <summary>Returns all active configuration options for the given process code.</summary>
     [HttpGet("processes/{processCode}/config-options")]
-    public async Task<ActionResult<IEnumerable<ProcessConfigOptionCatalogResponse>>> GetConfigOptionsByProcess(string processCode)
+    public async Task<ActionResult<IEnumerable<ProcessConfigOptionCatalogResponse>>> GetConfigOptionsByProcess(string processCode, CancellationToken cancellationToken)
     {
         var processId = await db.ManufacturingProcesses
+            .AsNoTracking()
             .Where(p => p.Active && p.Code == processCode.ToUpperInvariant())
             .Select(p => (Guid?)p.Id)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (processId is null) return NotFound();
 
         var options = await db.ProcessConfigOptions
+            .AsNoTracking()
             .Where(o => o.Active && o.ManufacturingProcessId == processId)
             .OrderBy(o => o.SortOrder)
             .Select(o => new ProcessConfigOptionCatalogResponse
@@ -152,16 +161,17 @@ public class ManufacturingCatalogController(MaterialDbContext db) : ControllerBa
                 IsRequired = o.IsRequired,
                 SortOrder = o.SortOrder,
             })
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return Ok(options);
     }
 
     /// <summary>Returns surface finishes compatible with a specific material.</summary>
     [HttpGet("materials/{materialId:guid}/finishes")]
-    public async Task<ActionResult<IEnumerable<SurfaceFinishCatalogResponse>>> GetFinishesByMaterial(Guid materialId)
+    public async Task<ActionResult<IEnumerable<SurfaceFinishCatalogResponse>>> GetFinishesByMaterial(Guid materialId, CancellationToken cancellationToken)
     {
         var finishes = await db.SurfaceFinishes
+            .AsNoTracking()
             .Where(sf => sf.Active && sf.CompatibleMaterials.Any(m => m.Id == materialId))
             .OrderBy(sf => sf.SortOrder)
             .Select(sf => new SurfaceFinishCatalogResponse
@@ -174,7 +184,7 @@ public class ManufacturingCatalogController(MaterialDbContext db) : ControllerBa
                 Description = sf.Description,
                 SortOrder = sf.SortOrder,
             })
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return Ok(finishes);
     }

@@ -309,6 +309,7 @@ public class MaterialService : IMaterialService
             .Include(m => m.MechanicalProperties)
                 .ThenInclude(mp => mp.MechanicalProperty)
             .Where(m => m.Active)
+            .AsSplitQuery()
             .ToListAsync();
 
         return materials.Select(m => m.ToMaterialResponse());
@@ -382,6 +383,8 @@ public class MaterialService : IMaterialService
             ));
         }
 
+        var totalCount = await query.CountAsync();
+
         query = query
             .Include(m => m.Supplier)
             .Include(m => m.ManufacturingProcesses.Where(mp => mp.Active))
@@ -390,8 +393,6 @@ public class MaterialService : IMaterialService
             .Include(m => m.MechanicalProperties.Where(mp => mp.MechanicalProperty.Active))
                 .ThenInclude(mp => mp.MechanicalProperty)
             .AsSplitQuery();
-
-        var totalCount = await query.CountAsync();
 
         query = sortBy?.ToLower() switch
         {
