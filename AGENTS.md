@@ -6,83 +6,96 @@ This document contains instructions for AI agents operating in this codebase.
 
 This is a **.NET 10.0** project using Visual Studio Solution (.slnx).
 
-*   **Build Solution:**
-    ```bash
-    dotnet build
-    ```
-*   **Run All Tests:**
-    ```bash
-    dotnet test
-    ```
-*   **Run a Single Test:**
-    ```bash
-    dotnet test --filter "FullyQualifiedName~NameOfTestClass.NameOfTestMethod"
-    ```
-    *Example:* `dotnet test --filter "FullyQualifiedName~MaterialsControllerTests.GetMaterials_ReturnsSuccessStatusCode"`
-*   **Run Tests in a specific project:**
-    ```bash
-    dotnet test Maliev.MaterialService.Tests/Maliev.MaterialService.Tests.csproj
-    ```
+All commands run from within this service directory (`B:\maliev\Maliev.MaterialService`).
+
+```powershell
+# Build (treats warnings as errors — all must be fixed)
+dotnet build Maliev.MaterialService.slnx
+
+# Run all tests
+dotnet test Maliev.MaterialService.slnx --verbosity normal
+
+# Run a single test method
+dotnet test --filter "FullyQualifiedName~MaterialsControllerTests.GetMaterials_ReturnsSuccessStatusCode"
+
+# Run all tests in a class
+dotnet test --filter "FullyQualifiedName~MaterialsControllerTests"
+
+# Run with code coverage
+dotnet test Maliev.MaterialService.slnx --collect:"XPlat Code Coverage"
+
+# Format check
+dotnet format Maliev.MaterialService.slnx
+
+# EF Core migrations (Infrastructure project only)
+dotnet ef migrations add <Name> --project Maliev.MaterialService.Infrastructure --startup-project Maliev.MaterialService.Infrastructure
+```
 
 ## 2. Project Structure
 
 **Architecture**: Clean Architecture (Api, Application, Domain, Infrastructure, Tests)
 
-*   **`Maliev.MaterialService.Api`**: Controllers, Middleware.
-*   **`Maliev.MaterialService.Application`**: Use cases, handlers, DTOs.
-*   **`Maliev.MaterialService.Domain`**: Entities, interfaces, value objects.
-*   **`Maliev.MaterialService.Infrastructure`**: EF Core, repositories.
-*   **`Maliev.MaterialService.Tests`**: xUnit Test project (Integration and Unit tests).
+```
+Maliev.MaterialService/
+├── Maliev.MaterialService.Api/           # Controllers, Middleware
+├── Maliev.MaterialService.Application/   # Use cases, DTOs, Interfaces, Handlers
+├── Maliev.MaterialService.Domain/        # Entities, value objects, domain interfaces
+├── Maliev.MaterialService.Infrastructure/ # EF Core DbContext, repositories
+├── Maliev.MaterialService.Tests/         # Unit + Integration tests (xUnit)
+├── Directory.Build.props                 # Central package versioning
+└── Maliev.MaterialService.slnx          # Solution file (.slnx preferred over .sln)
+```
 
 ## 3. Code Style & Conventions
 
-Follow the existing patterns in the codebase strictly.
+### C# Naming & Formatting
 
-### Formatting & Syntax
-*   **Namespaces:** Use **File-scoped namespaces** (e.g., `namespace Maliev.MaterialService.Api.Controllers;`).
-*   **Nullable Types:** Nullable reference types are **enabled**. Use `string?` for optional values.
-*   **Async/Await:** Use `async Task` for I/O bound operations. Avoid `.Result` or `.Wait()`.
-*   **Braces:** Use standard C# bracing (Allman style - open brace on new line).
-*   **Imports:** Remove unused usings. Place `System` directives first, then 3rd party, then solution namespaces.
+- **Namespaces**: File-scoped (`namespace Maliev.MaterialService.Api.Controllers;`)
+- **Classes/Methods/Properties**: `PascalCase`
+- **Private fields**: `_camelCase` (underscore prefix)
+- **Parameters/locals**: `camelCase`
+- **Async methods**: Suffix with `Async` (e.g., `GetMaterialByIdAsync`)
+- **Interfaces**: Prefix with `I` (e.g., `IMaterialService`)
+- **DTOs**: Suffix with `Request` or `Response` (e.g., `CreateMaterialRequest`, `MaterialResponse`)
+- **Permissions**: GCP-style `{domain}.{plural-resource}.{action}` as `public const string` in a `Permissions` static class
+  - Valid: `material.materials.create`, `material.suppliers.update`
+  - Invalid: `material.material.create` (singular), `material.create` (missing resource)
+- **XML docs**: Required on ALL public methods and properties
+- **Nullable**: Enabled (`<Nullable>enable</Nullable>`). Use `?` explicitly
+- **Imports**: System first, then third-party, then local. Alphabetize within groups. Remove unused `using`
+- **Braces**: Allman style (new line) for methods and control structures. Expression-bodied for properties/accessors
+- **Indentation**: 4 spaces, LF line endings, UTF-8, trim trailing whitespace
 
-### Naming Conventions
-*   **Classes/Methods/Properties:** `PascalCase`.
-*   **Parameters/Locals:** `camelCase`.
-*   **Private Fields:** `_camelCase` (underscore prefix).
-    ```csharp
-    private readonly IMaterialService _materialService;
-    ```
-*   **Interfaces:** Prefix with `I` (e.g., `IMaterialService`).
-*   **DTOs:** Suffix with `Request` or `Response` (e.g., `CreateMaterialRequest`, `MaterialResponse`).
-*   **Async Methods:** Suffix with `Async` (e.g., `GetMaterialByIdAsync`).
+### C# Patterns
 
-### Architecture & Patterns
-*   **Controllers:**
-    *   Inherit from `ControllerBase`.
-    *   Decorate with `[ApiController]`, `[ApiVersion]`, `[Route]`.
-    *   Use `[RequirePermission]` for authorization.
-    *   Return `ActionResult<T>`.
-    *   Wrap logic in `try-catch` blocks for robust error handling.
-*   **Data Access:**
-    *   Use Entity Framework Core.
-    *   Entities inherit from `BaseEntity` where applicable.
-    *   Configure entities in `DbContext` or `IEntityTypeConfiguration`.
-*   **Dependency Injection:**
-    *   Register services in `Program.cs`.
-    *   Use Constructor Injection.
+- **DI**: Constructor injection with `private readonly` fields
+- **Controllers**: `[ApiController]`, `[ApiVersion("1")]`, `[Route("material/v{version:apiVersion}")]`
+  - Inherit from `ControllerBase`. Use `[RequirePermission]` for authorization. Return `ActionResult<T>`.
+- **Logging**: `ILogger<T>` with structured placeholders (never interpolate): `_logger.LogInformation("Processing {MaterialId}", materialId)`
+- **Error handling**: Global exception middleware. Return `ProblemDetails` / `ErrorResponse` DTOs. Never expose stack traces
+- **Manual mapping**: Static extension methods (`ToDto()`, `ToEntity()`). AutoMapper is banned
+- **Validation**: `System.ComponentModel.DataAnnotations` on DTOs. FluentValidation is banned
+- **Data Access**: Use Entity Framework Core. Entities inherit from `BaseEntity` where applicable. Configure entities in `DbContext` or `IEntityTypeConfiguration`.
 
-### Comments & Documentation
-*   **Controllers/Actions:** XML Documentation (`/// <summary>`) is **mandatory** for public API endpoints (used for OpenAPI/Swagger).
-    *   Include `<remarks>` for implementation details.
-    *   Include `<response>` tags for status codes.
+### Banned Libraries (Build Will Fail)
 
-### Testing
-*   **Framework:** xUnit.
-*   **Integration Tests:**
-    *   Use `IClassFixture<IntegrationTestWebAppFactory>`.
-    *   Create scoped services and DbContexts within tests if needed.
-    *   Clean database state between tests.
-*   **Naming:** `MethodName_StateUnder_ExpectedBehavior`.
+| Banned | Use Instead |
+|--------|-------------|
+| AutoMapper | Manual mapping extensions |
+| FluentValidation | DataAnnotations or manual validation |
+| FluentAssertions | Standard xUnit `Assert.*` |
+| Swashbuckle/Swagger | Scalar (at `/material/scalar`) |
+| InMemoryDatabase (EF Core) | Testcontainers with real PostgreSQL |
+
+## 4. Testing Rules
+
+- **Framework**: xUnit with standard `Assert` (`Assert.Equal`, `Assert.NotNull`, etc.)
+- **Naming**: `MethodName_StateUnderTest_ExpectedBehavior` or `HTTP_METHOD_Path_Scenario_ExpectedStatus`
+- **Coverage**: Minimum 80% per service
+- **Integration tests**: `BaseIntegrationTestFactory<TProgram, TDbContext>` with Testcontainers (PostgreSQL, Redis, RabbitMQ). Never InMemoryDatabase
+- **System tests** (Tier 3): `AspireTestFixture` with `[Collection("AspireDomainTests")]` — shared AppHost, never one per class
+- **Eventual consistency**: Use `TestHelpers.WaitForAsync`. Never `Task.Delay`
+- **MassTransit consumers**: Must have consumer tests using `AddMassTransitTestHarness()`
 
 ### Testing Strategy (4-Tier Pyramid Context)
 
@@ -95,50 +108,33 @@ This service's tests cover **Tier 1 (Unit)** and **Tier 2 (Service Integration)*
 
 **Tier 3 (System Integration)** — cross-service workflows and event chains — is tested in `Maliev.Aspire.Tests/`.
 
-#### Key Rules
-- Use `BaseIntegrationTestFactory<TProgram, TDbContext>` for integration tests (real Testcontainers, never InMemoryDatabase)
-- Test naming: `MethodName_StateUnderTest_ExpectedBehavior`
-- Minimum 80% code coverage
-- Use `[Fact]` for single cases, `[Theory]` for parameterized tests
-
 > Full ecosystem test strategy: `Maliev.Aspire.Tests/TEST_PLAN.md`
 
-## 4. Error Handling
-*   Use structured logging via `ILogger`.
-*   Return standard HTTP status codes:
-    *   `200 OK`: Successful synchronous retrieval/update.
-    *   `201 Created`: Successful creation.
-    *   `204 No Content`: Successful deletion.
-    *   `400 Bad Request`: Validation failures.
-    *   `404 Not Found`: Resource does not exist.
-    *   `409 Conflict`: Concurrency issues or duplicate keys.
+## 5. Error Handling
 
+Return standard HTTP status codes:
+- `200 OK`: Successful synchronous retrieval/update.
+- `201 Created`: Successful creation.
+- `204 No Content`: Successful deletion.
+- `400 Bad Request`: Validation failures.
+- `404 Not Found`: Resource does not exist.
+- `409 Conflict`: Concurrency issues or duplicate keys.
 
-## Git & Version Control — Mandatory Rules
+## 6. Mandatory Rules
 
-### 🚨 CRITICAL: Always Commit Code Changes (Non-Negotiable)
-- **You MUST commit your changes to the local repository after completing any meaningful unit of work.**
-- **Never accumulate uncommitted changes.** Do not wait until end of session or until something breaks.
-- **Commit early and often** — if a change is meaningful (even a small fix or refactor), commit it.
-- **You do NOT need to push to remote** — local commits are sufficient to protect against accidental loss.
-- **If you are unsure whether to commit, commit anyway.** Extra commits are harmless; lost work is irreversible.
-- This rule applies even if you are just "testing" or "exploring" — use git branches to isolate experimental work and commit those changes too.
+- **`TreatWarningsAsErrors = true`**: Zero warnings allowed. No suppression
+- **`[RequirePermission("material.resources.action")]`**: On all endpoints, not plain `[Authorize]`
+- **API versioning**: All routes versioned (`v1/`)
+- **Service prefix**: Routes prefixed with `/material`
+- **Scalar docs**: Configured at `/material/scalar`
+- **Secrets**: Never hardcoded. Use GCP Secret Manager or environment variables
+- **Async/await**: All the way down. Pass `CancellationToken`
+- **EF Core Design package**: Only in Infrastructure project, never in Api
+- **PostgreSQL xmin**: Shadow property only — `entity.Property<uint>("xmin").HasColumnType("xid").IsRowVersion()`. Never add entity property
+- **Temporary files**: Generate in `/temp` folder, clean up afterwards
 
-### 🚨 CRITICAL: Never Use `git checkout` to Restore Broken Files
-- **NEVER use `git checkout` to restore or recover files.** This operation discards uncommitted changes permanently and will result in data loss.
-- **To undo/recover from broken files: first commit your current changes, then use `git revert` or `git reset --soft` to safely undo.**
+### EF Core / PostgreSQL xmin Concurrency — Mandatory Pattern
 
-## Database & EF Core — Mandatory Rules
-
-### EF Core Design Package
-- ❌ `Microsoft.EntityFrameworkCore.Design` MUST NOT be in Api projects
-- ✅ It belongs ONLY in the Infrastructure (or Data) project where migrations live
-- Migration commands must target Infrastructure as both project and startup-project (since EF Core Design package is in Infrastructure):
-  ```
-  dotnet ef migrations add <Name> --project Maliev.<Domain>Service.Infrastructure --startup-project Maliev.<Domain>Service.Infrastructure
-  ```
-
-### PostgreSQL xmin Concurrency — Mandatory Pattern
 Use shadow property ONLY. Never add a Xmin/xmin property to domain entities.
 ```csharp
 entity.Property<uint>("xmin").HasColumnType("xid").IsRowVersion();
@@ -146,3 +142,10 @@ entity.Property<uint>("xmin").HasColumnType("xid").IsRowVersion();
 - ❌ Never use `UseXminAsConcurrencyToken()` (removed in Npgsql EF v7)
 - ❌ Never use entity property `public uint Xmin { get; set; }` or `public uint xmin { get; set; }`
 - ❌ Never use `.Ignore(e => e.Xmin)` — remove the entity property instead
+
+## 7. Git Rules
+
+- Each `Maliev.*` folder is an independent git repo. `cd` into it before git commands
+- **Commit early and often** after every meaningful unit of work. Do not accumulate changes
+- **Never use `git checkout` to restore files** — commit first, then `git revert` or `git reset --soft`
+- Feature branches merged to `develop` via PR. Do not push without being asked
