@@ -20,17 +20,31 @@ public static class ManufacturingCatalogSeedData
     }
 
     // ── Process IDs (referenced by other seed data) ───────────────────────────
-    public static readonly Guid CncId = G("PROC_CNC");
+    public static readonly Guid CncId = G("PROC_CNC");           // legacy — kept for backward compat
+    public static readonly Guid CncMillId = G("PROC_CNC_MILL");
+    public static readonly Guid CncTurnId = G("PROC_CNC_TURN");
     public static readonly Guid FdmId = G("PROC_FDM");
     public static readonly Guid SlaDlpId = G("PROC_SLA_DLP");
+    public static readonly Guid SlsId = G("PROC_SLS");
+    public static readonly Guid MjfId = G("PROC_MJF");
+    public static readonly Guid MjId = G("PROC_MJ");
+    public static readonly Guid BjId = G("PROC_BJ");
+    public static readonly Guid DmlsId = G("PROC_DMLS");
     public static readonly Guid SheetMetalId = G("PROC_SHEET_METAL");
     public static readonly Guid InjectionMoldId = G("PROC_INJECTION_MOLD");
 
     public static IEnumerable<ManufacturingProcess> GetProcesses() =>
     [
-        new() { Id = CncId, Name = "CNC Machining", Code = "CNC", Description = "Subtractive manufacturing from solid billet", SortOrder = 10, Active = true },
+        new() { Id = CncId, Name = "CNC Machining", Code = "CNC", Description = "Subtractive manufacturing from solid billet (legacy)", SortOrder = 10, Active = true },
+        new() { Id = CncMillId, Name = "CNC Milling", Code = "CNC_MILL", Description = "Multi-axis subtractive milling from solid billet", SortOrder = 11, Active = true },
+        new() { Id = CncTurnId, Name = "CNC Turning", Code = "CNC_TURN", Description = "Lathe turning for rotationally symmetric parts", SortOrder = 12, Active = true },
         new() { Id = FdmId, Name = "3D Printing (FDM)", Code = "FDM", Description = "Fused Deposition Modeling — thermoplastic filament", SortOrder = 20, Active = true },
         new() { Id = SlaDlpId, Name = "3D Printing (SLA/DLP)", Code = "SLA_DLP", Description = "Stereolithography — UV-cured resin", SortOrder = 30, Active = true },
+        new() { Id = SlsId, Name = "3D Printing (SLS)", Code = "SLS", Description = "Selective Laser Sintering — powder bed nylon", SortOrder = 35, Active = true },
+        new() { Id = MjfId, Name = "3D Printing (MJF)", Code = "MJF", Description = "Multi Jet Fusion — powder bed fusing agent", SortOrder = 36, Active = true },
+        new() { Id = MjId, Name = "3D Printing (Material Jetting)", Code = "MJ", Description = "Material Jetting — inkjet photopolymer droplets", SortOrder = 37, Active = true },
+        new() { Id = BjId, Name = "3D Printing (Binder Jetting)", Code = "BJ", Description = "Binder Jetting — powder bed with liquid binder", SortOrder = 38, Active = true },
+        new() { Id = DmlsId, Name = "3D Printing (DMLS)", Code = "DMLS", Description = "Direct Metal Laser Sintering — metal powder bed fusion", SortOrder = 39, Active = true },
         new() { Id = SheetMetalId, Name = "Sheet Metal Fabrication", Code = "SHEET_METAL", Description = "Laser cut, bent, and formed sheet", SortOrder = 40, Active = true },
         new() { Id = InjectionMoldId, Name = "Injection Molding", Code = "INJECTION_MOLD", Description = "High-volume thermoplastic injection", SortOrder = 50, Active = true },
     ];
@@ -63,6 +77,26 @@ public static class ManufacturingCatalogSeedData
         new() { Id = G("MAT_FLEX_RESIN"), Name = "Flexible Resin", Code = "FLEX_RESIN", Category = "Resin", DensityGCm3 = 1.05m, MachinabilityRating = null, Description = "Rubber-like resin for flexible components.", SortOrder = 200, Active = true, PricePerUnit = 0, StockLevel = 0 },
         new() { Id = G("MAT_CAST_RESIN"), Name = "Castable Resin", Code = "CAST_RESIN", Category = "Resin", DensityGCm3 = 1.08m, MachinabilityRating = null, Description = "Burns out cleanly for investment casting applications.", SortOrder = 210, Active = true, PricePerUnit = 0, StockLevel = 0 },
         new() { Id = G("MAT_HT_RESIN"), Name = "High-Temp Resin", Code = "HT_RESIN", Category = "Resin", DensityGCm3 = 1.12m, MachinabilityRating = null, Description = "Heat-deflection resistant resin for high-temperature applications.", SortOrder = 220, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        // SLS Materials
+        new() { Id = G("MAT_PA12_SLS"), Name = "Nylon PA12 (SLS)", Code = "PA12_SLS", Category = "Polymer", DensityGCm3 = 0.93m, MachinabilityRating = null, Description = "SLS-grade PA12. Strong, flexible, fine detail. Industry workhorse for powder-bed nylon.", SortOrder = 280, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        new() { Id = G("MAT_PA11_SLS"), Name = "Nylon PA11 (SLS)", Code = "PA11_SLS", Category = "Polymer", DensityGCm3 = 1.01m, MachinabilityRating = null, Description = "Bio-based PA11. Higher elongation and impact resistance than PA12.", SortOrder = 290, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        new() { Id = G("MAT_PA12GF_SLS"), Name = "Glass-Filled PA12 (SLS)", Code = "PA12GF_SLS", Category = "Polymer", DensityGCm3 = 1.22m, MachinabilityRating = null, Description = "PA12 reinforced with glass spheres. Higher stiffness and heat resistance than standard PA12.", SortOrder = 300, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        // MJF Materials
+        new() { Id = G("MAT_PA12_MJF"), Name = "Nylon PA12 (MJF)", Code = "PA12_MJF", Category = "Polymer", DensityGCm3 = 1.01m, MachinabilityRating = null, Description = "HP MJF PA12. Isotropic mechanical properties, fine detail, natural grey finish.", SortOrder = 310, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        new() { Id = G("MAT_PA12GB_MJF"), Name = "PA12 Glass Bead (MJF)", Code = "PA12GB_MJF", Category = "Polymer", DensityGCm3 = 1.22m, MachinabilityRating = null, Description = "HP MJF PA12 with glass beads. Increased stiffness and dimensional stability.", SortOrder = 320, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        // Material Jetting Materials
+        new() { Id = G("MAT_VEROWHITE"), Name = "VeroWhite (MJ)", Code = "VEROWHITE", Category = "Photopolymer", DensityGCm3 = 1.17m, MachinabilityRating = null, Description = "Rigid opaque white photopolymer. High accuracy and smooth surface for visual prototypes.", SortOrder = 330, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        new() { Id = G("MAT_VEROBLACK"), Name = "VeroBlack (MJ)", Code = "VEROBLACK", Category = "Photopolymer", DensityGCm3 = 1.17m, MachinabilityRating = null, Description = "Rigid opaque black photopolymer. Same properties as VeroWhite, matte black finish.", SortOrder = 340, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        new() { Id = G("MAT_TANGOPLUS"), Name = "TangoPlus (MJ)", Code = "TANGOPLUS", Category = "Photopolymer", DensityGCm3 = 1.12m, MachinabilityRating = null, Description = "Rubber-like flexible photopolymer (Shore A 26–28). For grips, seals, and flexible joints.", SortOrder = 350, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        // Binder Jetting Materials
+        new() { Id = G("MAT_SS316L_BJ"), Name = "Stainless Steel 316L (BJ)", Code = "SS316L_BJ", Category = "Metal", DensityGCm3 = 7.90m, MachinabilityRating = null, Description = "Binder-jetted 316L SS, sintered. Fully dense metal with corrosion resistance.", SortOrder = 360, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        new() { Id = G("MAT_BRONZE_BJ"), Name = "Bronze (BJ)", Code = "BRONZE_BJ", Category = "Metal", DensityGCm3 = 8.70m, MachinabilityRating = null, Description = "Binder-jetted bronze. Good thermal conductivity, golden appearance.", SortOrder = 370, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        new() { Id = G("MAT_SAND_BJ"), Name = "Silica Sand (BJ)", Code = "SAND_BJ", Category = "Sand", DensityGCm3 = 1.50m, MachinabilityRating = null, Description = "Binder-jetted sand molds for metal casting. High thermal stability.", SortOrder = 380, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        // DMLS Materials
+        new() { Id = G("MAT_TI6AL4V_DMLS"), Name = "Ti-6Al-4V (DMLS)", Code = "TI6AL4V_DMLS", Category = "Metal", DensityGCm3 = 4.42m, MachinabilityRating = null, Description = "DMLS titanium alloy. Aerospace grade, excellent strength-to-weight ratio.", SortOrder = 390, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        new() { Id = G("MAT_ALSI10MG"), Name = "AlSi10Mg (DMLS)", Code = "ALSI10MG", Category = "Metal", DensityGCm3 = 2.67m, MachinabilityRating = null, Description = "DMLS aluminum alloy. Lightweight, good thermal conductivity, complex geometries.", SortOrder = 400, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        new() { Id = G("MAT_IN718"), Name = "Inconel 718 (DMLS)", Code = "IN718", Category = "Metal", DensityGCm3 = 8.19m, MachinabilityRating = null, Description = "DMLS nickel superalloy. Excellent high-temperature performance to 700°C.", SortOrder = 410, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        new() { Id = G("MAT_174PH"), Name = "17-4PH Stainless (DMLS)", Code = "174PH", Category = "Metal", DensityGCm3 = 7.78m, MachinabilityRating = null, Description = "DMLS precipitation-hardening stainless steel. High strength and corrosion resistance.", SortOrder = 420, Active = true, PricePerUnit = 0, StockLevel = 0 },
         // Sheet Metal Materials
         new() { Id = G("MAT_MILD_STEEL"), Name = "Mild Steel (CR/HR)", Code = "MILD_STEEL", Category = "Sheet", DensityGCm3 = 7.85m, MachinabilityRating = null, Description = "Low-carbon steel sheet. 1.0–3.0mm thickness range.", SortOrder = 230, Active = true, PricePerUnit = 0, StockLevel = 0 },
         new() { Id = G("MAT_SS304_SHEET"), Name = "Stainless Steel 304 Sheet", Code = "SS304_SHEET", Category = "Sheet", DensityGCm3 = 8.00m, MachinabilityRating = null, Description = "Stainless steel sheet. 0.5–3.0mm thickness range.", SortOrder = 240, Active = true, PricePerUnit = 0, StockLevel = 0 },
@@ -113,6 +147,17 @@ public static class ManufacturingCatalogSeedData
         // SLA/DLP Tolerances
         new() { Id = G("TOL_SLA_STD"), Name = "SLA Standard", Code = "SLA_STD", IsoStandard = "SLA", Grade = "Standard", ToleranceRange = "±0.1mm", AdditionalCostPercent = 0m, SortOrder = 100, Active = true },
         new() { Id = G("TOL_SLA_FINE"), Name = "SLA Fine", Code = "SLA_FINE", IsoStandard = "SLA", Grade = "Fine", ToleranceRange = "±0.05mm", AdditionalCostPercent = 20m, SortOrder = 110, Active = true },
+        // SLS Tolerances
+        new() { Id = G("TOL_SLS_STD"), Name = "SLS Standard", Code = "SLS_STD", IsoStandard = "SLS", Grade = "Standard", ToleranceRange = "±0.3mm", AdditionalCostPercent = 0m, SortOrder = 120, Active = true },
+        // MJF Tolerances
+        new() { Id = G("TOL_MJF_STD"), Name = "MJF Standard", Code = "MJF_STD", IsoStandard = "MJF", Grade = "Standard", ToleranceRange = "±0.3mm", AdditionalCostPercent = 0m, SortOrder = 130, Active = true },
+        // Material Jetting Tolerances
+        new() { Id = G("TOL_MJ_STD"), Name = "Material Jetting Standard", Code = "MJ_STD", IsoStandard = "MJ", Grade = "Standard", ToleranceRange = "±0.1mm", AdditionalCostPercent = 0m, SortOrder = 140, Active = true },
+        // Binder Jetting Tolerances
+        new() { Id = G("TOL_BJ_STD"), Name = "Binder Jetting Standard", Code = "BJ_STD", IsoStandard = "BJ", Grade = "Standard", ToleranceRange = "±0.2mm (metal) / ±0.3mm (sand)", AdditionalCostPercent = 0m, SortOrder = 150, Active = true },
+        // DMLS Tolerances
+        new() { Id = G("TOL_DMLS_STD"), Name = "DMLS Standard", Code = "DMLS_STD", IsoStandard = "DMLS", Grade = "Standard", ToleranceRange = "±0.1mm", AdditionalCostPercent = 0m, SortOrder = 160, Active = true },
+        new() { Id = G("TOL_DMLS_FINE"), Name = "DMLS Fine", Code = "DMLS_FINE", IsoStandard = "DMLS", Grade = "Fine", ToleranceRange = "±0.05mm (post-machined critical features)", AdditionalCostPercent = 30m, SortOrder = 170, Active = true },
     ];
 
     public static IEnumerable<ProcessConfigOption> GetProcessConfigOptions() =>
@@ -138,6 +183,43 @@ public static class ManufacturingCatalogSeedData
         new() { Id = G("OPT_SLA_UV"), ManufacturingProcessId = SlaDlpId, ConfigKey = "uv_cure", Label = "UV Post-cure", ConfigType = "toggle", DefaultValue = "true", SortOrder = 30, IsRequired = false, Active = true },
         new() { Id = G("OPT_SLA_INSERT"), ManufacturingProcessId = SlaDlpId, ConfigKey = "thread_insert", Label = "Thread Insert", ConfigType = "toggle", DefaultValue = "false", SortOrder = 40, IsRequired = false, Active = true },
 
+        // ── CNC Milling ────────────────────────────────────────────────────────
+        new() { Id = G("OPT_CNCMILL_RA"), ManufacturingProcessId = CncMillId, ConfigKey = "surface_roughness_ra", Label = "Surface Roughness (Ra)", ConfigType = "dropdown", DefaultValue = "3.2", OptionsJson = """["0.4","0.8","1.6","3.2","6.3"]""", Unit = "μm", SortOrder = 10, IsRequired = false, Active = true },
+        new() { Id = G("OPT_CNCMILL_TAP"), ManufacturingProcessId = CncMillId, ConfigKey = "tap_thread_holes", Label = "Tap/Thread Mill Holes", ConfigType = "toggle", DefaultValue = "false", SortOrder = 20, IsRequired = false, Active = true },
+        new() { Id = G("OPT_CNCMILL_THREAD_SPEC"), ManufacturingProcessId = CncMillId, ConfigKey = "thread_spec", Label = "Thread Specification", ConfigType = "text", DefaultValue = null, HelpText = "e.g. M6×1.0, 1/4-20 UNC", SortOrder = 30, IsRequired = false, Active = true },
+        new() { Id = G("OPT_CNCMILL_INSPECTION"), ManufacturingProcessId = CncMillId, ConfigKey = "inspection_type", Label = "Inspection Type", ConfigType = "dropdown", DefaultValue = "VISUAL", OptionsJson = """["VISUAL","CMM","FIRST_ARTICLE"]""", SortOrder = 40, IsRequired = false, Active = true },
+        new() { Id = G("OPT_CNCMILL_DEBURR"), ManufacturingProcessId = CncMillId, ConfigKey = "deburr_edges", Label = "Deburr All Edges", ConfigType = "toggle", DefaultValue = "true", SortOrder = 50, IsRequired = false, Active = true },
+
+        // ── CNC Turning ─────────────────────────────────────────────────────────
+        new() { Id = G("OPT_CNCTURN_RA"), ManufacturingProcessId = CncTurnId, ConfigKey = "surface_roughness_ra", Label = "Surface Roughness (Ra)", ConfigType = "dropdown", DefaultValue = "1.6", OptionsJson = """["0.4","0.8","1.6","3.2"]""", Unit = "μm", SortOrder = 10, IsRequired = false, Active = true },
+        new() { Id = G("OPT_CNCTURN_TAP"), ManufacturingProcessId = CncTurnId, ConfigKey = "tap_thread_holes", Label = "Thread Holes (Axial)", ConfigType = "toggle", DefaultValue = "false", SortOrder = 20, IsRequired = false, Active = true },
+        new() { Id = G("OPT_CNCTURN_THREAD_SPEC"), ManufacturingProcessId = CncTurnId, ConfigKey = "thread_spec", Label = "OD/ID Thread Specification", ConfigType = "text", DefaultValue = null, HelpText = "e.g. M20×2.5 OD, M12×1.75 ID", SortOrder = 30, IsRequired = false, Active = true },
+        new() { Id = G("OPT_CNCTURN_GROOVE"), ManufacturingProcessId = CncTurnId, ConfigKey = "groove_required", Label = "Groove / Undercut", ConfigType = "toggle", DefaultValue = "false", SortOrder = 40, IsRequired = false, Active = true },
+        new() { Id = G("OPT_CNCTURN_INSPECTION"), ManufacturingProcessId = CncTurnId, ConfigKey = "inspection_type", Label = "Inspection Type", ConfigType = "dropdown", DefaultValue = "VISUAL", OptionsJson = """["VISUAL","CMM","FIRST_ARTICLE"]""", SortOrder = 50, IsRequired = false, Active = true },
+
+        // ── SLS 3D Printing ────────────────────────────────────────────────────
+        new() { Id = G("OPT_SLS_COLOR"), ManufacturingProcessId = SlsId, ConfigKey = "color", Label = "Color", ConfigType = "dropdown", DefaultValue = "NATURAL", OptionsJson = """["NATURAL","BLACK","GREY","CUSTOM_DYE"]""", SortOrder = 10, IsRequired = false, Active = true },
+        new() { Id = G("OPT_SLS_FINISH"), ManufacturingProcessId = SlsId, ConfigKey = "post_processing", Label = "Post-Processing", ConfigType = "dropdown", DefaultValue = "AS_PRINTED", OptionsJson = """["AS_PRINTED","TUMBLED","DYED","PAINTED"]""", SortOrder = 20, IsRequired = false, Active = true },
+
+        // ── MJF 3D Printing ────────────────────────────────────────────────────
+        new() { Id = G("OPT_MJF_COLOR"), ManufacturingProcessId = MjfId, ConfigKey = "color", Label = "Color", ConfigType = "dropdown", DefaultValue = "NATURAL_GREY", OptionsJson = """["NATURAL_GREY","BLACK"]""", SortOrder = 10, IsRequired = false, Active = true },
+        new() { Id = G("OPT_MJF_FINISH"), ManufacturingProcessId = MjfId, ConfigKey = "post_processing", Label = "Post-Processing", ConfigType = "dropdown", DefaultValue = "AS_PRINTED", OptionsJson = """["AS_PRINTED","TUMBLED","DYED","PAINTED"]""", SortOrder = 20, IsRequired = false, Active = true },
+
+        // ── Material Jetting ───────────────────────────────────────────────────
+        new() { Id = G("OPT_MJ_LAYER"), ManufacturingProcessId = MjId, ConfigKey = "layer_height_mm", Label = "Layer Height", ConfigType = "dropdown", DefaultValue = "0.016", OptionsJson = """["0.014","0.016","0.028","0.03"]""", Unit = "mm", SortOrder = 10, IsRequired = false, Active = true },
+        new() { Id = G("OPT_MJ_SUPPORT"), ManufacturingProcessId = MjId, ConfigKey = "support_removal", Label = "Support Removal", ConfigType = "dropdown", DefaultValue = "MECHANICAL", OptionsJson = """["MECHANICAL","WATER_JET"]""", SortOrder = 20, IsRequired = false, Active = true },
+        new() { Id = G("OPT_MJ_FINISH"), ManufacturingProcessId = MjId, ConfigKey = "surface_finish", Label = "Surface Finish Mode", ConfigType = "dropdown", DefaultValue = "MATTE", OptionsJson = """["MATTE","GLOSSY"]""", SortOrder = 30, IsRequired = false, Active = true },
+
+        // ── Binder Jetting ─────────────────────────────────────────────────────
+        new() { Id = G("OPT_BJ_INFILTRANT"), ManufacturingProcessId = BjId, ConfigKey = "infiltrant", Label = "Metal Infiltrant", ConfigType = "dropdown", DefaultValue = "NONE", OptionsJson = """["NONE","BRONZE","EPOXY"]""", HelpText = "Post-sintering infiltrant to fill residual porosity", SortOrder = 10, IsRequired = false, Active = true },
+        new() { Id = G("OPT_BJ_HEAT_TREAT"), ManufacturingProcessId = BjId, ConfigKey = "heat_treatment", Label = "Heat Treatment", ConfigType = "dropdown", DefaultValue = "SINTER", OptionsJson = """["SINTER","SINTER_HIP"]""", SortOrder = 20, IsRequired = false, Active = true },
+
+        // ── DMLS 3D Printing ───────────────────────────────────────────────────
+        new() { Id = G("OPT_DMLS_LAYER"), ManufacturingProcessId = DmlsId, ConfigKey = "layer_height_mm", Label = "Layer Height", ConfigType = "dropdown", DefaultValue = "0.04", OptionsJson = """["0.02","0.03","0.04","0.06","0.08"]""", Unit = "mm", SortOrder = 10, IsRequired = false, Active = true },
+        new() { Id = G("OPT_DMLS_HEAT_TREAT"), ManufacturingProcessId = DmlsId, ConfigKey = "heat_treatment", Label = "Heat Treatment", ConfigType = "dropdown", DefaultValue = "STRESS_RELIEF", OptionsJson = """["NONE","STRESS_RELIEF","HIP","ANNEAL"]""", SortOrder = 20, IsRequired = false, Active = true },
+        new() { Id = G("OPT_DMLS_SUPPORT_REMOVAL"), ManufacturingProcessId = DmlsId, ConfigKey = "support_removal", Label = "Support Removal", ConfigType = "dropdown", DefaultValue = "STANDARD", OptionsJson = """["STANDARD","MACHINED_DATUMS"]""", HelpText = "MACHINED_DATUMS mills support contact faces for tight tolerances", SortOrder = 30, IsRequired = false, Active = true },
+        new() { Id = G("OPT_DMLS_INSPECTION"), ManufacturingProcessId = DmlsId, ConfigKey = "inspection_type", Label = "Inspection Type", ConfigType = "dropdown", DefaultValue = "VISUAL", OptionsJson = """["VISUAL","CMM","X_RAY","FIRST_ARTICLE"]""", SortOrder = 40, IsRequired = false, Active = true },
+
         // ── Sheet Metal ────────────────────────────────────────────────────────
         new() { Id = G("OPT_SM_THICKNESS"), ManufacturingProcessId = SheetMetalId, ConfigKey = "sheet_thickness_mm", Label = "Sheet Thickness", ConfigType = "dropdown", DefaultValue = "1.5", OptionsJson = """["0.5","0.8","1.0","1.5","2.0","3.0"]""", Unit = "mm", SortOrder = 10, IsRequired = false, Active = true },
         new() { Id = G("OPT_SM_BEND"), ManufacturingProcessId = SheetMetalId, ConfigKey = "bend_radius_factor", Label = "Min Bend Radius", ConfigType = "dropdown", DefaultValue = "1T", OptionsJson = """["0.5T","1T","2T"]""", HelpText = "T = sheet thickness", SortOrder = 20, IsRequired = false, Active = true },
@@ -151,10 +233,18 @@ public static class ManufacturingCatalogSeedData
     // Returns (processId, materialCode) pairs for seeding the join table
     public static IEnumerable<(Guid ProcessId, Guid MaterialId)> GetProcessMaterialLinks() =>
     [
-        // CNC
+        // CNC (legacy)
         (CncId, G("MAT_AL6061")), (CncId, G("MAT_AL7075")), (CncId, G("MAT_SS304")),
         (CncId, G("MAT_SS316L")), (CncId, G("MAT_BRASS_C360")), (CncId, G("MAT_COPPER_C110")),
         (CncId, G("MAT_TI6AL4V")), (CncId, G("MAT_PEEK")), (CncId, G("MAT_DELRIN")),
+        // CNC Milling
+        (CncMillId, G("MAT_AL6061")), (CncMillId, G("MAT_AL7075")), (CncMillId, G("MAT_SS304")),
+        (CncMillId, G("MAT_SS316L")), (CncMillId, G("MAT_BRASS_C360")), (CncMillId, G("MAT_COPPER_C110")),
+        (CncMillId, G("MAT_TI6AL4V")), (CncMillId, G("MAT_PEEK")), (CncMillId, G("MAT_DELRIN")),
+        // CNC Turning
+        (CncTurnId, G("MAT_AL6061")), (CncTurnId, G("MAT_AL7075")), (CncTurnId, G("MAT_SS304")),
+        (CncTurnId, G("MAT_SS316L")), (CncTurnId, G("MAT_BRASS_C360")), (CncTurnId, G("MAT_COPPER_C110")),
+        (CncTurnId, G("MAT_TI6AL4V")), (CncTurnId, G("MAT_PEEK")), (CncTurnId, G("MAT_DELRIN")),
         // FDM
         (FdmId, G("MAT_PLA")), (FdmId, G("MAT_PETG")), (FdmId, G("MAT_ABS")),
         (FdmId, G("MAT_PA12")), (FdmId, G("MAT_TPU95A")), (FdmId, G("MAT_ASA")),
@@ -162,6 +252,16 @@ public static class ManufacturingCatalogSeedData
         // SLA/DLP
         (SlaDlpId, G("MAT_STD_RESIN")), (SlaDlpId, G("MAT_TOUGH_RESIN")),
         (SlaDlpId, G("MAT_FLEX_RESIN")), (SlaDlpId, G("MAT_CAST_RESIN")), (SlaDlpId, G("MAT_HT_RESIN")),
+        // SLS
+        (SlsId, G("MAT_PA12_SLS")), (SlsId, G("MAT_PA11_SLS")), (SlsId, G("MAT_PA12GF_SLS")),
+        // MJF
+        (MjfId, G("MAT_PA12_MJF")), (MjfId, G("MAT_PA12GB_MJF")),
+        // Material Jetting
+        (MjId, G("MAT_VEROWHITE")), (MjId, G("MAT_VEROBLACK")), (MjId, G("MAT_TANGOPLUS")),
+        // Binder Jetting
+        (BjId, G("MAT_SS316L_BJ")), (BjId, G("MAT_BRONZE_BJ")), (BjId, G("MAT_SAND_BJ")),
+        // DMLS
+        (DmlsId, G("MAT_TI6AL4V_DMLS")), (DmlsId, G("MAT_ALSI10MG")), (DmlsId, G("MAT_IN718")), (DmlsId, G("MAT_174PH")),
         // Sheet Metal
         (SheetMetalId, G("MAT_MILD_STEEL")), (SheetMetalId, G("MAT_SS304_SHEET")),
         (SheetMetalId, G("MAT_AL5052")), (SheetMetalId, G("MAT_COPPER_SHEET")), (SheetMetalId, G("MAT_BRASS_SHEET")),
@@ -170,16 +270,35 @@ public static class ManufacturingCatalogSeedData
     // ── M2M: Process ↔ SurfaceFinish ──────────────────────────────────────────
     public static IEnumerable<(Guid ProcessId, Guid FinishId)> GetProcessFinishLinks() =>
     [
-        // CNC gets all CNC finishes
+        // CNC (legacy) gets all CNC finishes
         (CncId, G("SF_AS_MACHINED")), (CncId, G("SF_BEAD_BLASTED")), (CncId, G("SF_ANODIZE_CLEAR")),
         (CncId, G("SF_ANODIZE_BLACK")), (CncId, G("SF_ANODIZE_HARD")), (CncId, G("SF_POWDER_COAT")),
         (CncId, G("SF_ELECTROPOLISH")), (CncId, G("SF_BRUSHED")), (CncId, G("SF_MIRROR_POLISH")),
+        // CNC Milling finishes
+        (CncMillId, G("SF_AS_MACHINED")), (CncMillId, G("SF_BEAD_BLASTED")), (CncMillId, G("SF_ANODIZE_CLEAR")),
+        (CncMillId, G("SF_ANODIZE_BLACK")), (CncMillId, G("SF_ANODIZE_HARD")), (CncMillId, G("SF_POWDER_COAT")),
+        (CncMillId, G("SF_ELECTROPOLISH")), (CncMillId, G("SF_BRUSHED")), (CncMillId, G("SF_MIRROR_POLISH")),
+        // CNC Turning finishes
+        (CncTurnId, G("SF_AS_MACHINED")), (CncTurnId, G("SF_BEAD_BLASTED")), (CncTurnId, G("SF_ANODIZE_CLEAR")),
+        (CncTurnId, G("SF_ANODIZE_BLACK")), (CncTurnId, G("SF_ANODIZE_HARD")), (CncTurnId, G("SF_ELECTROPOLISH")),
+        (CncTurnId, G("SF_BRUSHED")), (CncTurnId, G("SF_MIRROR_POLISH")),
         // FDM gets 3D printing finishes
         (FdmId, G("SF_AS_PRINTED")), (FdmId, G("SF_SANDED")), (FdmId, G("SF_VAPOR_SMOOTH")),
         (FdmId, G("SF_PAINTED")),
         // SLA/DLP gets 3D printing finishes + dye
         (SlaDlpId, G("SF_AS_PRINTED")), (SlaDlpId, G("SF_SANDED")), (SlaDlpId, G("SF_VAPOR_SMOOTH")),
         (SlaDlpId, G("SF_PAINTED")), (SlaDlpId, G("SF_DYE")),
+        // SLS finishes
+        (SlsId, G("SF_AS_PRINTED")), (SlsId, G("SF_SANDED")), (SlsId, G("SF_VAPOR_SMOOTH")), (SlsId, G("SF_PAINTED")),
+        // MJF finishes
+        (MjfId, G("SF_AS_PRINTED")), (MjfId, G("SF_SANDED")), (MjfId, G("SF_PAINTED")),
+        // Material Jetting finishes
+        (MjId, G("SF_AS_PRINTED")), (MjId, G("SF_SANDED")),
+        // Binder Jetting finishes
+        (BjId, G("SF_AS_PRINTED")), (BjId, G("SF_BEAD_BLASTED")), (BjId, G("SF_ELECTROPOLISH")),
+        // DMLS finishes
+        (DmlsId, G("SF_AS_PRINTED")), (DmlsId, G("SF_BEAD_BLASTED")), (DmlsId, G("SF_ELECTROPOLISH")),
+        (DmlsId, G("SF_MIRROR_POLISH")),
         // Sheet Metal finishes
         (SheetMetalId, G("SF_DEBURR")), (SheetMetalId, G("SF_POWDER_COAT_SM")),
         (SheetMetalId, G("SF_ZINC_PLATE")), (SheetMetalId, G("SF_GALVANIZE")),
@@ -190,15 +309,31 @@ public static class ManufacturingCatalogSeedData
     // ── M2M: Process ↔ ToleranceClass ─────────────────────────────────────────
     public static IEnumerable<(Guid ProcessId, Guid ToleranceId)> GetProcessToleranceLinks() =>
     [
-        // CNC gets ISO 2768 + IT grades
+        // CNC (legacy) gets ISO 2768 + IT grades
         (CncId, G("TOL_ISO2768_F")), (CncId, G("TOL_ISO2768_M")), (CncId, G("TOL_ISO2768_C")),
         (CncId, G("TOL_IT6")), (CncId, G("TOL_IT7")), (CncId, G("TOL_IT8")),
+        // CNC Milling gets ISO 2768 + IT grades
+        (CncMillId, G("TOL_ISO2768_F")), (CncMillId, G("TOL_ISO2768_M")), (CncMillId, G("TOL_ISO2768_C")),
+        (CncMillId, G("TOL_IT6")), (CncMillId, G("TOL_IT7")), (CncMillId, G("TOL_IT8")),
+        // CNC Turning gets ISO 2768 + IT grades
+        (CncTurnId, G("TOL_ISO2768_F")), (CncTurnId, G("TOL_ISO2768_M")), (CncTurnId, G("TOL_ISO2768_C")),
+        (CncTurnId, G("TOL_IT6")), (CncTurnId, G("TOL_IT7")), (CncTurnId, G("TOL_IT8")),
         // FDM gets ISO 2768 coarse/very coarse + FDM-specific
         (FdmId, G("TOL_ISO2768_C")), (FdmId, G("TOL_ISO2768_V")),
         (FdmId, G("TOL_FDM_STD")), (FdmId, G("TOL_FDM_FINE")),
         // SLA/DLP gets ISO 2768 fine/medium + SLA-specific
         (SlaDlpId, G("TOL_ISO2768_F")), (SlaDlpId, G("TOL_ISO2768_M")),
         (SlaDlpId, G("TOL_SLA_STD")), (SlaDlpId, G("TOL_SLA_FINE")),
+        // SLS gets ISO 2768 coarse + SLS-specific
+        (SlsId, G("TOL_ISO2768_C")), (SlsId, G("TOL_ISO2768_V")), (SlsId, G("TOL_SLS_STD")),
+        // MJF gets ISO 2768 coarse + MJF-specific
+        (MjfId, G("TOL_ISO2768_C")), (MjfId, G("TOL_ISO2768_V")), (MjfId, G("TOL_MJF_STD")),
+        // Material Jetting gets ISO 2768 fine/medium + MJ-specific
+        (MjId, G("TOL_ISO2768_F")), (MjId, G("TOL_ISO2768_M")), (MjId, G("TOL_MJ_STD")),
+        // Binder Jetting gets ISO 2768 medium/coarse + BJ-specific
+        (BjId, G("TOL_ISO2768_M")), (BjId, G("TOL_ISO2768_C")), (BjId, G("TOL_BJ_STD")),
+        // DMLS gets ISO 2768 fine/medium + DMLS-specific
+        (DmlsId, G("TOL_ISO2768_F")), (DmlsId, G("TOL_ISO2768_M")), (DmlsId, G("TOL_DMLS_STD")), (DmlsId, G("TOL_DMLS_FINE")),
         // Sheet Metal gets ISO 2768
         (SheetMetalId, G("TOL_ISO2768_M")), (SheetMetalId, G("TOL_ISO2768_C")), (SheetMetalId, G("TOL_ISO2768_V")),
     ];
