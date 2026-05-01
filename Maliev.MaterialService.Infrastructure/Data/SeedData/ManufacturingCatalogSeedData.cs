@@ -227,6 +227,18 @@ public static class ManufacturingCatalogSeedData
         new() { Id = G("OPT_SM_WELD_TYPE"), ManufacturingProcessId = SheetMetalId, ConfigKey = "welding_type", Label = "Welding Type", ConfigType = "dropdown", DefaultValue = "TIG", OptionsJson = """["TIG","MIG","SPOT"]""", SortOrder = 40, IsRequired = false, Active = true },
         new() { Id = G("OPT_SM_CSINK"), ManufacturingProcessId = SheetMetalId, ConfigKey = "countersink_holes", Label = "Countersink Holes", ConfigType = "toggle", DefaultValue = "false", SortOrder = 50, IsRequired = false, Active = true },
         new() { Id = G("OPT_SM_PEM"), ManufacturingProcessId = SheetMetalId, ConfigKey = "hardware_insertion", Label = "Hardware Insertion (PEM)", ConfigType = "toggle", DefaultValue = "false", SortOrder = 60, IsRequired = false, Active = true },
+        new() { Id = G("OPT_SM_PAINT_COLOR"), ManufacturingProcessId = SheetMetalId, ConfigKey = "paint_color", Label = "Paint Color", ConfigType = "text", DefaultValue = null, HelpText = "Specify the desired paint color (e.g. RAL 9005, custom hex)", SortOrder = 70, IsRequired = false, Active = true },
+
+        // ── CNC Anodize Color ──────────────────────────────────────────────────
+        new() { Id = G("OPT_CNC_ANODIZE_COLOR"), ManufacturingProcessId = CncId, ConfigKey = "anodize_color", Label = "Anodize Color", ConfigType = "dropdown", DefaultValue = "CLEAR", OptionsJson = """["CLEAR","BLACK","RED","BLUE","GOLD","CUSTOM"]""", HelpText = "Shown when Anodize Clear or Anodize Black finish is selected", SortOrder = 60, IsRequired = false, Active = true },
+        new() { Id = G("OPT_CNCMILL_ANODIZE_COLOR"), ManufacturingProcessId = CncMillId, ConfigKey = "anodize_color", Label = "Anodize Color", ConfigType = "dropdown", DefaultValue = "CLEAR", OptionsJson = """["CLEAR","BLACK","RED","BLUE","GOLD","CUSTOM"]""", HelpText = "Shown when Anodize Clear or Anodize Black finish is selected", SortOrder = 60, IsRequired = false, Active = true },
+        new() { Id = G("OPT_CNCTURN_ANODIZE_COLOR"), ManufacturingProcessId = CncTurnId, ConfigKey = "anodize_color", Label = "Anodize Color", ConfigType = "dropdown", DefaultValue = "CLEAR", OptionsJson = """["CLEAR","BLACK","RED","BLUE","GOLD","CUSTOM"]""", HelpText = "Shown when Anodize Clear or Anodize Black finish is selected", SortOrder = 60, IsRequired = false, Active = true },
+
+        // ── Paint Color (processes that support SF_PAINTED) ────────────────────
+        new() { Id = G("OPT_FDM_PAINT_COLOR"), ManufacturingProcessId = FdmId, ConfigKey = "paint_color", Label = "Paint Color", ConfigType = "text", DefaultValue = null, HelpText = "Specify the desired paint color (e.g. RAL 9005, custom hex)", SortOrder = 70, IsRequired = false, Active = true },
+        new() { Id = G("OPT_SLA_PAINT_COLOR"), ManufacturingProcessId = SlaDlpId, ConfigKey = "paint_color", Label = "Paint Color", ConfigType = "text", DefaultValue = null, HelpText = "Specify the desired paint color (e.g. RAL 9005, custom hex)", SortOrder = 50, IsRequired = false, Active = true },
+        new() { Id = G("OPT_SLS_PAINT_COLOR"), ManufacturingProcessId = SlsId, ConfigKey = "paint_color", Label = "Paint Color", ConfigType = "text", DefaultValue = null, HelpText = "Specify the desired paint color (e.g. RAL 9005, custom hex)", SortOrder = 30, IsRequired = false, Active = true },
+        new() { Id = G("OPT_MJF_PAINT_COLOR"), ManufacturingProcessId = MjfId, ConfigKey = "paint_color", Label = "Paint Color", ConfigType = "text", DefaultValue = null, HelpText = "Specify the desired paint color (e.g. RAL 9005, custom hex)", SortOrder = 30, IsRequired = false, Active = true },
     ];
 
     // ── M2M: Process ↔ Material ────────────────────────────────────────────────
