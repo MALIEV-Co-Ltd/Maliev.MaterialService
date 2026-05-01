@@ -23,6 +23,9 @@ public static class DatabaseSeeder
 
         try
         {
+            // Always run: fix any process rows whose Name was incorrectly set to the Code value.
+            await EnsureProcessNamesAsync(context, logger);
+
             if (await context.ManufacturingProcesses.AnyAsync())
             {
                 logger.LogInformation("Manufacturing catalog already seeded. Skipping.");
@@ -111,5 +114,33 @@ public static class DatabaseSeeder
         {
             logger.LogError(ex, "An error occurred while seeding the manufacturing catalog.");
         }
+    }
+
+    /// <summary>
+    /// Fixes any processes whose Name was accidentally stored as the Code value.
+    /// Runs unconditionally on every startup so stale dev/staging databases self-heal.
+    /// </summary>
+    private static async Task EnsureProcessNamesAsync(MaterialDbContext context, ILogger logger)
+    {
+        var canonical = ManufacturingCatalogSeedData.GetProcesses()
+            .ToDictionary(p => p.Code, p => p.Name);
+
+        var staleProcesses = await context.ManufacturingProcesses
+            .Where(p => canonical.Keys.Contains(p.Code) && p.Name == p.Code)
+            .ToListAsync();
+
+        if (staleProcesses.Count == 0) return;
+
+        foreach (var process in staleProcesses)
+        {
+            if (canonical.TryGetValue(process.Code, out var correctName))
+            {
+                logger.LogInformation("Fixing process name: {Code} '{Old}' → '{New}'", process.Code, process.Name, correctName);
+                process.Name = correctName;
+            }
+        }
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Fixed {Count} stale process name(s).", staleProcesses.Count);
     }
 }
