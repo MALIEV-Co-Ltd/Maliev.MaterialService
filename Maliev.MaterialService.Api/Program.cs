@@ -1,10 +1,12 @@
 using Maliev.Aspire.ServiceDefaults;
 using Maliev.MaterialService.Api.Services.Auth;
 using Maliev.MaterialService.Application.Services;
+using Maliev.MaterialService.Infrastructure.Consumers;
 using Maliev.MaterialService.Infrastructure.Data.SeedData;
 using Maliev.MaterialService.Infrastructure.Persistence;
 using Maliev.MaterialService.Infrastructure.Persistence.Interceptors;
 using Maliev.MaterialService.Infrastructure.Services;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 // Initialize bootstrap logging
 using var loggerFactory = LoggerFactory.Create(logBuilder => logBuilder.AddConsole());
@@ -36,7 +38,10 @@ try
         sp.GetRequiredService<AuthMetrics>());
     builder.Services.AddSingleton<DatabaseMetricsInterceptor>();
 
-    builder.AddMassTransitWithRabbitMq(); // Standard messaging integration
+    builder.AddMassTransitWithRabbitMq(x =>
+    {
+        x.AddConsumer<SearchReindexRequestedConsumer>();
+    }); // Standard messaging integration
 
     // Add PostgreSQL DbContext - test setup handles environment-specific configuration via connection string override
     builder.AddPostgresDbContext<MaterialDbContext>(connectionName: "MaterialDbContext"); // PostgreSQL with retry logic

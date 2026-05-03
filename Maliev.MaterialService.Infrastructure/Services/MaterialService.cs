@@ -5,6 +5,7 @@ using Maliev.MaterialService.Application.Services;
 using Maliev.MaterialService.Domain.Entities;
 using Maliev.MaterialService.Infrastructure.Mapping;
 using Maliev.MaterialService.Infrastructure.Persistence;
+using Maliev.MaterialService.Infrastructure.Search;
 using Maliev.MessagingContracts;
 using Maliev.MessagingContracts.Contracts.Materials;
 using MassTransit;
@@ -119,6 +120,9 @@ public class MaterialService : IMaterialService
 
         _logger.LogInformation("Published MaterialCreatedEvent for material {MaterialId}", material.Id);
 
+        await _publishEndpoint.Publish(
+            MaterialSearchDocumentMapper.ToUpsertEvent(material, DateTimeOffset.UtcNow));
+
         await InvalidateCacheAsync();
 
         return await GetMaterialByIdAsync(material.Id) ?? throw new InvalidOperationException("Failed to retrieve created material.");
@@ -231,6 +235,9 @@ public class MaterialService : IMaterialService
 
                 _logger.LogInformation("Published MaterialUpdatedEvent for material {MaterialId}", material.Id);
 
+                await _publishEndpoint.Publish(
+                    MaterialSearchDocumentMapper.ToUpsertEvent(material, DateTimeOffset.UtcNow));
+
                 await transaction.CommitAsync();
 
                 await InvalidateCacheAsync(id);
@@ -291,6 +298,9 @@ public class MaterialService : IMaterialService
         ));
 
         _logger.LogInformation("Published MaterialDiscontinuedEvent for material {MaterialId}", material.Id);
+
+        await _publishEndpoint.Publish(
+            MaterialSearchDocumentMapper.ToDeletedEvent(material.Id, DateTimeOffset.UtcNow));
 
         await InvalidateCacheAsync(id);
 
