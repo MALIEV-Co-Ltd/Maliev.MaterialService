@@ -148,6 +148,7 @@ public class MaterialService : IMaterialService
             .Include(m => m.PostProcessingMethods)
             .Include(m => m.MechanicalProperties)
                 .ThenInclude(mp => mp.MechanicalProperty)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(m => m.Id == id && m.Active);
 
         if (material == null)
@@ -180,6 +181,7 @@ public class MaterialService : IMaterialService
                     .Include(m => m.AvailableColors)
                     .Include(m => m.PostProcessingMethods)
                     .Include(m => m.MechanicalProperties)
+                    .AsSplitQuery()
                     .FirstOrDefaultAsync(m => m.Id == id && m.Active);
 
                 if (material == null)
