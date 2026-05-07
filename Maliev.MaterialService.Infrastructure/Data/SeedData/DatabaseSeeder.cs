@@ -28,6 +28,7 @@ public static class DatabaseSeeder
 
             if (await context.ManufacturingProcesses.AnyAsync())
             {
+                await EnsureMaterialDetailReferenceDataAsync(context, logger);
                 logger.LogInformation("Manufacturing catalog already seeded. Skipping.");
                 return;
             }
@@ -109,6 +110,8 @@ public static class DatabaseSeeder
                 await tx.CommitAsync();
                 logger.LogInformation("Manufacturing catalog seeding complete.");
             });
+
+            await EnsureMaterialDetailReferenceDataAsync(context, logger);
         }
         catch (Exception ex)
         {
@@ -142,5 +145,126 @@ public static class DatabaseSeeder
 
         await context.SaveChangesAsync();
         logger.LogInformation("Fixed {Count} stale process name(s).", staleProcesses.Count);
+    }
+
+    private static async Task EnsureMaterialDetailReferenceDataAsync(MaterialDbContext context, ILogger logger)
+    {
+        var addedColors = 0;
+        foreach (var seedColor in ManufacturingCatalogSeedData.GetColors())
+        {
+            var color = await context.Colors
+                .FirstOrDefaultAsync(item => item.Id == seedColor.Id || item.Name == seedColor.Name);
+
+            if (color is null)
+            {
+                context.Colors.Add(seedColor);
+                addedColors++;
+                continue;
+            }
+
+            if (color.HexCode != seedColor.HexCode)
+            {
+                color.HexCode = seedColor.HexCode;
+            }
+        }
+
+        var addedProperties = 0;
+        foreach (var seedProperty in ManufacturingCatalogSeedData.GetMechanicalProperties())
+        {
+            var property = await context.MechanicalProperties
+                .FirstOrDefaultAsync(item => item.Id == seedProperty.Id || item.Name == seedProperty.Name);
+
+            if (property is null)
+            {
+                context.MechanicalProperties.Add(seedProperty);
+                addedProperties++;
+                continue;
+            }
+
+            if (property.Unit != seedProperty.Unit)
+            {
+                property.Unit = seedProperty.Unit;
+            }
+        }
+
+        await context.SaveChangesAsync();
+
+        var materialColorLinks = ManufacturingCatalogSeedData.GetMaterialColorLinks().ToList();
+        var materialIds = materialColorLinks.Select(link => link.MaterialId).Distinct().ToList();
+        var colorIds = materialColorLinks.Select(link => link.ColorId).Distinct().ToList();
+        var materials = await context.Materials
+            .Include(material => material.AvailableColors)
+            .Where(material => materialIds.Contains(material.Id))
+            .ToDictionaryAsync(material => material.Id);
+        var colors = await context.Colors
+            .Where(color => colorIds.Contains(color.Id))
+            .ToDictionaryAsync(color => color.Id);
+
+        var addedColorLinks = 0;
+        foreach (var (materialId, colorId) in materialColorLinks)
+        {
+            if (!materials.TryGetValue(materialId, out var material) || !colors.TryGetValue(colorId, out var color))
+            {
+                continue;
+            }
+
+            if (material.AvailableColors.Any(existing => existing.Id == colorId))
+            {
+                continue;
+            }
+
+            material.AvailableColors.Add(color);
+            addedColorLinks++;
+        }
+
+        var propertyLinks = ManufacturingCatalogSeedData.GetMaterialMechanicalPropertyLinks().ToList();
+        var propertyMaterialIds = propertyLinks.Select(link => link.MaterialId).Distinct().ToList();
+        var propertyIds = propertyLinks.Select(link => link.MechanicalPropertyId).Distinct().ToList();
+        var existingMaterialIds = await context.Materials
+            .Where(material => propertyMaterialIds.Contains(material.Id))
+            .Select(material => material.Id)
+            .ToListAsync();
+        var existingPropertyIds = await context.MechanicalProperties
+            .Where(property => propertyIds.Contains(property.Id))
+            .Select(property => property.Id)
+            .ToListAsync();
+        var existingPropertyLinks = await context.MaterialMechanicalProperties
+            .Where(link => propertyMaterialIds.Contains(link.MaterialId) && propertyIds.Contains(link.MechanicalPropertyId))
+            .ToDictionaryAsync(link => (link.MaterialId, link.MechanicalPropertyId));
+
+        var addedPropertyLinks = 0;
+        foreach (var (materialId, propertyId, value) in propertyLinks)
+        {
+            if (!existingMaterialIds.Contains(materialId) || !existingPropertyIds.Contains(propertyId))
+            {
+                continue;
+            }
+
+            if (existingPropertyLinks.TryGetValue((materialId, propertyId), out var existingLink))
+            {
+                existingLink.Value = value;
+                continue;
+            }
+
+            context.MaterialMechanicalProperties.Add(new()
+            {
+                MaterialId = materialId,
+                MechanicalPropertyId = propertyId,
+                Value = value
+            });
+            addedPropertyLinks++;
+        }
+
+        await context.SaveChangesAsync();
+
+        if (addedColors + addedProperties + addedColorLinks + addedPropertyLinks > 0)
+        {
+            logger.LogInformation(
+                "Seeded material detail reference data. Colors={Colors}, properties={Properties}, colorLinks={ColorLinks}, propertyLinks={PropertyLinks}.",
+                addedColors,
+                addedProperties,
+                addedColorLinks,
+                addedPropertyLinks);
+        }
     }
 }

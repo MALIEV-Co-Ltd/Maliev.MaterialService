@@ -105,6 +105,82 @@ public static class ManufacturingCatalogSeedData
         new() { Id = G("MAT_BRASS_SHEET"), Name = "Brass Sheet", Code = "BRASS_SHEET", Category = "Sheet", DensityGCm3 = 8.49m, MachinabilityRating = null, Description = "Brass sheet for decorative and precision components. 0.5–2.0mm.", SortOrder = 270, Active = true, PricePerUnit = 0, StockLevel = 0 },
     ];
 
+    public static IEnumerable<Color> GetColors() =>
+    [
+        new() { Id = G("COLOR_NATURAL"), Name = "Natural", HexCode = "#d9c7a4", Active = true },
+        new() { Id = G("COLOR_BLACK"), Name = "Black", HexCode = "#171717", Active = true },
+        new() { Id = G("COLOR_WHITE"), Name = "White", HexCode = "#f5f5f5", Active = true },
+        new() { Id = G("COLOR_GREY"), Name = "Grey", HexCode = "#8a8f98", Active = true },
+        new() { Id = G("COLOR_CLEAR"), Name = "Clear", HexCode = "#dceeff", Active = true },
+        new() { Id = G("COLOR_SILVER"), Name = "Silver", HexCode = "#c0c0c0", Active = true },
+        new() { Id = G("COLOR_GOLD"), Name = "Gold", HexCode = "#d4a017", Active = true },
+        new() { Id = G("COLOR_COPPER"), Name = "Copper", HexCode = "#b87333", Active = true },
+        new() { Id = G("COLOR_BLUE"), Name = "Blue", HexCode = "#2563eb", Active = true },
+        new() { Id = G("COLOR_RED"), Name = "Red", HexCode = "#dc2626", Active = true },
+        new() { Id = G("COLOR_GREEN"), Name = "Green", HexCode = "#16a34a", Active = true },
+        new() { Id = G("COLOR_YELLOW"), Name = "Yellow", HexCode = "#facc15", Active = true },
+        new() { Id = G("COLOR_ORANGE"), Name = "Orange", HexCode = "#f97316", Active = true },
+        new() { Id = G("COLOR_AMBER"), Name = "Amber", HexCode = "#f59e0b", Active = true },
+    ];
+
+    public static IEnumerable<MechanicalProperty> GetMechanicalProperties() =>
+    [
+        new() { Id = G("PROP_DENSITY"), Name = "Density", Unit = "g/cm3", Active = true },
+        new() { Id = G("PROP_TENSILE_STRENGTH"), Name = "Tensile Strength", Unit = "MPa", Active = true },
+        new() { Id = G("PROP_ELASTIC_MODULUS"), Name = "Elastic Modulus", Unit = "GPa", Active = true },
+        new() { Id = G("PROP_HEAT_DEFLECTION_TEMP"), Name = "Heat Deflection Temp", Unit = "deg C", Active = true },
+        new() { Id = G("PROP_CONTINUOUS_USE_TEMP"), Name = "Continuous Use Temp", Unit = "deg C", Active = true },
+        new() { Id = G("PROP_CHEMICAL_RESISTANCE"), Name = "Chemical Resistance", Unit = "1-5", Active = true },
+        new() { Id = G("PROP_MACHINABILITY"), Name = "Machinability", Unit = "1-5", Active = true },
+    ];
+
+    public static IEnumerable<(Guid MaterialId, Guid ColorId)> GetMaterialColorLinks() =>
+    [
+        // Metals
+        (G("MAT_AL6061"), G("COLOR_SILVER")), (G("MAT_AL7075"), G("COLOR_SILVER")),
+        (G("MAT_SS304"), G("COLOR_SILVER")), (G("MAT_SS316L"), G("COLOR_SILVER")),
+        (G("MAT_BRASS_C360"), G("COLOR_GOLD")), (G("MAT_COPPER_C110"), G("COLOR_COPPER")),
+        (G("MAT_TI6AL4V"), G("COLOR_GREY")),
+        // CNC polymers
+        (G("MAT_PEEK"), G("COLOR_NATURAL")), (G("MAT_PEEK"), G("COLOR_BLACK")),
+        (G("MAT_DELRIN"), G("COLOR_WHITE")), (G("MAT_DELRIN"), G("COLOR_BLACK")),
+        // FDM polymers
+        (G("MAT_PLA"), G("COLOR_WHITE")), (G("MAT_PLA"), G("COLOR_BLACK")), (G("MAT_PLA"), G("COLOR_RED")),
+        (G("MAT_PLA"), G("COLOR_BLUE")), (G("MAT_PLA"), G("COLOR_GREEN")), (G("MAT_PLA"), G("COLOR_YELLOW")),
+        (G("MAT_PETG"), G("COLOR_CLEAR")), (G("MAT_PETG"), G("COLOR_BLACK")), (G("MAT_PETG"), G("COLOR_WHITE")),
+        (G("MAT_ABS"), G("COLOR_BLACK")), (G("MAT_ABS"), G("COLOR_WHITE")),
+        (G("MAT_PA12"), G("COLOR_NATURAL")), (G("MAT_TPU95A"), G("COLOR_BLACK")),
+        (G("MAT_ASA"), G("COLOR_BLACK")), (G("MAT_PC"), G("COLOR_CLEAR")), (G("MAT_CF_PETG"), G("COLOR_BLACK")),
+        // Resins and powder-bed polymers
+        (G("MAT_STD_RESIN"), G("COLOR_GREY")), (G("MAT_STD_RESIN"), G("COLOR_CLEAR")),
+        (G("MAT_TOUGH_RESIN"), G("COLOR_GREY")), (G("MAT_FLEX_RESIN"), G("COLOR_BLACK")),
+        (G("MAT_CAST_RESIN"), G("COLOR_AMBER")), (G("MAT_HT_RESIN"), G("COLOR_CLEAR")),
+        (G("MAT_PA12_SLS"), G("COLOR_NATURAL")), (G("MAT_PA12_SLS"), G("COLOR_BLACK")),
+        (G("MAT_PA11_SLS"), G("COLOR_NATURAL")), (G("MAT_PA12GF_SLS"), G("COLOR_GREY")),
+        (G("MAT_PA12_MJF"), G("COLOR_GREY")), (G("MAT_PA12_MJF"), G("COLOR_BLACK")),
+        (G("MAT_PA12GB_MJF"), G("COLOR_GREY")),
+        // Material jetting, binder jetting, DMLS, sheet
+        (G("MAT_VEROWHITE"), G("COLOR_WHITE")), (G("MAT_VEROBLACK"), G("COLOR_BLACK")),
+        (G("MAT_TANGOPLUS"), G("COLOR_CLEAR")), (G("MAT_SS316L_BJ"), G("COLOR_SILVER")),
+        (G("MAT_BRONZE_BJ"), G("COLOR_GOLD")), (G("MAT_SAND_BJ"), G("COLOR_NATURAL")),
+        (G("MAT_TI6AL4V_DMLS"), G("COLOR_GREY")), (G("MAT_ALSI10MG"), G("COLOR_SILVER")),
+        (G("MAT_IN718"), G("COLOR_SILVER")), (G("MAT_174PH"), G("COLOR_SILVER")),
+        (G("MAT_MILD_STEEL"), G("COLOR_GREY")), (G("MAT_SS304_SHEET"), G("COLOR_SILVER")),
+        (G("MAT_AL5052"), G("COLOR_SILVER")), (G("MAT_COPPER_SHEET"), G("COLOR_COPPER")),
+        (G("MAT_BRASS_SHEET"), G("COLOR_GOLD")),
+    ];
+
+    public static IEnumerable<(Guid MaterialId, Guid MechanicalPropertyId, decimal Value)> GetMaterialMechanicalPropertyLinks() =>
+    [
+        (G("MAT_PEEK"), G("PROP_DENSITY"), 1.31m),
+        (G("MAT_PEEK"), G("PROP_TENSILE_STRENGTH"), 90m),
+        (G("MAT_PEEK"), G("PROP_ELASTIC_MODULUS"), 3.6m),
+        (G("MAT_PEEK"), G("PROP_HEAT_DEFLECTION_TEMP"), 152m),
+        (G("MAT_PEEK"), G("PROP_CONTINUOUS_USE_TEMP"), 250m),
+        (G("MAT_PEEK"), G("PROP_CHEMICAL_RESISTANCE"), 5m),
+        (G("MAT_PEEK"), G("PROP_MACHINABILITY"), 3m),
+    ];
+
     public static IEnumerable<SurfaceFinish> GetSurfaceFinishes() =>
     [
         // CNC Finishes
