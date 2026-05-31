@@ -103,6 +103,12 @@ public static class ManufacturingCatalogSeedData
         new() { Id = G("MAT_AL5052"), Name = "Aluminum 5052 Sheet", Code = "AL5052", Category = "Sheet", DensityGCm3 = 2.68m, MachinabilityRating = null, Description = "Aluminum sheet with good formability. 0.5–5.0mm thickness range.", SortOrder = 250, Active = true, PricePerUnit = 0, StockLevel = 0 },
         new() { Id = G("MAT_COPPER_SHEET"), Name = "Copper Sheet", Code = "COPPER_SHEET", Category = "Sheet", DensityGCm3 = 8.94m, MachinabilityRating = null, Description = "Copper sheet for electrical and thermal applications. 0.5–2.0mm.", SortOrder = 260, Active = true, PricePerUnit = 0, StockLevel = 0 },
         new() { Id = G("MAT_BRASS_SHEET"), Name = "Brass Sheet", Code = "BRASS_SHEET", Category = "Sheet", DensityGCm3 = 8.49m, MachinabilityRating = null, Description = "Brass sheet for decorative and precision components. 0.5–2.0mm.", SortOrder = 270, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        // Injection Molding Materials
+        new() { Id = G("MAT_PP_IM"), Name = "Polypropylene (PP)", Code = "PP_IM", Category = "Polymer", DensityGCm3 = 0.91m, MachinabilityRating = null, Description = "Lightweight, chemical-resistant thermoplastic. Excellent for living hinges.", SortOrder = 430, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        new() { Id = G("MAT_ABS_IM"), Name = "ABS (Injection)", Code = "ABS_IM", Category = "Polymer", DensityGCm3 = 1.05m, MachinabilityRating = null, Description = "Impact-resistant, easy to paint and glue. General-purpose engineering plastic.", SortOrder = 440, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        new() { Id = G("MAT_PCABS_IM"), Name = "PC/ABS Blend", Code = "PCABS_IM", Category = "Polymer", DensityGCm3 = 1.12m, MachinabilityRating = null, Description = "High-impact blend combining PC strength with ABS processability.", SortOrder = 450, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        new() { Id = G("MAT_PA66_IM"), Name = "Nylon PA66", Code = "PA66_IM", Category = "Polymer", DensityGCm3 = 1.14m, MachinabilityRating = null, Description = "High-strength nylon for mechanical components, gears, and wear-resistant parts.", SortOrder = 460, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        new() { Id = G("MAT_TPE_IM"), Name = "TPE (Overmold)", Code = "TPE_IM", Category = "Polymer", DensityGCm3 = 1.10m, MachinabilityRating = null, Description = "Thermoplastic elastomer for soft-touch grips, seals, and overmolding applications.", SortOrder = 470, Active = true, PricePerUnit = 0, StockLevel = 0 },
     ];
 
     public static IEnumerable<Color> GetColors() =>
@@ -144,19 +150,25 @@ public static class ManufacturingCatalogSeedData
         // CNC polymers
         (G("MAT_PEEK"), G("COLOR_NATURAL")), (G("MAT_PEEK"), G("COLOR_BLACK")),
         (G("MAT_DELRIN"), G("COLOR_WHITE")), (G("MAT_DELRIN"), G("COLOR_BLACK")),
-        // FDM polymers
-        (G("MAT_PLA"), G("COLOR_WHITE")), (G("MAT_PLA"), G("COLOR_BLACK")), (G("MAT_PLA"), G("COLOR_RED")),
-        (G("MAT_PLA"), G("COLOR_BLUE")), (G("MAT_PLA"), G("COLOR_GREEN")), (G("MAT_PLA"), G("COLOR_YELLOW")),
+        // FDM polymers — extended colors based on commercially available filaments
+        (G("MAT_PLA"), G("COLOR_WHITE")), (G("MAT_PLA"), G("COLOR_BLACK")), (G("MAT_PLA"), G("COLOR_GREY")),
+        (G("MAT_PLA"), G("COLOR_RED")), (G("MAT_PLA"), G("COLOR_BLUE")), (G("MAT_PLA"), G("COLOR_GREEN")),
+        (G("MAT_PLA"), G("COLOR_YELLOW")), (G("MAT_PLA"), G("COLOR_ORANGE")),
         (G("MAT_PETG"), G("COLOR_CLEAR")), (G("MAT_PETG"), G("COLOR_BLACK")), (G("MAT_PETG"), G("COLOR_WHITE")),
-        (G("MAT_ABS"), G("COLOR_BLACK")), (G("MAT_ABS"), G("COLOR_WHITE")),
-        (G("MAT_PA12"), G("COLOR_NATURAL")), (G("MAT_TPU95A"), G("COLOR_BLACK")),
-        (G("MAT_ASA"), G("COLOR_BLACK")), (G("MAT_PC"), G("COLOR_CLEAR")), (G("MAT_CF_PETG"), G("COLOR_BLACK")),
+        (G("MAT_PETG"), G("COLOR_GREY")),
+        (G("MAT_ABS"), G("COLOR_BLACK")), (G("MAT_ABS"), G("COLOR_WHITE")), (G("MAT_ABS"), G("COLOR_GREY")),
+        (G("MAT_PA12"), G("COLOR_NATURAL")), (G("MAT_PA12"), G("COLOR_BLACK")),
+        (G("MAT_TPU95A"), G("COLOR_BLACK")), (G("MAT_TPU95A"), G("COLOR_WHITE")),
+        (G("MAT_ASA"), G("COLOR_BLACK")), (G("MAT_ASA"), G("COLOR_WHITE")), (G("MAT_ASA"), G("COLOR_GREY")),
+        (G("MAT_PC"), G("COLOR_CLEAR")), (G("MAT_PC"), G("COLOR_BLACK")),
+        (G("MAT_CF_PETG"), G("COLOR_BLACK")),
         // Resins and powder-bed polymers
         (G("MAT_STD_RESIN"), G("COLOR_GREY")), (G("MAT_STD_RESIN"), G("COLOR_CLEAR")),
         (G("MAT_TOUGH_RESIN"), G("COLOR_GREY")), (G("MAT_FLEX_RESIN"), G("COLOR_BLACK")),
         (G("MAT_CAST_RESIN"), G("COLOR_AMBER")), (G("MAT_HT_RESIN"), G("COLOR_CLEAR")),
-        (G("MAT_PA12_SLS"), G("COLOR_NATURAL")), (G("MAT_PA12_SLS"), G("COLOR_BLACK")),
-        (G("MAT_PA11_SLS"), G("COLOR_NATURAL")), (G("MAT_PA12GF_SLS"), G("COLOR_GREY")),
+        (G("MAT_PA12_SLS"), G("COLOR_NATURAL")), (G("MAT_PA12_SLS"), G("COLOR_BLACK")), (G("MAT_PA12_SLS"), G("COLOR_GREY")),
+        (G("MAT_PA11_SLS"), G("COLOR_NATURAL")), (G("MAT_PA11_SLS"), G("COLOR_BLACK")), (G("MAT_PA11_SLS"), G("COLOR_GREY")),
+        (G("MAT_PA12GF_SLS"), G("COLOR_GREY")),
         (G("MAT_PA12_MJF"), G("COLOR_GREY")), (G("MAT_PA12_MJF"), G("COLOR_BLACK")),
         (G("MAT_PA12GB_MJF"), G("COLOR_GREY")),
         // Material jetting, binder jetting, DMLS, sheet
@@ -168,6 +180,12 @@ public static class ManufacturingCatalogSeedData
         (G("MAT_MILD_STEEL"), G("COLOR_GREY")), (G("MAT_SS304_SHEET"), G("COLOR_SILVER")),
         (G("MAT_AL5052"), G("COLOR_SILVER")), (G("MAT_COPPER_SHEET"), G("COLOR_COPPER")),
         (G("MAT_BRASS_SHEET"), G("COLOR_GOLD")),
+        // Injection Molding — masterbatch colors. Natural/clear is raw resin; black and white are universal.
+        (G("MAT_PP_IM"), G("COLOR_NATURAL")), (G("MAT_PP_IM"), G("COLOR_BLACK")), (G("MAT_PP_IM"), G("COLOR_WHITE")),
+        (G("MAT_ABS_IM"), G("COLOR_BLACK")), (G("MAT_ABS_IM"), G("COLOR_WHITE")), (G("MAT_ABS_IM"), G("COLOR_GREY")),
+        (G("MAT_PCABS_IM"), G("COLOR_BLACK")), (G("MAT_PCABS_IM"), G("COLOR_GREY")),
+        (G("MAT_PA66_IM"), G("COLOR_NATURAL")), (G("MAT_PA66_IM"), G("COLOR_BLACK")),
+        (G("MAT_TPE_IM"), G("COLOR_BLACK")), (G("MAT_TPE_IM"), G("COLOR_GREY")), (G("MAT_TPE_IM"), G("COLOR_WHITE")),
     ];
 
     public static IEnumerable<(Guid MaterialId, Guid MechanicalPropertyId, decimal Value)> GetMaterialMechanicalPropertyLinks() =>
@@ -198,7 +216,9 @@ public static class ManufacturingCatalogSeedData
         new() { Id = G("SF_SANDED"), Name = "Sanded", Code = "SANDED", RaValueUm = null, AdditionalCostPercent = 10m, SortOrder = 110, Active = true },
         new() { Id = G("SF_VAPOR_SMOOTH"), Name = "Vapor Smoothed", Code = "VAPOR_SMOOTH", RaValueUm = null, AdditionalCostPercent = 20m, SortOrder = 120, Active = true },
         new() { Id = G("SF_PAINTED"), Name = "Painted", Code = "PAINTED", RaValueUm = null, AdditionalCostPercent = 25m, SortOrder = 130, Active = true },
-        new() { Id = G("SF_DYE"), Name = "Dyed (SLA)", Code = "DYE", RaValueUm = null, AdditionalCostPercent = 12m, SortOrder = 140, Active = true },
+        new() { Id = G("SF_DYE"), Name = "Dyed", Code = "DYE", RaValueUm = null, AdditionalCostPercent = 12m, SortOrder = 140, Active = true },
+        // Injection Molding Finishes
+        new() { Id = G("SF_AS_MOLDED"), Name = "As-molded", Code = "AS_MOLDED", RaValueUm = null, AdditionalCostPercent = 0m, SortOrder = 145, Active = true },
         // Sheet Metal Finishes
         new() { Id = G("SF_DEBURR"), Name = "Deburred", Code = "DEBURR", RaValueUm = null, AdditionalCostPercent = 0m, SortOrder = 150, Active = true },
         new() { Id = G("SF_POWDER_COAT_SM"), Name = "Powder Coated (Sheet Metal)", Code = "POWDER_COAT_SM", RaValueUm = 2.0m, AdditionalCostPercent = 18m, SortOrder = 160, Active = true },
@@ -234,6 +254,9 @@ public static class ManufacturingCatalogSeedData
         // DMLS Tolerances
         new() { Id = G("TOL_DMLS_STD"), Name = "DMLS Standard", Code = "DMLS_STD", IsoStandard = "DMLS", Grade = "Standard", ToleranceRange = "±0.1mm", AdditionalCostPercent = 0m, SortOrder = 160, Active = true },
         new() { Id = G("TOL_DMLS_FINE"), Name = "DMLS Fine", Code = "DMLS_FINE", IsoStandard = "DMLS", Grade = "Fine", ToleranceRange = "±0.05mm (post-machined critical features)", AdditionalCostPercent = 30m, SortOrder = 170, Active = true },
+        // Injection Molding Tolerances — typical achievable range per DFM guidelines
+        new() { Id = G("TOL_IM_STD"), Name = "IM Standard", Code = "IM_STD", IsoStandard = "SPI", Grade = "B", ToleranceRange = "±0.1mm (critical) / ±0.3mm (non-critical)", AdditionalCostPercent = 0m, SortOrder = 180, Active = true },
+        new() { Id = G("TOL_IM_FINE"), Name = "IM Fine (tight mold)", Code = "IM_FINE", IsoStandard = "SPI", Grade = "A", ToleranceRange = "±0.05mm (requires precision tooling)", AdditionalCostPercent = 40m, SortOrder = 190, Active = true },
     ];
 
     public static IEnumerable<ProcessConfigOption> GetProcessConfigOptions() =>
@@ -315,6 +338,13 @@ public static class ManufacturingCatalogSeedData
         new() { Id = G("OPT_SLA_PAINT_COLOR"), ManufacturingProcessId = SlaDlpId, ConfigKey = "paint_color", Label = "Paint Color", ConfigType = "text", DefaultValue = null, HelpText = "Specify the desired paint color (e.g. RAL 9005, custom hex)", SortOrder = 50, IsRequired = false, Active = true },
         new() { Id = G("OPT_SLS_PAINT_COLOR"), ManufacturingProcessId = SlsId, ConfigKey = "paint_color", Label = "Paint Color", ConfigType = "text", DefaultValue = null, HelpText = "Specify the desired paint color (e.g. RAL 9005, custom hex)", SortOrder = 30, IsRequired = false, Active = true },
         new() { Id = G("OPT_MJF_PAINT_COLOR"), ManufacturingProcessId = MjfId, ConfigKey = "paint_color", Label = "Paint Color", ConfigType = "text", DefaultValue = null, HelpText = "Specify the desired paint color (e.g. RAL 9005, custom hex)", SortOrder = 30, IsRequired = false, Active = true },
+
+        // ── Injection Molding ──────────────────────────────────────────────────
+        new() { Id = G("OPT_IM_DRAFT"), ManufacturingProcessId = InjectionMoldId, ConfigKey = "draft_angle_deg", Label = "Minimum Draft Angle", ConfigType = "dropdown", DefaultValue = "1.5", OptionsJson = """["0.5","1.0","1.5","2.0","3.0","5.0"]""", Unit = "°", HelpText = "Minimum taper on vertical walls to release part from mold. Steeper = easier ejection.", SortOrder = 10, IsRequired = false, Active = true },
+        new() { Id = G("OPT_IM_WALL"), ManufacturingProcessId = InjectionMoldId, ConfigKey = "wall_thickness_mm", Label = "Nominal Wall Thickness", ConfigType = "dropdown", DefaultValue = "2.0", OptionsJson = """["0.5","1.0","1.5","2.0","2.5","3.0","4.0"]""", Unit = "mm", HelpText = "Target wall thickness. Uniform walls reduce warp and sink marks.", SortOrder = 20, IsRequired = false, Active = true },
+        new() { Id = G("OPT_IM_GATE"), ManufacturingProcessId = InjectionMoldId, ConfigKey = "gate_type", Label = "Gate Type", ConfigType = "dropdown", DefaultValue = "EDGE", OptionsJson = """["EDGE","PIN","SUBMARINE","HOT_TIP"]""", HelpText = "Gate = where plastic enters the mold cavity.", SortOrder = 30, IsRequired = false, Active = true },
+        new() { Id = G("OPT_IM_TEXTURE"), ManufacturingProcessId = InjectionMoldId, ConfigKey = "surface_texture", Label = "Mold Surface Texture", ConfigType = "dropdown", DefaultValue = "SPI_D1", OptionsJson = """["SPI_A1","SPI_A2","SPI_B1","SPI_C1","SPI_D1","SPI_D2","SPI_D3"]""", HelpText = "SPI finish standard: A = mirror, B = semi-gloss, C = matte, D = textured.", SortOrder = 40, IsRequired = false, Active = true },
+        new() { Id = G("OPT_IM_QUANTITY"), ManufacturingProcessId = InjectionMoldId, ConfigKey = "annual_volume", Label = "Annual Volume Estimate", ConfigType = "dropdown", DefaultValue = "10000", OptionsJson = """["500","1000","5000","10000","50000","100000","500000"]""", HelpText = "Estimated annual production volume — affects mold steel grade and cavity count recommendation.", SortOrder = 50, IsRequired = false, Active = true },
     ];
 
     // ── M2M: Process ↔ Material ────────────────────────────────────────────────
@@ -353,6 +383,9 @@ public static class ManufacturingCatalogSeedData
         // Sheet Metal
         (SheetMetalId, G("MAT_MILD_STEEL")), (SheetMetalId, G("MAT_SS304_SHEET")),
         (SheetMetalId, G("MAT_AL5052")), (SheetMetalId, G("MAT_COPPER_SHEET")), (SheetMetalId, G("MAT_BRASS_SHEET")),
+        // Injection Molding
+        (InjectionMoldId, G("MAT_PP_IM")), (InjectionMoldId, G("MAT_ABS_IM")),
+        (InjectionMoldId, G("MAT_PCABS_IM")), (InjectionMoldId, G("MAT_PA66_IM")), (InjectionMoldId, G("MAT_TPE_IM")),
     ];
 
     // ── M2M: Process ↔ SurfaceFinish ──────────────────────────────────────────
@@ -366,22 +399,24 @@ public static class ManufacturingCatalogSeedData
         (CncMillId, G("SF_AS_MACHINED")), (CncMillId, G("SF_BEAD_BLASTED")), (CncMillId, G("SF_ANODIZE_CLEAR")),
         (CncMillId, G("SF_ANODIZE_BLACK")), (CncMillId, G("SF_ANODIZE_HARD")), (CncMillId, G("SF_POWDER_COAT")),
         (CncMillId, G("SF_ELECTROPOLISH")), (CncMillId, G("SF_BRUSHED")), (CncMillId, G("SF_MIRROR_POLISH")),
-        // CNC Turning finishes
+        // CNC Turning finishes — POWDER_COAT added (turned parts are routinely powder-coated)
         (CncTurnId, G("SF_AS_MACHINED")), (CncTurnId, G("SF_BEAD_BLASTED")), (CncTurnId, G("SF_ANODIZE_CLEAR")),
-        (CncTurnId, G("SF_ANODIZE_BLACK")), (CncTurnId, G("SF_ANODIZE_HARD")), (CncTurnId, G("SF_ELECTROPOLISH")),
-        (CncTurnId, G("SF_BRUSHED")), (CncTurnId, G("SF_MIRROR_POLISH")),
+        (CncTurnId, G("SF_ANODIZE_BLACK")), (CncTurnId, G("SF_ANODIZE_HARD")), (CncTurnId, G("SF_POWDER_COAT")),
+        (CncTurnId, G("SF_ELECTROPOLISH")), (CncTurnId, G("SF_BRUSHED")), (CncTurnId, G("SF_MIRROR_POLISH")),
         // FDM gets 3D printing finishes
         (FdmId, G("SF_AS_PRINTED")), (FdmId, G("SF_SANDED")), (FdmId, G("SF_VAPOR_SMOOTH")),
         (FdmId, G("SF_PAINTED")),
         // SLA/DLP gets 3D printing finishes + dye
         (SlaDlpId, G("SF_AS_PRINTED")), (SlaDlpId, G("SF_SANDED")), (SlaDlpId, G("SF_VAPOR_SMOOTH")),
         (SlaDlpId, G("SF_PAINTED")), (SlaDlpId, G("SF_DYE")),
-        // SLS finishes
-        (SlsId, G("SF_AS_PRINTED")), (SlsId, G("SF_SANDED")), (SlsId, G("SF_VAPOR_SMOOTH")), (SlsId, G("SF_PAINTED")),
-        // MJF finishes
-        (MjfId, G("SF_AS_PRINTED")), (MjfId, G("SF_SANDED")), (MjfId, G("SF_PAINTED")),
-        // Material Jetting finishes
-        (MjId, G("SF_AS_PRINTED")), (MjId, G("SF_SANDED")),
+        // SLS finishes — DYE is standard for SLS nylon (PA12 dyeing is industry-standard)
+        (SlsId, G("SF_AS_PRINTED")), (SlsId, G("SF_SANDED")), (SlsId, G("SF_VAPOR_SMOOTH")),
+        (SlsId, G("SF_PAINTED")), (SlsId, G("SF_DYE")),
+        // MJF finishes — DYE applies to unfilled PA12 MJF
+        (MjfId, G("SF_AS_PRINTED")), (MjfId, G("SF_SANDED")), (MjfId, G("SF_VAPOR_SMOOTH")),
+        (MjfId, G("SF_PAINTED")), (MjfId, G("SF_DYE")),
+        // Material Jetting finishes — PAINTED added (post-paint on MJ parts is common)
+        (MjId, G("SF_AS_PRINTED")), (MjId, G("SF_SANDED")), (MjId, G("SF_PAINTED")),
         // Binder Jetting finishes
         (BjId, G("SF_AS_PRINTED")), (BjId, G("SF_BEAD_BLASTED")), (BjId, G("SF_ELECTROPOLISH")),
         // DMLS finishes
@@ -390,8 +425,219 @@ public static class ManufacturingCatalogSeedData
         // Sheet Metal finishes
         (SheetMetalId, G("SF_DEBURR")), (SheetMetalId, G("SF_POWDER_COAT_SM")),
         (SheetMetalId, G("SF_ZINC_PLATE")), (SheetMetalId, G("SF_GALVANIZE")),
-        // Sheet metal can also get brushed/painted
+        // Sheet metal: brushed + painted + anodize for aluminum sheet (AL5052 is commonly anodized)
         (SheetMetalId, G("SF_BRUSHED")), (SheetMetalId, G("SF_PAINTED")),
+        (SheetMetalId, G("SF_ANODIZE_CLEAR")), (SheetMetalId, G("SF_ANODIZE_BLACK")),
+        // Injection Molding finishes
+        (InjectionMoldId, G("SF_AS_MOLDED")), (InjectionMoldId, G("SF_PAINTED")),
+    ];
+
+    // ── M2M: Material ↔ SurfaceFinish ─────────────────────────────────────────
+    // Rules applied:
+    //   Anodize (CLEAR/BLACK/HARD) → Al and Ti only. Never plastic.
+    //   Mirror Polish             → metals only. POM/PEEK/all polymers excluded.
+    //   Electropolish             → metals (Al, SS, Brass, Cu, BJ SS316L, DMLS metals). Not Ti (uncommon).
+    //   Powder Coat (CNC)         → Al and SS only. Not Cu, Brass, Ti, or any polymer.
+    //   Brushed                   → metals only.
+    //   Vapor Smooth              → ABS/ASA (acetone); SLS/MJF PA12/PA11 (tumble); SLA STD/TOUGH/HT resins.
+    //                               NOT PLA, PETG, PA12 FDM, TPU, PC, CF-PETG, FLEX/CAST resin, glass-filled.
+    //   Dyed                      → SLA std/tough resins; SLS PA12/PA11; MJF PA12 (not glass-filled).
+    //                               NOT metals, FDM polymers, flex/cast resin, glass-filled nylon.
+    //   Painted                   → all FDM/SLA/SLS/MJF/MJ thermoplastics. Not TPU, FLEX/CAST resin, sand mold.
+    //   As-Molded                 → injection molding only.
+    public static IEnumerable<(Guid MaterialId, Guid FinishId)> GetMaterialSurfaceFinishLinks() =>
+    [
+        // ── CNC — Aluminum 6061 (full CNC metal set; anodize YES; all metal finishes) ──────────
+        (G("MAT_AL6061"), G("SF_AS_MACHINED")), (G("MAT_AL6061"), G("SF_BEAD_BLASTED")),
+        (G("MAT_AL6061"), G("SF_ANODIZE_CLEAR")), (G("MAT_AL6061"), G("SF_ANODIZE_BLACK")),
+        (G("MAT_AL6061"), G("SF_ANODIZE_HARD")), (G("MAT_AL6061"), G("SF_POWDER_COAT")),
+        (G("MAT_AL6061"), G("SF_ELECTROPOLISH")), (G("MAT_AL6061"), G("SF_BRUSHED")),
+        (G("MAT_AL6061"), G("SF_MIRROR_POLISH")),
+
+        // ── CNC — Aluminum 7075 (same as 6061) ──────────────────────────────────────────────────
+        (G("MAT_AL7075"), G("SF_AS_MACHINED")), (G("MAT_AL7075"), G("SF_BEAD_BLASTED")),
+        (G("MAT_AL7075"), G("SF_ANODIZE_CLEAR")), (G("MAT_AL7075"), G("SF_ANODIZE_BLACK")),
+        (G("MAT_AL7075"), G("SF_ANODIZE_HARD")), (G("MAT_AL7075"), G("SF_POWDER_COAT")),
+        (G("MAT_AL7075"), G("SF_ELECTROPOLISH")), (G("MAT_AL7075"), G("SF_BRUSHED")),
+        (G("MAT_AL7075"), G("SF_MIRROR_POLISH")),
+
+        // ── CNC — Stainless Steel 304 (no anodize — SS cannot be anodized) ───────────────────────
+        (G("MAT_SS304"), G("SF_AS_MACHINED")), (G("MAT_SS304"), G("SF_BEAD_BLASTED")),
+        (G("MAT_SS304"), G("SF_POWDER_COAT")), (G("MAT_SS304"), G("SF_ELECTROPOLISH")),
+        (G("MAT_SS304"), G("SF_BRUSHED")), (G("MAT_SS304"), G("SF_MIRROR_POLISH")),
+
+        // ── CNC — Stainless Steel 316L (same as 304) ────────────────────────────────────────────
+        (G("MAT_SS316L"), G("SF_AS_MACHINED")), (G("MAT_SS316L"), G("SF_BEAD_BLASTED")),
+        (G("MAT_SS316L"), G("SF_POWDER_COAT")), (G("MAT_SS316L"), G("SF_ELECTROPOLISH")),
+        (G("MAT_SS316L"), G("SF_BRUSHED")), (G("MAT_SS316L"), G("SF_MIRROR_POLISH")),
+
+        // ── CNC — Brass C360 (Cu-Zn alloy; no anodize, no powder coat for CNC) ───────────────────
+        (G("MAT_BRASS_C360"), G("SF_AS_MACHINED")), (G("MAT_BRASS_C360"), G("SF_BEAD_BLASTED")),
+        (G("MAT_BRASS_C360"), G("SF_ELECTROPOLISH")), (G("MAT_BRASS_C360"), G("SF_BRUSHED")),
+        (G("MAT_BRASS_C360"), G("SF_MIRROR_POLISH")),
+
+        // ── CNC — Copper C110 (no anodize) ──────────────────────────────────────────────────────
+        (G("MAT_COPPER_C110"), G("SF_AS_MACHINED")), (G("MAT_COPPER_C110"), G("SF_BEAD_BLASTED")),
+        (G("MAT_COPPER_C110"), G("SF_ELECTROPOLISH")), (G("MAT_COPPER_C110"), G("SF_BRUSHED")),
+        (G("MAT_COPPER_C110"), G("SF_MIRROR_POLISH")),
+
+        // ── CNC — Titanium Ti-6Al-4V (anodize YES; no electropolish standard for CNC Ti) ─────────
+        (G("MAT_TI6AL4V"), G("SF_AS_MACHINED")), (G("MAT_TI6AL4V"), G("SF_BEAD_BLASTED")),
+        (G("MAT_TI6AL4V"), G("SF_ANODIZE_CLEAR")), (G("MAT_TI6AL4V"), G("SF_ANODIZE_BLACK")),
+        (G("MAT_TI6AL4V"), G("SF_ANODIZE_HARD")), (G("MAT_TI6AL4V"), G("SF_BRUSHED")),
+        (G("MAT_TI6AL4V"), G("SF_MIRROR_POLISH")),
+
+        // ── CNC — PEEK (engineering polymer; only mechanical finishes; no anodize/mirror/electropolish) ─
+        (G("MAT_PEEK"), G("SF_AS_MACHINED")), (G("MAT_PEEK"), G("SF_BEAD_BLASTED")),
+
+        // ── CNC — Delrin/POM (semi-crystalline polymer; no anodize, no mirror polish, no electropolish) ─
+        // Mirror polishing POM is physically impossible — it's semi-crystalline and cannot achieve
+        // specular metal-grade surface. Anodizing requires electrochemical oxidation of metal.
+        (G("MAT_DELRIN"), G("SF_AS_MACHINED")), (G("MAT_DELRIN"), G("SF_BEAD_BLASTED")),
+
+        // ── FDM — PLA (PLA not acetone-soluble; no vapor smooth) ─────────────────────────────────
+        (G("MAT_PLA"), G("SF_AS_PRINTED")), (G("MAT_PLA"), G("SF_SANDED")), (G("MAT_PLA"), G("SF_PAINTED")),
+
+        // ── FDM — PETG (no vapor smooth) ─────────────────────────────────────────────────────────
+        (G("MAT_PETG"), G("SF_AS_PRINTED")), (G("MAT_PETG"), G("SF_SANDED")), (G("MAT_PETG"), G("SF_PAINTED")),
+
+        // ── FDM — ABS (acetone vapor smoothing supported) ────────────────────────────────────────
+        (G("MAT_ABS"), G("SF_AS_PRINTED")), (G("MAT_ABS"), G("SF_SANDED")),
+        (G("MAT_ABS"), G("SF_VAPOR_SMOOTH")), (G("MAT_ABS"), G("SF_PAINTED")),
+
+        // ── FDM — PA12 Nylon FDM (no vapor smooth for FDM nylon) ─────────────────────────────────
+        (G("MAT_PA12"), G("SF_AS_PRINTED")), (G("MAT_PA12"), G("SF_SANDED")), (G("MAT_PA12"), G("SF_PAINTED")),
+
+        // ── FDM — TPU 95A (flexible elastomer; sanding tears surface; only as-printed) ─────────────
+        (G("MAT_TPU95A"), G("SF_AS_PRINTED")),
+
+        // ── FDM — ASA (UV-stable ABS-like; acetone vapor smooth supported) ──────────────────────
+        (G("MAT_ASA"), G("SF_AS_PRINTED")), (G("MAT_ASA"), G("SF_SANDED")),
+        (G("MAT_ASA"), G("SF_VAPOR_SMOOTH")), (G("MAT_ASA"), G("SF_PAINTED")),
+
+        // ── FDM — Polycarbonate (no vapor smooth) ─────────────────────────────────────────────────
+        (G("MAT_PC"), G("SF_AS_PRINTED")), (G("MAT_PC"), G("SF_SANDED")), (G("MAT_PC"), G("SF_PAINTED")),
+
+        // ── FDM — CF-PETG (carbon fiber reinforced; sanding reveals fibers) ──────────────────────
+        (G("MAT_CF_PETG"), G("SF_AS_PRINTED")), (G("MAT_CF_PETG"), G("SF_SANDED")), (G("MAT_CF_PETG"), G("SF_PAINTED")),
+
+        // ── SLA/DLP — Standard Resin (dyeable; vapor smooth via IPA treatment) ──────────────────
+        (G("MAT_STD_RESIN"), G("SF_AS_PRINTED")), (G("MAT_STD_RESIN"), G("SF_SANDED")),
+        (G("MAT_STD_RESIN"), G("SF_VAPOR_SMOOTH")), (G("MAT_STD_RESIN"), G("SF_PAINTED")),
+        (G("MAT_STD_RESIN"), G("SF_DYE")),
+
+        // ── SLA/DLP — Tough Resin ─────────────────────────────────────────────────────────────────
+        (G("MAT_TOUGH_RESIN"), G("SF_AS_PRINTED")), (G("MAT_TOUGH_RESIN"), G("SF_SANDED")),
+        (G("MAT_TOUGH_RESIN"), G("SF_VAPOR_SMOOTH")), (G("MAT_TOUGH_RESIN"), G("SF_PAINTED")),
+        (G("MAT_TOUGH_RESIN"), G("SF_DYE")),
+
+        // ── SLA/DLP — Flexible Resin (rubber-like; no vapor smooth, no reliable paint, no dye) ───
+        (G("MAT_FLEX_RESIN"), G("SF_AS_PRINTED")), (G("MAT_FLEX_RESIN"), G("SF_SANDED")),
+
+        // ── SLA/DLP — Castable Resin (investment casting; minimal post-process — it gets burned out) ─
+        (G("MAT_CAST_RESIN"), G("SF_AS_PRINTED")), (G("MAT_CAST_RESIN"), G("SF_SANDED")),
+
+        // ── SLA/DLP — High-Temp Resin ─────────────────────────────────────────────────────────────
+        (G("MAT_HT_RESIN"), G("SF_AS_PRINTED")), (G("MAT_HT_RESIN"), G("SF_SANDED")),
+        (G("MAT_HT_RESIN"), G("SF_VAPOR_SMOOTH")), (G("MAT_HT_RESIN"), G("SF_PAINTED")),
+
+        // ── SLS — PA12 (dyeing is industry-standard for SLS nylon; tumble vapor smooth supported) ─
+        (G("MAT_PA12_SLS"), G("SF_AS_PRINTED")), (G("MAT_PA12_SLS"), G("SF_SANDED")),
+        (G("MAT_PA12_SLS"), G("SF_VAPOR_SMOOTH")), (G("MAT_PA12_SLS"), G("SF_PAINTED")),
+        (G("MAT_PA12_SLS"), G("SF_DYE")),
+
+        // ── SLS — PA11 (bio-based; same post-process capability as PA12 SLS) ──────────────────────
+        (G("MAT_PA11_SLS"), G("SF_AS_PRINTED")), (G("MAT_PA11_SLS"), G("SF_SANDED")),
+        (G("MAT_PA11_SLS"), G("SF_VAPOR_SMOOTH")), (G("MAT_PA11_SLS"), G("SF_PAINTED")),
+        (G("MAT_PA11_SLS"), G("SF_DYE")),
+
+        // ── SLS — PA12GF (glass-filled; no vapor smooth, no dye — glass disrupts surface/dye uptake) ─
+        (G("MAT_PA12GF_SLS"), G("SF_AS_PRINTED")), (G("MAT_PA12GF_SLS"), G("SF_SANDED")),
+        (G("MAT_PA12GF_SLS"), G("SF_PAINTED")),
+
+        // ── MJF — PA12 (dyeable; tumble/vapor smooth supported) ────────────────────────────────────
+        (G("MAT_PA12_MJF"), G("SF_AS_PRINTED")), (G("MAT_PA12_MJF"), G("SF_SANDED")),
+        (G("MAT_PA12_MJF"), G("SF_VAPOR_SMOOTH")), (G("MAT_PA12_MJF"), G("SF_PAINTED")),
+        (G("MAT_PA12_MJF"), G("SF_DYE")),
+
+        // ── MJF — PA12 Glass Bead (no vapor smooth, no dye — glass fill disrupts both) ────────────
+        (G("MAT_PA12GB_MJF"), G("SF_AS_PRINTED")), (G("MAT_PA12GB_MJF"), G("SF_SANDED")),
+        (G("MAT_PA12GB_MJF"), G("SF_PAINTED")),
+
+        // ── Material Jetting — VeroWhite (smooth as-printed; painted for colour/texture) ──────────
+        (G("MAT_VEROWHITE"), G("SF_AS_PRINTED")), (G("MAT_VEROWHITE"), G("SF_SANDED")),
+        (G("MAT_VEROWHITE"), G("SF_PAINTED")),
+
+        // ── Material Jetting — VeroBlack ────────────────────────────────────────────────────────────
+        (G("MAT_VEROBLACK"), G("SF_AS_PRINTED")), (G("MAT_VEROBLACK"), G("SF_SANDED")),
+        (G("MAT_VEROBLACK"), G("SF_PAINTED")),
+
+        // ── Material Jetting — TangoPlus (rubber-like; painting not practical; only as-printed) ───
+        (G("MAT_TANGOPLUS"), G("SF_AS_PRINTED")),
+
+        // ── Binder Jetting — SS316L (sintered metal; bead blast and electropolish standard) ───────
+        (G("MAT_SS316L_BJ"), G("SF_AS_PRINTED")), (G("MAT_SS316L_BJ"), G("SF_BEAD_BLASTED")),
+        (G("MAT_SS316L_BJ"), G("SF_ELECTROPOLISH")),
+
+        // ── Binder Jetting — Bronze (sintered; limited to bead blast) ──────────────────────────────
+        (G("MAT_BRONZE_BJ"), G("SF_AS_PRINTED")), (G("MAT_BRONZE_BJ"), G("SF_BEAD_BLASTED")),
+
+        // ── Binder Jetting — Silica Sand (casting mold; no post-process finishes) ─────────────────
+        (G("MAT_SAND_BJ"), G("SF_AS_PRINTED")),
+
+        // ── DMLS — Ti-6Al-4V (hard alloy; no mirror polish standard for DMLS Ti) ──────────────────
+        (G("MAT_TI6AL4V_DMLS"), G("SF_AS_PRINTED")), (G("MAT_TI6AL4V_DMLS"), G("SF_BEAD_BLASTED")),
+        (G("MAT_TI6AL4V_DMLS"), G("SF_ELECTROPOLISH")),
+
+        // ── DMLS — AlSi10Mg (aluminum alloy; anodize IS done in practice; mirror polish achievable) ──
+        (G("MAT_ALSI10MG"), G("SF_AS_PRINTED")), (G("MAT_ALSI10MG"), G("SF_BEAD_BLASTED")),
+        (G("MAT_ALSI10MG"), G("SF_ELECTROPOLISH")), (G("MAT_ALSI10MG"), G("SF_MIRROR_POLISH")),
+        (G("MAT_ALSI10MG"), G("SF_ANODIZE_CLEAR")), (G("MAT_ALSI10MG"), G("SF_ANODIZE_BLACK")),
+
+        // ── DMLS — Inconel 718 (aerospace superalloy; mirror polish done in practice) ────────────
+        (G("MAT_IN718"), G("SF_AS_PRINTED")), (G("MAT_IN718"), G("SF_BEAD_BLASTED")),
+        (G("MAT_IN718"), G("SF_ELECTROPOLISH")), (G("MAT_IN718"), G("SF_MIRROR_POLISH")),
+
+        // ── DMLS — 17-4PH Stainless (precipitation-hardened SS; mirror polish achievable) ─────────
+        (G("MAT_174PH"), G("SF_AS_PRINTED")), (G("MAT_174PH"), G("SF_BEAD_BLASTED")),
+        (G("MAT_174PH"), G("SF_ELECTROPOLISH")), (G("MAT_174PH"), G("SF_MIRROR_POLISH")),
+
+        // ── Sheet Metal — Mild Steel (full SM finish set; zinc and galvanize for mild steel only) ──
+        (G("MAT_MILD_STEEL"), G("SF_DEBURR")), (G("MAT_MILD_STEEL"), G("SF_POWDER_COAT_SM")),
+        (G("MAT_MILD_STEEL"), G("SF_ZINC_PLATE")), (G("MAT_MILD_STEEL"), G("SF_GALVANIZE")),
+        (G("MAT_MILD_STEEL"), G("SF_PAINTED")), (G("MAT_MILD_STEEL"), G("SF_BRUSHED")),
+
+        // ── Sheet Metal — SS304 Sheet (no zinc plate, no galvanize — SS doesn't need corrosion protection) ─
+        (G("MAT_SS304_SHEET"), G("SF_DEBURR")), (G("MAT_SS304_SHEET"), G("SF_POWDER_COAT_SM")),
+        (G("MAT_SS304_SHEET"), G("SF_BRUSHED")), (G("MAT_SS304_SHEET"), G("SF_PAINTED")),
+
+        // ── Sheet Metal — Aluminum 5052 Sheet (anodizable — very common for enclosures and panels) ──
+        (G("MAT_AL5052"), G("SF_DEBURR")), (G("MAT_AL5052"), G("SF_POWDER_COAT_SM")),
+        (G("MAT_AL5052"), G("SF_BRUSHED")), (G("MAT_AL5052"), G("SF_PAINTED")),
+        (G("MAT_AL5052"), G("SF_ANODIZE_CLEAR")), (G("MAT_AL5052"), G("SF_ANODIZE_BLACK")),
+
+        // ── Sheet Metal — Copper Sheet (limited; no powder coat, no zinc/galvanize) ──────────────
+        (G("MAT_COPPER_SHEET"), G("SF_DEBURR")), (G("MAT_COPPER_SHEET"), G("SF_BRUSHED")),
+        (G("MAT_COPPER_SHEET"), G("SF_PAINTED")),
+
+        // ── Sheet Metal — Brass Sheet ─────────────────────────────────────────────────────────────
+        (G("MAT_BRASS_SHEET"), G("SF_DEBURR")), (G("MAT_BRASS_SHEET"), G("SF_BRUSHED")),
+        (G("MAT_BRASS_SHEET"), G("SF_PAINTED")),
+
+        // ── Injection Molding — PP (as-molded standard; painted for aesthetic parts) ────────────
+        (G("MAT_PP_IM"), G("SF_AS_MOLDED")), (G("MAT_PP_IM"), G("SF_PAINTED")),
+
+        // ── Injection Molding — ABS (as-molded; painting and primer common) ──────────────────────
+        (G("MAT_ABS_IM"), G("SF_AS_MOLDED")), (G("MAT_ABS_IM"), G("SF_PAINTED")),
+
+        // ── Injection Molding — PC/ABS Blend ─────────────────────────────────────────────────────
+        (G("MAT_PCABS_IM"), G("SF_AS_MOLDED")), (G("MAT_PCABS_IM"), G("SF_PAINTED")),
+
+        // ── Injection Molding — PA66 (nylon; painting with adhesion primer) ──────────────────────
+        (G("MAT_PA66_IM"), G("SF_AS_MOLDED")), (G("MAT_PA66_IM"), G("SF_PAINTED")),
+
+        // ── Injection Molding — TPE Overmold (rubber-like; painting not practical) ────────────────
+        (G("MAT_TPE_IM"), G("SF_AS_MOLDED")),
     ];
 
     // ── M2M: Process ↔ ToleranceClass ─────────────────────────────────────────
@@ -424,5 +670,8 @@ public static class ManufacturingCatalogSeedData
         (DmlsId, G("TOL_ISO2768_F")), (DmlsId, G("TOL_ISO2768_M")), (DmlsId, G("TOL_DMLS_STD")), (DmlsId, G("TOL_DMLS_FINE")),
         // Sheet Metal gets ISO 2768
         (SheetMetalId, G("TOL_ISO2768_M")), (SheetMetalId, G("TOL_ISO2768_C")), (SheetMetalId, G("TOL_ISO2768_V")),
+        // Injection Molding gets SPI-based tolerances
+        (InjectionMoldId, G("TOL_ISO2768_C")), (InjectionMoldId, G("TOL_ISO2768_V")),
+        (InjectionMoldId, G("TOL_IM_STD")), (InjectionMoldId, G("TOL_IM_FINE")),
     ];
 }

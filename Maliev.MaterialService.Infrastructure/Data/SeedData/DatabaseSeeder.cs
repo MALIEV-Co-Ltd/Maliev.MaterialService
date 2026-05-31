@@ -23,8 +23,10 @@ public static class DatabaseSeeder
 
         try
         {
-            // Always run: fix any process rows whose Name was incorrectly set to the Code value.
+            // Always run: fix stale names and add new combos idempotently.
             await EnsureProcessNamesAsync(context, logger);
+            await EnsureFinishNamesAsync(context, logger);
+            await EnsureProcessFinishLinksAsync(context, logger);
 
             if (await context.ManufacturingProcesses.AnyAsync())
             {
@@ -147,6 +149,80 @@ public static class DatabaseSeeder
         logger.LogInformation("Fixed {Count} stale process name(s).", staleProcesses.Count);
     }
 
+    /// <summary>
+    /// Fixes surface finish names that were saved with stale values (e.g. "Dyed (SLA)" → "Dyed").
+    /// </summary>
+    private static async Task EnsureFinishNamesAsync(MaterialDbContext context, ILogger logger)
+    {
+        var canonical = ManufacturingCatalogSeedData.GetSurfaceFinishes()
+            .ToDictionary(f => f.Code, f => f.Name);
+        var canonicalCodes = canonical.Keys.ToList();
+
+        var staleFinishes = await context.SurfaceFinishes
+            .Where(f => canonicalCodes.Contains(f.Code))
+            .ToListAsync();
+
+        staleFinishes = staleFinishes
+            .Where(f => canonical.TryGetValue(f.Code, out var correctName) && correctName != f.Name)
+            .ToList();
+
+        if (staleFinishes.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var finish in staleFinishes)
+        {
+            if (canonical.TryGetValue(finish.Code, out var correctName))
+            {
+                logger.LogInformation("Fixing finish name: {Code} '{Old}' → '{New}'", finish.Code, finish.Name, correctName);
+                finish.Name = correctName;
+            }
+        }
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Fixed {Count} stale finish name(s).", staleFinishes.Count);
+    }
+
+    /// <summary>
+    /// Adds any process–finish links that are in the seed data but missing from the DB.
+    /// Safe to run repeatedly (idempotent).
+    /// </summary>
+    private static async Task EnsureProcessFinishLinksAsync(MaterialDbContext context, ILogger logger)
+    {
+        var seedLinks = ManufacturingCatalogSeedData.GetProcessFinishLinks().ToList();
+        var processIds = seedLinks.Select(l => l.ProcessId).Distinct().ToList();
+        var finishIds = seedLinks.Select(l => l.FinishId).Distinct().ToList();
+
+        var processes = await context.ManufacturingProcesses
+            .Include(p => p.SurfaceFinishes)
+            .Where(p => processIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id);
+
+        var finishes = await context.SurfaceFinishes
+            .Where(f => finishIds.Contains(f.Id))
+            .ToDictionaryAsync(f => f.Id);
+
+        var added = 0;
+        foreach (var (processId, finishId) in seedLinks)
+        {
+            if (!processes.TryGetValue(processId, out var process) || !finishes.TryGetValue(finishId, out var finish))
+                continue;
+
+            if (!process.SurfaceFinishes.Any(f => f.Id == finishId))
+            {
+                process.SurfaceFinishes.Add(finish);
+                added++;
+            }
+        }
+
+        if (added > 0)
+        {
+            await context.SaveChangesAsync();
+            logger.LogInformation("Added {Count} missing process–finish link(s).", added);
+        }
+    }
+
     private static async Task EnsureMaterialDetailReferenceDataAsync(MaterialDbContext context, ILogger logger)
     {
         var addedColors = 0;
@@ -257,14 +333,123 @@ public static class DatabaseSeeder
 
         await context.SaveChangesAsync();
 
-        if (addedColors + addedProperties + addedColorLinks + addedPropertyLinks > 0)
+        // ── surface_finish_materials — idempotent ──────────────────────────────
+        // Ensure SF_AS_MOLDED exists (may be new).
+        var asMoldedSeed = ManufacturingCatalogSeedData.GetSurfaceFinishes()
+            .First(f => f.Code == "AS_MOLDED");
+        if (!await context.SurfaceFinishes.AnyAsync(f => f.Code == "AS_MOLDED"))
+        {
+            context.SurfaceFinishes.Add(asMoldedSeed);
+            await context.SaveChangesAsync();
+            logger.LogInformation("Added new surface finish: AS_MOLDED.");
+        }
+
+        var finishLinks = ManufacturingCatalogSeedData.GetMaterialSurfaceFinishLinks().ToList();
+        var finishLinkMaterialIds = finishLinks.Select(l => l.MaterialId).Distinct().ToList();
+        var finishLinkFinishIds = finishLinks.Select(l => l.FinishId).Distinct().ToList();
+
+        var finishLinkMaterials = await context.Materials
+            .Include(m => m.SurfaceFinishes)
+            .Where(m => finishLinkMaterialIds.Contains(m.Id))
+            .ToDictionaryAsync(m => m.Id);
+
+        var finishLinkFinishes = await context.SurfaceFinishes
+            .Where(f => finishLinkFinishIds.Contains(f.Id))
+            .ToDictionaryAsync(f => f.Id);
+
+        var addedFinishLinks = 0;
+        foreach (var (materialId, finishId) in finishLinks)
+        {
+            if (!finishLinkMaterials.TryGetValue(materialId, out var material) ||
+                !finishLinkFinishes.TryGetValue(finishId, out var finish))
+                continue;
+
+            if (!material.SurfaceFinishes.Any(f => f.Id == finishId))
+            {
+                material.SurfaceFinishes.Add(finish);
+                addedFinishLinks++;
+            }
+        }
+
+        // ── Injection molding tolerance classes — idempotent ──────────────────
+        var imTolCodes = new[] { "IM_STD", "IM_FINE" };
+        var imTolSeed = ManufacturingCatalogSeedData.GetToleranceClasses()
+            .Where(t => imTolCodes.Contains(t.Code)).ToList();
+        foreach (var tol in imTolSeed)
+        {
+            if (!await context.ToleranceClasses.AnyAsync(t => t.Code == tol.Code))
+            {
+                context.ToleranceClasses.Add(tol);
+            }
+        }
+        await context.SaveChangesAsync();
+
+        // ── Injection molding process config options — idempotent ──────────────
+        var imOptKeys = new[] { "draft_angle_deg", "wall_thickness_mm", "gate_type", "surface_texture", "annual_volume" };
+        var injectionProcess2 = await context.ManufacturingProcesses
+            .FirstOrDefaultAsync(p => p.Code == "INJECTION_MOLD");
+        if (injectionProcess2 is not null)
+        {
+            var existingOptKeys = await context.ProcessConfigOptions
+                .Where(o => o.ManufacturingProcessId == injectionProcess2.Id)
+                .Select(o => o.ConfigKey)
+                .ToListAsync();
+            var imOptsToAdd = ManufacturingCatalogSeedData.GetProcessConfigOptions()
+                .Where(o => o.ManufacturingProcessId == ManufacturingCatalogSeedData.InjectionMoldId
+                         && !existingOptKeys.Contains(o.ConfigKey))
+                .ToList();
+            if (imOptsToAdd.Count > 0)
+            {
+                await context.ProcessConfigOptions.AddRangeAsync(imOptsToAdd);
+                await context.SaveChangesAsync();
+                logger.LogInformation("Added {Count} injection molding config option(s).", imOptsToAdd.Count);
+            }
+        }
+
+        // ── Injection molding materials — idempotent ───────────────────────────
+        var imCodes = new[] { "PP_IM", "ABS_IM", "PCABS_IM", "PA66_IM", "TPE_IM" };
+        var existingImCodes = await context.Materials
+            .Where(m => imCodes.Contains(m.Code))
+            .Select(m => m.Code)
+            .ToListAsync();
+        var imMaterialsToAdd = ManufacturingCatalogSeedData.GetMaterials()
+            .Where(m => imCodes.Contains(m.Code) && !existingImCodes.Contains(m.Code))
+            .ToList();
+        if (imMaterialsToAdd.Count > 0)
+        {
+            await context.Materials.AddRangeAsync(imMaterialsToAdd);
+            await context.SaveChangesAsync();
+            logger.LogInformation("Added {Count} new injection molding material(s).", imMaterialsToAdd.Count);
+
+            // Link to injection molding process.
+            var injectionProcess = await context.ManufacturingProcesses
+                .Include(p => p.Materials)
+                .FirstOrDefaultAsync(p => p.Code == "INJECTION_MOLD");
+            if (injectionProcess is not null)
+            {
+                var newImMaterials = await context.Materials
+                    .Where(m => imCodes.Contains(m.Code))
+                    .ToListAsync();
+                foreach (var mat in newImMaterials)
+                {
+                    if (!injectionProcess.Materials.Any(m => m.Id == mat.Id))
+                        injectionProcess.Materials.Add(mat);
+                }
+                await context.SaveChangesAsync();
+            }
+        }
+
+        await context.SaveChangesAsync();
+
+        if (addedColors + addedProperties + addedColorLinks + addedPropertyLinks + addedFinishLinks > 0)
         {
             logger.LogInformation(
-                "Seeded material detail reference data. Colors={Colors}, properties={Properties}, colorLinks={ColorLinks}, propertyLinks={PropertyLinks}.",
+                "Seeded material detail reference data. Colors={Colors}, properties={Properties}, colorLinks={ColorLinks}, propertyLinks={PropertyLinks}, finishLinks={FinishLinks}.",
                 addedColors,
                 addedProperties,
                 addedColorLinks,
-                addedPropertyLinks);
+                addedPropertyLinks,
+                addedFinishLinks);
         }
     }
 }
