@@ -54,7 +54,7 @@ public class ManufacturingCatalogSeedDataTests
         var links = ManufacturingCatalogSeedData.GetMaterialSurfaceFinishLinks().ToList();
 
         var epId = finishes["ELECTROPOLISH"].Id;
-        var polymers = new[] { "DELRIN", "PEEK", "PLA", "PETG", "ABS", "PA12", "TPU95A", "ASA", "PC", "CF_PETG" };
+        var polymers = new[] { "DELRIN", "PEEK", "ACRYLIC_CLEAR", "PLA", "PETG", "ABS", "PA12", "TPU95A", "ASA", "PC", "CF_PETG" };
 
         foreach (var code in polymers)
         {
@@ -63,6 +63,54 @@ public class ManufacturingCatalogSeedDataTests
                 links.Any(l => l.MaterialId == matId && l.FinishId == epId),
                 $"Electropolish must not be offered for polymer {code}.");
         }
+    }
+
+    [Fact]
+    public void TransparentMaterials_AreOfferedForSuitableManufacturingProcesses()
+    {
+        var materials = ManufacturingCatalogSeedData.GetMaterials().ToDictionary(m => m.Code);
+        var processLinks = ManufacturingCatalogSeedData.GetProcessMaterialLinks().ToList();
+
+        Assert.Contains(materials.Keys, code => code == "ACRYLIC_CLEAR");
+        Assert.Contains(materials.Keys, code => code == "CLEAR_RESIN");
+
+        var acrylic = materials["ACRYLIC_CLEAR"];
+        Assert.Equal("Clear Acrylic / PMMA", acrylic.Name);
+        Assert.Equal("Polymer", acrylic.Category);
+        Assert.Contains(processLinks, link => link.ProcessId == ManufacturingCatalogSeedData.CncId && link.MaterialId == acrylic.Id);
+        Assert.Contains(processLinks, link => link.ProcessId == ManufacturingCatalogSeedData.CncMillId && link.MaterialId == acrylic.Id);
+        Assert.Contains(processLinks, link => link.ProcessId == ManufacturingCatalogSeedData.CncTurnId && link.MaterialId == acrylic.Id);
+
+        var clearResin = materials["CLEAR_RESIN"];
+        Assert.Equal("Clear Resin", clearResin.Name);
+        Assert.Equal("Resin", clearResin.Category);
+        Assert.Contains(processLinks, link => link.ProcessId == ManufacturingCatalogSeedData.SlaDlpId && link.MaterialId == clearResin.Id);
+    }
+
+    [Fact]
+    public void TransparentMaterials_HaveClearColorAndPhysicalFinishRules()
+    {
+        var materials = ManufacturingCatalogSeedData.GetMaterials().ToDictionary(m => m.Code);
+        var colors = ManufacturingCatalogSeedData.GetColors().ToDictionary(c => c.Name);
+        var colorLinks = ManufacturingCatalogSeedData.GetMaterialColorLinks().ToList();
+        var finishes = ManufacturingCatalogSeedData.GetSurfaceFinishes().ToDictionary(f => f.Code);
+        var finishLinks = ManufacturingCatalogSeedData.GetMaterialSurfaceFinishLinks().ToList();
+
+        var clearColorId = colors["Clear"].Id;
+        var acrylicId = materials["ACRYLIC_CLEAR"].Id;
+        var clearResinId = materials["CLEAR_RESIN"].Id;
+
+        Assert.Contains(colorLinks, link => link.MaterialId == acrylicId && link.ColorId == clearColorId);
+        Assert.Contains(colorLinks, link => link.MaterialId == clearResinId && link.ColorId == clearColorId);
+
+        Assert.Contains(finishLinks, link => link.MaterialId == acrylicId && link.FinishId == finishes["AS_MACHINED"].Id);
+        Assert.Contains(finishLinks, link => link.MaterialId == acrylicId && link.FinishId == finishes["BEAD_BLASTED"].Id);
+        Assert.DoesNotContain(finishLinks, link => link.MaterialId == acrylicId && link.FinishId == finishes["ANODIZE_CLEAR"].Id);
+
+        Assert.Contains(finishLinks, link => link.MaterialId == clearResinId && link.FinishId == finishes["AS_PRINTED"].Id);
+        Assert.Contains(finishLinks, link => link.MaterialId == clearResinId && link.FinishId == finishes["SANDED"].Id);
+        Assert.Contains(finishLinks, link => link.MaterialId == clearResinId && link.FinishId == finishes["VAPOR_SMOOTH"].Id);
+        Assert.DoesNotContain(finishLinks, link => link.MaterialId == clearResinId && link.FinishId == finishes["DYE"].Id);
     }
 
     [Fact]

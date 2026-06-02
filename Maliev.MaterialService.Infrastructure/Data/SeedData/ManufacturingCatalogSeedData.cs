@@ -62,6 +62,7 @@ public static class ManufacturingCatalogSeedData
         // CNC — Engineering Polymers
         new() { Id = G("MAT_PEEK"), Name = "PEEK", Code = "PEEK", Category = "Polymer", DensityGCm3 = 1.31m, MachinabilityRating = 3.0m, Description = "High-performance engineering polymer. Excellent chemical and temperature resistance.", SortOrder = 80, Active = true, PricePerUnit = 0, StockLevel = 0 },
         new() { Id = G("MAT_DELRIN"), Name = "Delrin / POM", Code = "DELRIN", Category = "Polymer", DensityGCm3 = 1.41m, MachinabilityRating = 4.5m, Description = "Acetal homopolymer. Low friction, high stiffness, easy to machine.", SortOrder = 90, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        new() { Id = G("MAT_ACRYLIC_CLEAR"), Name = "Clear Acrylic / PMMA", Code = "ACRYLIC_CLEAR", Category = "Polymer", DensityGCm3 = 1.18m, MachinabilityRating = 3.8m, Description = "Optically clear PMMA acrylic for CNC-machined transparent covers, light pipes, and display parts.", SortOrder = 95, Active = true, PricePerUnit = 0, StockLevel = 0 },
         // FDM Materials
         new() { Id = G("MAT_PLA"), Name = "PLA", Code = "PLA", Category = "Polymer", DensityGCm3 = 1.24m, MachinabilityRating = null, Description = "Biodegradable thermoplastic. Easy to print, good for prototypes.", SortOrder = 100, Active = true, PricePerUnit = 0, StockLevel = 0 },
         new() { Id = G("MAT_PETG"), Name = "PETG", Code = "PETG", Category = "Polymer", DensityGCm3 = 1.27m, MachinabilityRating = null, Description = "Durable, slightly flexible. Good chemical resistance.", SortOrder = 110, Active = true, PricePerUnit = 0, StockLevel = 0 },
@@ -73,6 +74,7 @@ public static class ManufacturingCatalogSeedData
         new() { Id = G("MAT_CF_PETG"), Name = "Carbon Fiber PETG", Code = "CF_PETG", Category = "Polymer", DensityGCm3 = 1.35m, MachinabilityRating = null, Description = "PETG reinforced with carbon fibers for increased stiffness.", SortOrder = 170, Active = true, PricePerUnit = 0, StockLevel = 0 },
         // SLA/DLP Resins
         new() { Id = G("MAT_STD_RESIN"), Name = "Standard Resin", Code = "STD_RESIN", Category = "Resin", DensityGCm3 = 1.10m, MachinabilityRating = null, Description = "General-purpose photopolymer resin for detailed prototypes.", SortOrder = 180, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        new() { Id = G("MAT_CLEAR_RESIN"), Name = "Clear Resin", Code = "CLEAR_RESIN", Category = "Resin", DensityGCm3 = 1.10m, MachinabilityRating = null, Description = "Transparent photopolymer resin for SLA/DLP prototypes requiring light transmission or internal visibility.", SortOrder = 185, Active = true, PricePerUnit = 0, StockLevel = 0 },
         new() { Id = G("MAT_TOUGH_RESIN"), Name = "Tough Resin", Code = "TOUGH_RESIN", Category = "Resin", DensityGCm3 = 1.15m, MachinabilityRating = null, Description = "Impact-resistant resin simulating ABS-like properties.", SortOrder = 190, Active = true, PricePerUnit = 0, StockLevel = 0 },
         new() { Id = G("MAT_FLEX_RESIN"), Name = "Flexible Resin", Code = "FLEX_RESIN", Category = "Resin", DensityGCm3 = 1.05m, MachinabilityRating = null, Description = "Rubber-like resin for flexible components.", SortOrder = 200, Active = true, PricePerUnit = 0, StockLevel = 0 },
         new() { Id = G("MAT_CAST_RESIN"), Name = "Castable Resin", Code = "CAST_RESIN", Category = "Resin", DensityGCm3 = 1.08m, MachinabilityRating = null, Description = "Burns out cleanly for investment casting applications.", SortOrder = 210, Active = true, PricePerUnit = 0, StockLevel = 0 },
@@ -150,6 +152,7 @@ public static class ManufacturingCatalogSeedData
         // CNC polymers
         (G("MAT_PEEK"), G("COLOR_NATURAL")), (G("MAT_PEEK"), G("COLOR_BLACK")),
         (G("MAT_DELRIN"), G("COLOR_WHITE")), (G("MAT_DELRIN"), G("COLOR_BLACK")),
+        (G("MAT_ACRYLIC_CLEAR"), G("COLOR_CLEAR")),
         // FDM polymers — extended colors based on commercially available filaments
         (G("MAT_PLA"), G("COLOR_WHITE")), (G("MAT_PLA"), G("COLOR_BLACK")), (G("MAT_PLA"), G("COLOR_GREY")),
         (G("MAT_PLA"), G("COLOR_RED")), (G("MAT_PLA"), G("COLOR_BLUE")), (G("MAT_PLA"), G("COLOR_GREEN")),
@@ -164,6 +167,7 @@ public static class ManufacturingCatalogSeedData
         (G("MAT_CF_PETG"), G("COLOR_BLACK")),
         // Resins and powder-bed polymers
         (G("MAT_STD_RESIN"), G("COLOR_GREY")), (G("MAT_STD_RESIN"), G("COLOR_CLEAR")),
+        (G("MAT_CLEAR_RESIN"), G("COLOR_CLEAR")),
         (G("MAT_TOUGH_RESIN"), G("COLOR_GREY")), (G("MAT_FLEX_RESIN"), G("COLOR_BLACK")),
         (G("MAT_CAST_RESIN"), G("COLOR_AMBER")), (G("MAT_HT_RESIN"), G("COLOR_CLEAR")),
         (G("MAT_PA12_SLS"), G("COLOR_NATURAL")), (G("MAT_PA12_SLS"), G("COLOR_BLACK")), (G("MAT_PA12_SLS"), G("COLOR_GREY")),
@@ -355,21 +359,25 @@ public static class ManufacturingCatalogSeedData
         (CncId, G("MAT_AL6061")), (CncId, G("MAT_AL7075")), (CncId, G("MAT_SS304")),
         (CncId, G("MAT_SS316L")), (CncId, G("MAT_BRASS_C360")), (CncId, G("MAT_COPPER_C110")),
         (CncId, G("MAT_TI6AL4V")), (CncId, G("MAT_PEEK")), (CncId, G("MAT_DELRIN")),
+        (CncId, G("MAT_ACRYLIC_CLEAR")),
         // CNC Milling
         (CncMillId, G("MAT_AL6061")), (CncMillId, G("MAT_AL7075")), (CncMillId, G("MAT_SS304")),
         (CncMillId, G("MAT_SS316L")), (CncMillId, G("MAT_BRASS_C360")), (CncMillId, G("MAT_COPPER_C110")),
         (CncMillId, G("MAT_TI6AL4V")), (CncMillId, G("MAT_PEEK")), (CncMillId, G("MAT_DELRIN")),
+        (CncMillId, G("MAT_ACRYLIC_CLEAR")),
         // CNC Turning
         (CncTurnId, G("MAT_AL6061")), (CncTurnId, G("MAT_AL7075")), (CncTurnId, G("MAT_SS304")),
         (CncTurnId, G("MAT_SS316L")), (CncTurnId, G("MAT_BRASS_C360")), (CncTurnId, G("MAT_COPPER_C110")),
         (CncTurnId, G("MAT_TI6AL4V")), (CncTurnId, G("MAT_PEEK")), (CncTurnId, G("MAT_DELRIN")),
+        (CncTurnId, G("MAT_ACRYLIC_CLEAR")),
         // FDM
         (FdmId, G("MAT_PLA")), (FdmId, G("MAT_PETG")), (FdmId, G("MAT_ABS")),
         (FdmId, G("MAT_PA12")), (FdmId, G("MAT_TPU95A")), (FdmId, G("MAT_ASA")),
         (FdmId, G("MAT_PC")), (FdmId, G("MAT_CF_PETG")),
         // SLA/DLP
         (SlaDlpId, G("MAT_STD_RESIN")), (SlaDlpId, G("MAT_TOUGH_RESIN")),
-        (SlaDlpId, G("MAT_FLEX_RESIN")), (SlaDlpId, G("MAT_CAST_RESIN")), (SlaDlpId, G("MAT_HT_RESIN")),
+        (SlaDlpId, G("MAT_CLEAR_RESIN")), (SlaDlpId, G("MAT_FLEX_RESIN")),
+        (SlaDlpId, G("MAT_CAST_RESIN")), (SlaDlpId, G("MAT_HT_RESIN")),
         // SLS
         (SlsId, G("MAT_PA12_SLS")), (SlsId, G("MAT_PA11_SLS")), (SlsId, G("MAT_PA12GF_SLS")),
         // MJF
@@ -495,6 +503,9 @@ public static class ManufacturingCatalogSeedData
         // specular metal-grade surface. Anodizing requires electrochemical oxidation of metal.
         (G("MAT_DELRIN"), G("SF_AS_MACHINED")), (G("MAT_DELRIN"), G("SF_BEAD_BLASTED")),
 
+        // ── CNC — Clear Acrylic/PMMA (transparent polymer; mechanical finishes only) ─────────────
+        (G("MAT_ACRYLIC_CLEAR"), G("SF_AS_MACHINED")), (G("MAT_ACRYLIC_CLEAR"), G("SF_BEAD_BLASTED")),
+
         // ── FDM — PLA (PLA not acetone-soluble; no vapor smooth) ─────────────────────────────────
         (G("MAT_PLA"), G("SF_AS_PRINTED")), (G("MAT_PLA"), G("SF_SANDED")), (G("MAT_PLA"), G("SF_PAINTED")),
 
@@ -525,6 +536,10 @@ public static class ManufacturingCatalogSeedData
         (G("MAT_STD_RESIN"), G("SF_AS_PRINTED")), (G("MAT_STD_RESIN"), G("SF_SANDED")),
         (G("MAT_STD_RESIN"), G("SF_VAPOR_SMOOTH")), (G("MAT_STD_RESIN"), G("SF_PAINTED")),
         (G("MAT_STD_RESIN"), G("SF_DYE")),
+
+        // ── SLA/DLP — Clear Resin (transparent photopolymer; avoid dye by default) ───────────────
+        (G("MAT_CLEAR_RESIN"), G("SF_AS_PRINTED")), (G("MAT_CLEAR_RESIN"), G("SF_SANDED")),
+        (G("MAT_CLEAR_RESIN"), G("SF_VAPOR_SMOOTH")),
 
         // ── SLA/DLP — Tough Resin ─────────────────────────────────────────────────────────────────
         (G("MAT_TOUGH_RESIN"), G("SF_AS_PRINTED")), (G("MAT_TOUGH_RESIN"), G("SF_SANDED")),

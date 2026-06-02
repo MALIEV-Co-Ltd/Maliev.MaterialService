@@ -265,6 +265,9 @@ public static class DatabaseSeeder
 
         await context.SaveChangesAsync();
 
+        var addedMaterials = await EnsureLateCatalogMaterialsAsync(context, logger);
+        var addedProcessMaterialLinks = await EnsureProcessMaterialLinksAsync(context, logger);
+
         var materialColorLinks = ManufacturingCatalogSeedData.GetMaterialColorLinks().ToList();
         var materialIds = materialColorLinks.Select(link => link.MaterialId).Distinct().ToList();
         var colorIds = materialColorLinks.Select(link => link.ColorId).Distinct().ToList();
@@ -441,15 +444,80 @@ public static class DatabaseSeeder
 
         await context.SaveChangesAsync();
 
-        if (addedColors + addedProperties + addedColorLinks + addedPropertyLinks + addedFinishLinks > 0)
+        if (addedColors + addedProperties + addedMaterials + addedColorLinks + addedPropertyLinks + addedFinishLinks + addedProcessMaterialLinks > 0)
         {
             logger.LogInformation(
-                "Seeded material detail reference data. Colors={Colors}, properties={Properties}, colorLinks={ColorLinks}, propertyLinks={PropertyLinks}, finishLinks={FinishLinks}.",
+                "Seeded material detail reference data. Colors={Colors}, properties={Properties}, materials={Materials}, colorLinks={ColorLinks}, propertyLinks={PropertyLinks}, finishLinks={FinishLinks}, processMaterialLinks={ProcessMaterialLinks}.",
                 addedColors,
                 addedProperties,
+                addedMaterials,
                 addedColorLinks,
                 addedPropertyLinks,
-                addedFinishLinks);
+                addedFinishLinks,
+                addedProcessMaterialLinks);
         }
+    }
+
+    private static async Task<int> EnsureLateCatalogMaterialsAsync(MaterialDbContext context, ILogger logger)
+    {
+        var lateMaterialCodes = new[] { "ACRYLIC_CLEAR", "CLEAR_RESIN" };
+        var existingCodes = await context.Materials
+            .Where(material => lateMaterialCodes.Contains(material.Code))
+            .Select(material => material.Code)
+            .ToListAsync();
+        var materialsToAdd = ManufacturingCatalogSeedData.GetMaterials()
+            .Where(material => lateMaterialCodes.Contains(material.Code) && !existingCodes.Contains(material.Code))
+            .ToList();
+
+        if (materialsToAdd.Count == 0)
+        {
+            return 0;
+        }
+
+        await context.Materials.AddRangeAsync(materialsToAdd);
+        await context.SaveChangesAsync();
+        logger.LogInformation("Added {Count} late catalog material(s).", materialsToAdd.Count);
+        return materialsToAdd.Count;
+    }
+
+    private static async Task<int> EnsureProcessMaterialLinksAsync(MaterialDbContext context, ILogger logger)
+    {
+        var seedLinks = ManufacturingCatalogSeedData.GetProcessMaterialLinks().ToList();
+        var processIds = seedLinks.Select(link => link.ProcessId).Distinct().ToList();
+        var materialIds = seedLinks.Select(link => link.MaterialId).Distinct().ToList();
+
+        var processes = await context.ManufacturingProcesses
+            .Include(process => process.Materials)
+            .Where(process => processIds.Contains(process.Id))
+            .ToDictionaryAsync(process => process.Id);
+
+        var materials = await context.Materials
+            .Where(material => materialIds.Contains(material.Id))
+            .ToDictionaryAsync(material => material.Id);
+
+        var added = 0;
+        foreach (var (processId, materialId) in seedLinks)
+        {
+            if (!processes.TryGetValue(processId, out var process) || !materials.TryGetValue(materialId, out var material))
+            {
+                continue;
+            }
+
+            if (process.Materials.Any(existing => existing.Id == materialId))
+            {
+                continue;
+            }
+
+            process.Materials.Add(material);
+            added++;
+        }
+
+        if (added > 0)
+        {
+            await context.SaveChangesAsync();
+            logger.LogInformation("Added {Count} missing process–material link(s).", added);
+        }
+
+        return added;
     }
 }
