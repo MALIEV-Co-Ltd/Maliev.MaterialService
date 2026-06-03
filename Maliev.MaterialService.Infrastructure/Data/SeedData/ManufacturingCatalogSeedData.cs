@@ -66,6 +66,7 @@ public static class ManufacturingCatalogSeedData
         // FDM Materials
         new() { Id = G("MAT_PLA"), Name = "PLA", Code = "PLA", Category = "Polymer", DensityGCm3 = 1.24m, MachinabilityRating = null, Description = "Biodegradable thermoplastic. Easy to print, good for prototypes.", SortOrder = 100, Active = true, PricePerUnit = 0, StockLevel = 0 },
         new() { Id = G("MAT_PETG"), Name = "PETG", Code = "PETG", Category = "Polymer", DensityGCm3 = 1.27m, MachinabilityRating = null, Description = "Durable, slightly flexible. Good chemical resistance.", SortOrder = 110, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        new() { Id = G("MAT_PETG_CLEAR"), Name = "Clear PETG", Code = "PETG_CLEAR", Category = "Polymer", DensityGCm3 = 1.27m, MachinabilityRating = null, Description = "Translucent clear PETG filament for printed parts needing light transmission or internal visibility.", SortOrder = 115, Active = true, PricePerUnit = 0, StockLevel = 0 },
         new() { Id = G("MAT_ABS"), Name = "ABS", Code = "ABS", Category = "Polymer", DensityGCm3 = 1.04m, MachinabilityRating = null, Description = "Impact-resistant thermoplastic. Good for functional parts.", SortOrder = 120, Active = true, PricePerUnit = 0, StockLevel = 0 },
         new() { Id = G("MAT_PA12"), Name = "Nylon PA12", Code = "PA12", Category = "Polymer", DensityGCm3 = 1.02m, MachinabilityRating = null, Description = "Strong, flexible nylon for snap-fits and living hinges.", SortOrder = 130, Active = true, PricePerUnit = 0, StockLevel = 0 },
         new() { Id = G("MAT_TPU95A"), Name = "TPU 95A", Code = "TPU95A", Category = "Polymer", DensityGCm3 = 1.21m, MachinabilityRating = null, Description = "Flexible elastomer for gaskets, grips, and wearables.", SortOrder = 140, Active = true, PricePerUnit = 0, StockLevel = 0 },
@@ -157,7 +158,8 @@ public static class ManufacturingCatalogSeedData
         (G("MAT_PLA"), G("COLOR_WHITE")), (G("MAT_PLA"), G("COLOR_BLACK")), (G("MAT_PLA"), G("COLOR_GREY")),
         (G("MAT_PLA"), G("COLOR_RED")), (G("MAT_PLA"), G("COLOR_BLUE")), (G("MAT_PLA"), G("COLOR_GREEN")),
         (G("MAT_PLA"), G("COLOR_YELLOW")), (G("MAT_PLA"), G("COLOR_ORANGE")),
-        (G("MAT_PETG"), G("COLOR_CLEAR")), (G("MAT_PETG"), G("COLOR_BLACK")), (G("MAT_PETG"), G("COLOR_WHITE")),
+        (G("MAT_PETG"), G("COLOR_CLEAR")), (G("MAT_PETG_CLEAR"), G("COLOR_CLEAR")),
+        (G("MAT_PETG"), G("COLOR_BLACK")), (G("MAT_PETG"), G("COLOR_WHITE")),
         (G("MAT_PETG"), G("COLOR_GREY")),
         (G("MAT_ABS"), G("COLOR_BLACK")), (G("MAT_ABS"), G("COLOR_WHITE")), (G("MAT_ABS"), G("COLOR_GREY")),
         (G("MAT_PA12"), G("COLOR_NATURAL")), (G("MAT_PA12"), G("COLOR_BLACK")),
@@ -371,7 +373,7 @@ public static class ManufacturingCatalogSeedData
         (CncTurnId, G("MAT_TI6AL4V")), (CncTurnId, G("MAT_PEEK")), (CncTurnId, G("MAT_DELRIN")),
         (CncTurnId, G("MAT_ACRYLIC_CLEAR")),
         // FDM
-        (FdmId, G("MAT_PLA")), (FdmId, G("MAT_PETG")), (FdmId, G("MAT_ABS")),
+        (FdmId, G("MAT_PLA")), (FdmId, G("MAT_PETG")), (FdmId, G("MAT_PETG_CLEAR")), (FdmId, G("MAT_ABS")),
         (FdmId, G("MAT_PA12")), (FdmId, G("MAT_TPU95A")), (FdmId, G("MAT_ASA")),
         (FdmId, G("MAT_PC")), (FdmId, G("MAT_CF_PETG")),
         // SLA/DLP
@@ -511,6 +513,8 @@ public static class ManufacturingCatalogSeedData
 
         // ── FDM — PETG (no vapor smooth) ─────────────────────────────────────────────────────────
         (G("MAT_PETG"), G("SF_AS_PRINTED")), (G("MAT_PETG"), G("SF_SANDED")), (G("MAT_PETG"), G("SF_PAINTED")),
+        (G("MAT_PETG_CLEAR"), G("SF_AS_PRINTED")), (G("MAT_PETG_CLEAR"), G("SF_SANDED")),
+        (G("MAT_PETG_CLEAR"), G("SF_PAINTED")),
 
         // ── FDM — ABS (acetone vapor smoothing supported) ────────────────────────────────────────
         (G("MAT_ABS"), G("SF_AS_PRINTED")), (G("MAT_ABS"), G("SF_SANDED")),
