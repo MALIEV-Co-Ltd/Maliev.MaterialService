@@ -66,7 +66,7 @@ public static class ManufacturingCatalogSeedData
         // FDM Materials
         new() { Id = G("MAT_PLA"), Name = "PLA", Code = "PLA", Category = "Polymer", DensityGCm3 = 1.24m, MachinabilityRating = null, Description = "Biodegradable thermoplastic. Easy to print, good for prototypes.", SortOrder = 100, Active = true, PricePerUnit = 0, StockLevel = 0 },
         new() { Id = G("MAT_PETG"), Name = "PETG", Code = "PETG", Category = "Polymer", DensityGCm3 = 1.27m, MachinabilityRating = null, Description = "Durable, slightly flexible. Good chemical resistance.", SortOrder = 110, Active = true, PricePerUnit = 0, StockLevel = 0 },
-        new() { Id = G("MAT_PETG_CLEAR"), Name = "Clear PETG", Code = "PETG_CLEAR", Category = "Polymer", DensityGCm3 = 1.27m, MachinabilityRating = null, Description = "Translucent clear PETG filament for printed parts needing light transmission or internal visibility.", SortOrder = 115, Active = true, PricePerUnit = 0, StockLevel = 0 },
+        new() { Id = G("MAT_PETG_CLEAR"), Name = "Clear PETG", Code = "PETG_CLEAR", Category = "Polymer", DensityGCm3 = 1.27m, MachinabilityRating = null, Description = "Translucent clear PETG filament for printed parts needing light transmission or internal visibility.", SortOrder = 115, Active = false, PricePerUnit = 0, StockLevel = 0 },
         new() { Id = G("MAT_ABS"), Name = "ABS", Code = "ABS", Category = "Polymer", DensityGCm3 = 1.04m, MachinabilityRating = null, Description = "Impact-resistant thermoplastic. Good for functional parts.", SortOrder = 120, Active = true, PricePerUnit = 0, StockLevel = 0 },
         new() { Id = G("MAT_PA12"), Name = "Nylon PA12", Code = "PA12", Category = "Polymer", DensityGCm3 = 1.02m, MachinabilityRating = null, Description = "Strong, flexible nylon for snap-fits and living hinges.", SortOrder = 130, Active = true, PricePerUnit = 0, StockLevel = 0 },
         new() { Id = G("MAT_TPU95A"), Name = "TPU 95A", Code = "TPU95A", Category = "Polymer", DensityGCm3 = 1.21m, MachinabilityRating = null, Description = "Flexible elastomer for gaskets, grips, and wearables.", SortOrder = 140, Active = true, PricePerUnit = 0, StockLevel = 0 },
@@ -168,10 +168,10 @@ public static class ManufacturingCatalogSeedData
         (G("MAT_PC"), G("COLOR_CLEAR")), (G("MAT_PC"), G("COLOR_BLACK")),
         (G("MAT_CF_PETG"), G("COLOR_BLACK")),
         // Resins and powder-bed polymers
-        (G("MAT_STD_RESIN"), G("COLOR_GREY")), (G("MAT_STD_RESIN"), G("COLOR_CLEAR")),
+        (G("MAT_STD_RESIN"), G("COLOR_GREY")),
         (G("MAT_CLEAR_RESIN"), G("COLOR_CLEAR")),
         (G("MAT_TOUGH_RESIN"), G("COLOR_GREY")), (G("MAT_FLEX_RESIN"), G("COLOR_BLACK")),
-        (G("MAT_CAST_RESIN"), G("COLOR_AMBER")), (G("MAT_HT_RESIN"), G("COLOR_CLEAR")),
+        (G("MAT_CAST_RESIN"), G("COLOR_AMBER")), (G("MAT_HT_RESIN"), G("COLOR_AMBER")),
         (G("MAT_PA12_SLS"), G("COLOR_NATURAL")), (G("MAT_PA12_SLS"), G("COLOR_BLACK")), (G("MAT_PA12_SLS"), G("COLOR_GREY")),
         (G("MAT_PA11_SLS"), G("COLOR_NATURAL")), (G("MAT_PA11_SLS"), G("COLOR_BLACK")), (G("MAT_PA11_SLS"), G("COLOR_GREY")),
         (G("MAT_PA12GF_SLS"), G("COLOR_GREY")),
@@ -222,7 +222,7 @@ public static class ManufacturingCatalogSeedData
         new() { Id = G("SF_SANDED"), Name = "Sanded", Code = "SANDED", RaValueUm = null, AdditionalCostPercent = 10m, SortOrder = 110, Active = true },
         new() { Id = G("SF_VAPOR_SMOOTH"), Name = "Vapor Smoothed", Code = "VAPOR_SMOOTH", RaValueUm = null, AdditionalCostPercent = 20m, SortOrder = 120, Active = true },
         new() { Id = G("SF_PAINTED"), Name = "Painted", Code = "PAINTED", RaValueUm = null, AdditionalCostPercent = 25m, SortOrder = 130, Active = true },
-        new() { Id = G("SF_DYE"), Name = "Dyed", Code = "DYE", RaValueUm = null, AdditionalCostPercent = 12m, SortOrder = 140, Active = true },
+        new() { Id = G("SF_DYE"), Name = "Dyed", Code = "DYE", RaValueUm = null, AdditionalCostPercent = 12m, SortOrder = 101, Active = true },
         // Injection Molding Finishes
         new() { Id = G("SF_AS_MOLDED"), Name = "As-molded", Code = "AS_MOLDED", RaValueUm = null, AdditionalCostPercent = 0m, SortOrder = 145, Active = true },
         // Sheet Metal Finishes
@@ -304,7 +304,7 @@ public static class ManufacturingCatalogSeedData
 
         // ── SLS 3D Printing ────────────────────────────────────────────────────
         new() { Id = G("OPT_SLS_COLOR"), ManufacturingProcessId = SlsId, ConfigKey = "color", Label = "Color", ConfigType = "dropdown", DefaultValue = "NATURAL", OptionsJson = """["NATURAL","BLACK","GREY","CUSTOM_DYE"]""", SortOrder = 10, IsRequired = false, Active = true },
-        new() { Id = G("OPT_SLS_FINISH"), ManufacturingProcessId = SlsId, ConfigKey = "post_processing", Label = "Post-Processing", ConfigType = "dropdown", DefaultValue = "AS_PRINTED", OptionsJson = """["AS_PRINTED","TUMBLED","DYED","PAINTED"]""", SortOrder = 20, IsRequired = false, Active = true },
+        new() { Id = G("OPT_SLS_FINISH"), ManufacturingProcessId = SlsId, ConfigKey = "post_processing", Label = "Post-Processing", ConfigType = "dropdown", DefaultValue = "BEAD_BLASTED", OptionsJson = """["BEAD_BLASTED","DYED","SANDED","VAPOR_SMOOTH","PAINTED"]""", SortOrder = 20, IsRequired = false, Active = true },
 
         // ── MJF 3D Printing ────────────────────────────────────────────────────
         new() { Id = G("OPT_MJF_COLOR"), ManufacturingProcessId = MjfId, ConfigKey = "color", Label = "Color", ConfigType = "dropdown", DefaultValue = "NATURAL_GREY", OptionsJson = """["NATURAL_GREY","BLACK"]""", SortOrder = 10, IsRequired = false, Active = true },
@@ -419,9 +419,9 @@ public static class ManufacturingCatalogSeedData
         // SLA/DLP gets 3D printing finishes + dye
         (SlaDlpId, G("SF_AS_PRINTED")), (SlaDlpId, G("SF_SANDED")), (SlaDlpId, G("SF_VAPOR_SMOOTH")),
         (SlaDlpId, G("SF_PAINTED")), (SlaDlpId, G("SF_DYE")),
-        // SLS finishes — DYE is standard for SLS nylon (PA12 dyeing is industry-standard)
-        (SlsId, G("SF_AS_PRINTED")), (SlsId, G("SF_SANDED")), (SlsId, G("SF_VAPOR_SMOOTH")),
-        (SlsId, G("SF_PAINTED")), (SlsId, G("SF_DYE")),
+        // SLS finishes — BEAD_BLASTED is the default; DYE is standard for SLS nylon (PA12 dyeing is industry-standard)
+        (SlsId, G("SF_BEAD_BLASTED")), (SlsId, G("SF_DYE")), (SlsId, G("SF_SANDED")), (SlsId, G("SF_VAPOR_SMOOTH")),
+        (SlsId, G("SF_PAINTED")),
         // MJF finishes — DYE applies to unfilled PA12 MJF
         (MjfId, G("SF_AS_PRINTED")), (MjfId, G("SF_SANDED")), (MjfId, G("SF_VAPOR_SMOOTH")),
         (MjfId, G("SF_PAINTED")), (MjfId, G("SF_DYE")),
@@ -560,18 +560,18 @@ public static class ManufacturingCatalogSeedData
         (G("MAT_HT_RESIN"), G("SF_AS_PRINTED")), (G("MAT_HT_RESIN"), G("SF_SANDED")),
         (G("MAT_HT_RESIN"), G("SF_VAPOR_SMOOTH")), (G("MAT_HT_RESIN"), G("SF_PAINTED")),
 
-        // ── SLS — PA12 (dyeing is industry-standard for SLS nylon; tumble vapor smooth supported) ─
-        (G("MAT_PA12_SLS"), G("SF_AS_PRINTED")), (G("MAT_PA12_SLS"), G("SF_SANDED")),
-        (G("MAT_PA12_SLS"), G("SF_VAPOR_SMOOTH")), (G("MAT_PA12_SLS"), G("SF_PAINTED")),
-        (G("MAT_PA12_SLS"), G("SF_DYE")),
+        // ── SLS — PA12 (bead blast is the default SLS finish; dyeing is industry-standard) ─────────
+        (G("MAT_PA12_SLS"), G("SF_BEAD_BLASTED")), (G("MAT_PA12_SLS"), G("SF_DYE")),
+        (G("MAT_PA12_SLS"), G("SF_SANDED")), (G("MAT_PA12_SLS"), G("SF_VAPOR_SMOOTH")),
+        (G("MAT_PA12_SLS"), G("SF_PAINTED")),
 
         // ── SLS — PA11 (bio-based; same post-process capability as PA12 SLS) ──────────────────────
-        (G("MAT_PA11_SLS"), G("SF_AS_PRINTED")), (G("MAT_PA11_SLS"), G("SF_SANDED")),
-        (G("MAT_PA11_SLS"), G("SF_VAPOR_SMOOTH")), (G("MAT_PA11_SLS"), G("SF_PAINTED")),
-        (G("MAT_PA11_SLS"), G("SF_DYE")),
+        (G("MAT_PA11_SLS"), G("SF_BEAD_BLASTED")), (G("MAT_PA11_SLS"), G("SF_DYE")),
+        (G("MAT_PA11_SLS"), G("SF_SANDED")), (G("MAT_PA11_SLS"), G("SF_VAPOR_SMOOTH")),
+        (G("MAT_PA11_SLS"), G("SF_PAINTED")),
 
-        // ── SLS — PA12GF (glass-filled; no vapor smooth, no dye — glass disrupts surface/dye uptake) ─
-        (G("MAT_PA12GF_SLS"), G("SF_AS_PRINTED")), (G("MAT_PA12GF_SLS"), G("SF_SANDED")),
+        // ── SLS — PA12GF (glass-filled; bead blast supported; no dye — glass disrupts dye uptake) ─
+        (G("MAT_PA12GF_SLS"), G("SF_BEAD_BLASTED")), (G("MAT_PA12GF_SLS"), G("SF_SANDED")),
         (G("MAT_PA12GF_SLS"), G("SF_PAINTED")),
 
         // ── MJF — PA12 (dyeable; tumble/vapor smooth supported) ────────────────────────────────────

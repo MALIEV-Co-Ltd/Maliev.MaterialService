@@ -126,6 +126,24 @@ public class ManufacturingCatalogSeedDataTests
     }
 
     [Fact]
+    public void ResinMaterials_OfferClearColorOnlyForDedicatedClearResin()
+    {
+        var materials = ManufacturingCatalogSeedData.GetMaterials().ToDictionary(m => m.Code);
+        var clearColorId = ManufacturingCatalogSeedData.GetColors().Single(c => c.Name == "Clear").Id;
+        var colorLinks = ManufacturingCatalogSeedData.GetMaterialColorLinks().ToList();
+
+        var resinCodes = new[] { "STD_RESIN", "CLEAR_RESIN", "TOUGH_RESIN", "FLEX_RESIN", "CAST_RESIN", "HT_RESIN" };
+
+        foreach (var code in resinCodes)
+        {
+            var materialId = materials[code].Id;
+            var hasClear = colorLinks.Any(link => link.MaterialId == materialId && link.ColorId == clearColorId);
+
+            Assert.Equal(code == "CLEAR_RESIN", hasClear);
+        }
+    }
+
+    [Fact]
     public void DyeFinish_OfferedForSlsAndMjfNylon()
     {
         var materials = ManufacturingCatalogSeedData.GetMaterials().ToDictionary(m => m.Code);
@@ -223,6 +241,82 @@ public class ManufacturingCatalogSeedDataTests
         Assert.True(
             processLinks.Any(l => l.ProcessId == ManufacturingCatalogSeedData.MjfId && l.FinishId == dyeId),
             "DYE finish must be in the MJF process–finish links.");
+    }
+
+    // ── SLS finish ordering rules ─────────────────────────────────────────────
+
+    [Fact]
+    public void SlsProcess_HasBeadBlastedFinishLink_NotAsPrinted()
+    {
+        var finishes = ManufacturingCatalogSeedData.GetSurfaceFinishes().ToDictionary(f => f.Code);
+        var processLinks = ManufacturingCatalogSeedData.GetProcessFinishLinks().ToList();
+
+        var beadBlastId = finishes["BEAD_BLASTED"].Id;
+        var asPrintedId = finishes["AS_PRINTED"].Id;
+
+        Assert.True(
+            processLinks.Any(l => l.ProcessId == ManufacturingCatalogSeedData.SlsId && l.FinishId == beadBlastId),
+            "BEAD_BLASTED must be in the SLS process–finish links as the default finish.");
+
+        Assert.False(
+            processLinks.Any(l => l.ProcessId == ManufacturingCatalogSeedData.SlsId && l.FinishId == asPrintedId),
+            "AS_PRINTED must NOT be in the SLS process–finish links — SLS always bead-blasts by default.");
+    }
+
+    [Fact]
+    public void SlsProcess_BeadBlastedIsFirstFinish_DyeIsSecond()
+    {
+        var finishes = ManufacturingCatalogSeedData.GetSurfaceFinishes().ToDictionary(f => f.Code);
+        var processLinks = ManufacturingCatalogSeedData.GetProcessFinishLinks().ToList();
+
+        var slsFinishIds = new HashSet<Guid>(
+            processLinks.Where(l => l.ProcessId == ManufacturingCatalogSeedData.SlsId).Select(l => l.FinishId));
+
+        var slsFinishes = ManufacturingCatalogSeedData.GetSurfaceFinishes()
+            .Where(f => slsFinishIds.Contains(f.Id))
+            .OrderBy(f => f.SortOrder)
+            .ToList();
+
+        Assert.True(slsFinishes.Count >= 2, "SLS must have at least 2 finishes.");
+        Assert.Equal("BEAD_BLASTED", slsFinishes[0].Code);
+        Assert.Equal("DYE", slsFinishes[1].Code);
+    }
+
+    [Fact]
+    public void DyeFinish_SortOrder_PlacesItSecondAfterBeadBlasted()
+    {
+        var finishes = ManufacturingCatalogSeedData.GetSurfaceFinishes().ToDictionary(f => f.Code);
+
+        var beadBlastOrder = finishes["BEAD_BLASTED"].SortOrder;
+        var dyeOrder = finishes["DYE"].SortOrder;
+        var sandedOrder = finishes["SANDED"].SortOrder;
+
+        Assert.True(dyeOrder > beadBlastOrder,
+            $"DYE SortOrder ({dyeOrder}) must be greater than BEAD_BLASTED ({beadBlastOrder}).");
+        Assert.True(dyeOrder < sandedOrder,
+            $"DYE SortOrder ({dyeOrder}) must be less than SANDED ({sandedOrder}) so DYE ranks second for SLS.");
+    }
+
+    [Fact]
+    public void SlsMaterials_HaveBeadBlastedFinishLink_NotAsPrinted()
+    {
+        var materials = ManufacturingCatalogSeedData.GetMaterials().ToDictionary(m => m.Code);
+        var finishes = ManufacturingCatalogSeedData.GetSurfaceFinishes().ToDictionary(f => f.Code);
+        var links = ManufacturingCatalogSeedData.GetMaterialSurfaceFinishLinks().ToList();
+
+        var beadBlastId = finishes["BEAD_BLASTED"].Id;
+        var asPrintedId = finishes["AS_PRINTED"].Id;
+
+        foreach (var code in new[] { "PA12_SLS", "PA11_SLS", "PA12GF_SLS" })
+        {
+            var matId = materials[code].Id;
+            Assert.True(
+                links.Any(l => l.MaterialId == matId && l.FinishId == beadBlastId),
+                $"BEAD_BLASTED must be offered for SLS material {code}.");
+            Assert.False(
+                links.Any(l => l.MaterialId == matId && l.FinishId == asPrintedId),
+                $"AS_PRINTED must NOT be offered for SLS material {code} — SLS always bead-blasts.");
+        }
     }
 
     // ── Color tests ────────────────────────────────────────────────────────────

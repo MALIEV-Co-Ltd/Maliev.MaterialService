@@ -26,6 +26,8 @@ public static class DatabaseSeeder
             // Always run: fix stale names and add new combos idempotently.
             await EnsureProcessNamesAsync(context, logger);
             await EnsureFinishNamesAsync(context, logger);
+            await EnsureFinishSortOrdersAsync(context, logger);
+            await RemoveStaleProcessFinishLinksAsync(context, logger);
             await EnsureProcessFinishLinksAsync(context, logger);
 
             if (await context.ManufacturingProcesses.AnyAsync())
@@ -185,6 +187,61 @@ public static class DatabaseSeeder
     }
 
     /// <summary>
+    /// Fixes surface finish SortOrder values that differ from current seed data.
+    /// Runs unconditionally on every startup so existing databases self-heal.
+    /// </summary>
+    private static async Task EnsureFinishSortOrdersAsync(MaterialDbContext context, ILogger logger)
+    {
+        var canonical = ManufacturingCatalogSeedData.GetSurfaceFinishes()
+            .ToDictionary(f => f.Code, f => f.SortOrder);
+        var canonicalCodes = canonical.Keys.ToList();
+
+        var finishes = await context.SurfaceFinishes
+            .Where(f => canonicalCodes.Contains(f.Code))
+            .ToListAsync();
+
+        var updated = 0;
+        foreach (var finish in finishes)
+        {
+            if (canonical.TryGetValue(finish.Code, out var correctOrder) && finish.SortOrder != correctOrder)
+            {
+                logger.LogInformation("Fixing finish SortOrder: {Code} {Old} → {New}", finish.Code, finish.SortOrder, correctOrder);
+                finish.SortOrder = correctOrder;
+                updated++;
+            }
+        }
+
+        if (updated > 0)
+        {
+            await context.SaveChangesAsync();
+            logger.LogInformation("Fixed {Count} stale finish SortOrder(s).", updated);
+        }
+    }
+
+    /// <summary>
+    /// Removes process–finish links that are no longer in seed data for affected processes.
+    /// Currently removes the AS_PRINTED link from the SLS process.
+    /// </summary>
+    private static async Task RemoveStaleProcessFinishLinksAsync(MaterialDbContext context, ILogger logger)
+    {
+        // SLS: AS_PRINTED was replaced by BEAD_BLASTED as the standard finish
+        var slsProcess = await context.ManufacturingProcesses
+            .Include(p => p.SurfaceFinishes)
+            .FirstOrDefaultAsync(p => p.Code == "SLS");
+
+        if (slsProcess == null) return;
+
+        var asPrintedFinish = slsProcess.SurfaceFinishes
+            .FirstOrDefault(f => f.Code == "AS_PRINTED");
+
+        if (asPrintedFinish == null) return;
+
+        slsProcess.SurfaceFinishes.Remove(asPrintedFinish);
+        await context.SaveChangesAsync();
+        logger.LogInformation("Removed stale process–finish link: SLS → AS_PRINTED.");
+    }
+
+    /// <summary>
     /// Adds any process–finish links that are in the seed data but missing from the DB.
     /// Safe to run repeatedly (idempotent).
     /// </summary>
@@ -266,6 +323,8 @@ public static class DatabaseSeeder
         await context.SaveChangesAsync();
 
         var addedMaterials = await EnsureLateCatalogMaterialsAsync(context, logger);
+        await EnsureDeactivatedMaterialsAsync(context, logger);
+        var removedColorLinks = await RemoveStaleMaterialColorLinksAsync(context, logger);
         var addedProcessMaterialLinks = await EnsureProcessMaterialLinksAsync(context, logger);
 
         var materialColorLinks = ManufacturingCatalogSeedData.GetMaterialColorLinks().ToList();
@@ -444,18 +503,78 @@ public static class DatabaseSeeder
 
         await context.SaveChangesAsync();
 
-        if (addedColors + addedProperties + addedMaterials + addedColorLinks + addedPropertyLinks + addedFinishLinks + addedProcessMaterialLinks > 0)
+        if (addedColors + addedProperties + addedMaterials + addedColorLinks + addedPropertyLinks + addedFinishLinks + addedProcessMaterialLinks + removedColorLinks > 0)
         {
             logger.LogInformation(
-                "Seeded material detail reference data. Colors={Colors}, properties={Properties}, materials={Materials}, colorLinks={ColorLinks}, propertyLinks={PropertyLinks}, finishLinks={FinishLinks}, processMaterialLinks={ProcessMaterialLinks}.",
+                "Seeded material detail reference data. Colors={Colors}, properties={Properties}, materials={Materials}, colorLinks={ColorLinks}, removedColorLinks={RemovedColorLinks}, propertyLinks={PropertyLinks}, finishLinks={FinishLinks}, processMaterialLinks={ProcessMaterialLinks}.",
                 addedColors,
                 addedProperties,
                 addedMaterials,
                 addedColorLinks,
+                removedColorLinks,
                 addedPropertyLinks,
                 addedFinishLinks,
                 addedProcessMaterialLinks);
         }
+    }
+
+    private static async Task<int> RemoveStaleMaterialColorLinksAsync(MaterialDbContext context, ILogger logger)
+    {
+        var clearColor = await context.Colors.FirstOrDefaultAsync(color => color.Name == "Clear");
+        if (clearColor is null)
+        {
+            return 0;
+        }
+
+        var nonClearResinCodes = new[] { "STD_RESIN", "HT_RESIN" };
+        var materials = await context.Materials
+            .Include(material => material.AvailableColors)
+            .Where(material => nonClearResinCodes.Contains(material.Code))
+            .ToListAsync();
+
+        var removed = 0;
+        foreach (var material in materials)
+        {
+            var staleClearColor = material.AvailableColors.FirstOrDefault(color => color.Id == clearColor.Id);
+            if (staleClearColor is null)
+            {
+                continue;
+            }
+
+            material.AvailableColors.Remove(staleClearColor);
+            removed++;
+        }
+
+        if (removed == 0)
+        {
+            return 0;
+        }
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Removed {Count} stale non-clear resin color link(s).", removed);
+        return removed;
+    }
+
+    private static async Task<int> EnsureDeactivatedMaterialsAsync(MaterialDbContext context, ILogger logger)
+    {
+        var codesToDeactivate = new[] { "PETG_CLEAR" };
+        var activeStale = await context.Materials
+            .Where(material => codesToDeactivate.Contains(material.Code) && material.Active)
+            .ToListAsync();
+
+        if (activeStale.Count == 0)
+        {
+            return 0;
+        }
+
+        foreach (var material in activeStale)
+        {
+            material.Active = false;
+        }
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Deactivated {Count} retired catalog material(s).", activeStale.Count);
+        return activeStale.Count;
     }
 
     private static async Task<int> EnsureLateCatalogMaterialsAsync(MaterialDbContext context, ILogger logger)
