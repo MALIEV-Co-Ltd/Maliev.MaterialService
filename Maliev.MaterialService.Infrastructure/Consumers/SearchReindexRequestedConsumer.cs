@@ -44,7 +44,7 @@ public class SearchReindexRequestedConsumer : IConsumer<SearchReindexRequestedCo
         var count = 0;
         var occurredAtUtc = DateTimeOffset.UtcNow;
 
-        await foreach (var material in _context.Materials
+        var materials = await _context.Materials
             .AsNoTracking()
             .Include(item => item.Supplier)
             .Include(item => item.ManufacturingProcesses)
@@ -52,11 +52,16 @@ public class SearchReindexRequestedConsumer : IConsumer<SearchReindexRequestedCo
             .Include(item => item.PostProcessingMethods)
             .Where(item => item.Active)
             .AsSplitQuery()
-            .AsAsyncEnumerable()
-            .WithCancellation(context.CancellationToken))
+            .ToListAsync(context.CancellationToken);
+
+        var documents = materials
+            .Select(material => MaterialSearchDocumentMapper.ToUpsertEvent(material, occurredAtUtc))
+            .ToList();
+
+        foreach (var document in documents)
         {
             await _publishEndpoint.Publish(
-                MaterialSearchDocumentMapper.ToUpsertEvent(material, occurredAtUtc),
+                document,
                 context.CancellationToken);
             count++;
         }
