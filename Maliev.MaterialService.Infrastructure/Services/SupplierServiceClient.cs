@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Maliev.MaterialService.Application.Services;
 using Microsoft.Extensions.Logging;
 
@@ -39,8 +40,23 @@ public class SupplierServiceClient : ISupplierServiceClient
         }
 
         response.EnsureSuccessStatusCode();
-        var supplier = await response.Content.ReadFromJsonAsync<SupplierValidationResponse>(
-            cancellationToken);
+        SupplierValidationResponse? supplier;
+        try
+        {
+            supplier = await response.Content.ReadFromJsonAsync<SupplierValidationResponse>(
+                cancellationToken);
+        }
+        catch (Exception exception) when (exception is JsonException or NotSupportedException)
+        {
+            _logger.LogError(
+                exception,
+                "Supplier Service returned a malformed projection for {SupplierId}",
+                supplierId);
+            throw new HttpRequestException(
+                "Supplier Service returned an invalid supplier projection.",
+                exception,
+                HttpStatusCode.BadGateway);
+        }
         if (supplier is null ||
             supplier.Id != supplierId ||
             string.IsNullOrWhiteSpace(supplier.CompanyName) ||

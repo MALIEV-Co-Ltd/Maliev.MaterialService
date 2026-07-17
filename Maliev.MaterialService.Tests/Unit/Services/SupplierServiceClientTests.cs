@@ -60,6 +60,22 @@ public sealed class SupplierServiceClientTests
     }
 
     /// <summary>
+    /// A successful response with an unreadable projection is a dependency failure, not an internal error.
+    /// </summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("{not-json")]
+    public async Task GetSupplierAsync_MalformedSuccess_ThrowsBadGateway(string body)
+    {
+        var client = CreateClient(new CapturingHandler(HttpStatusCode.OK, body));
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.GetSupplierAsync(Guid.NewGuid(), CancellationToken.None));
+
+        Assert.Equal(HttpStatusCode.BadGateway, exception.StatusCode);
+    }
+
+    /// <summary>
     /// Caller cancellation must reach the outbound Supplier request.
     /// </summary>
     [Fact]
