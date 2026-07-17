@@ -65,7 +65,7 @@ public class IntegrationTestWebAppFactory : BaseIntegrationTestFactory<Program, 
                 It.IsAny<Guid>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((Guid supplierId, CancellationToken _) =>
-                new SupplierReference(supplierId, $"Supplier {supplierId:N}"));
+                new SupplierReference(supplierId, $"Supplier {supplierId:N}", IsActive: true));
         return mock;
     }
 }

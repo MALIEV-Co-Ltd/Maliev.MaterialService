@@ -528,6 +528,10 @@ public class MaterialService : IMaterialService
         {
             throw new InvalidOperationException($"Supplier with ID '{supplierId.Value}' does not exist.");
         }
+        if (!supplier.IsActive)
+        {
+            throw new InvalidOperationException($"Supplier with ID '{supplierId.Value}' is not active.");
+        }
 
         return supplier;
     }
