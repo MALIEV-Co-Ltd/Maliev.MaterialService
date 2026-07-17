@@ -13,7 +13,7 @@ public sealed class SupplierServiceClientTests
     /// A successful supplier lookup uses the versioned protected route.
     /// </summary>
     [Fact]
-    public async Task GetSupplierAsync_Success_UsesVersionedValidationRoute()
+    public async Task GetSupplierAsync_Success_UsesVersionedReferenceRoute()
     {
         var supplierId = Guid.NewGuid();
         var handler = new CapturingHandler(
@@ -26,7 +26,8 @@ public sealed class SupplierServiceClientTests
         Assert.NotNull(supplier);
         Assert.Equal(supplierId, supplier.Id);
         Assert.Equal("Supplier One", supplier.CompanyName);
-        Assert.Equal($"/supplier/v1/suppliers/{supplierId}/validate", handler.RequestUri?.AbsolutePath);
+        Assert.True(supplier.IsActive);
+        Assert.Equal($"/supplier/v1/suppliers/{supplierId}/reference", handler.RequestUri?.AbsolutePath);
     }
 
     /// <summary>
@@ -40,6 +41,25 @@ public sealed class SupplierServiceClientTests
         var supplier = await client.GetSupplierAsync(Guid.NewGuid(), CancellationToken.None);
 
         Assert.Null(supplier);
+    }
+
+    /// <summary>
+    /// Inactive suppliers are structurally valid dependency responses and remain business data.
+    /// </summary>
+    [Fact]
+    public async Task GetSupplierAsync_InactiveReference_ReturnsProjection()
+    {
+        var supplierId = Guid.NewGuid();
+        var client = CreateClient(new CapturingHandler(
+            HttpStatusCode.OK,
+            $$"""{"id":"{{supplierId}}","companyName":"Inactive Supplier","isActive":false}"""));
+
+        var supplier = await client.GetSupplierAsync(supplierId, CancellationToken.None);
+
+        Assert.NotNull(supplier);
+        Assert.Equal(supplierId, supplier.Id);
+        Assert.Equal("Inactive Supplier", supplier.CompanyName);
+        Assert.False(supplier.IsActive);
     }
 
     /// <summary>
@@ -71,6 +91,56 @@ public sealed class SupplierServiceClientTests
 
         var exception = await Assert.ThrowsAsync<HttpRequestException>(
             () => client.GetSupplierAsync(Guid.NewGuid(), CancellationToken.None));
+
+        Assert.Equal(HttpStatusCode.BadGateway, exception.StatusCode);
+    }
+
+    /// <summary>
+    /// A projection for a different supplier cannot satisfy the requested reference.
+    /// </summary>
+    [Fact]
+    public async Task GetSupplierAsync_WrongSupplierId_ThrowsBadGateway()
+    {
+        var client = CreateClient(new CapturingHandler(
+            HttpStatusCode.OK,
+            $$"""{"id":"{{Guid.NewGuid()}}","companyName":"Wrong Supplier","isActive":true}"""));
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.GetSupplierAsync(Guid.NewGuid(), CancellationToken.None));
+
+        Assert.Equal(HttpStatusCode.BadGateway, exception.StatusCode);
+    }
+
+    /// <summary>
+    /// SupplierService must provide a usable company name for the local projection.
+    /// </summary>
+    [Fact]
+    public async Task GetSupplierAsync_BlankCompanyName_ThrowsBadGateway()
+    {
+        var supplierId = Guid.NewGuid();
+        var client = CreateClient(new CapturingHandler(
+            HttpStatusCode.OK,
+            $$"""{"id":"{{supplierId}}","companyName":" ","isActive":true}"""));
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.GetSupplierAsync(supplierId, CancellationToken.None));
+
+        Assert.Equal(HttpStatusCode.BadGateway, exception.StatusCode);
+    }
+
+    /// <summary>
+    /// The active-state field is required to distinguish malformed data from an inactive supplier.
+    /// </summary>
+    [Fact]
+    public async Task GetSupplierAsync_MissingIsActive_ThrowsBadGateway()
+    {
+        var supplierId = Guid.NewGuid();
+        var client = CreateClient(new CapturingHandler(
+            HttpStatusCode.OK,
+            $$"""{"id":"{{supplierId}}","companyName":"Missing State Supplier"}"""));
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.GetSupplierAsync(supplierId, CancellationToken.None));
 
         Assert.Equal(HttpStatusCode.BadGateway, exception.StatusCode);
     }

@@ -200,7 +200,44 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
                 .Setup(client => client.GetSupplierAsync(
                     supplierId,
                     It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new SupplierReference(supplierId, "Recovered Supplier"));
+                .ReturnsAsync(new SupplierReference(supplierId, "Recovered Supplier", IsActive: true));
+        }
+    }
+
+    [Fact]
+    public async Task CreateMaterial_WithInactiveSupplier_ReturnsBadRequestBeforePersistence()
+    {
+        var supplierId = Guid.NewGuid();
+        _factory.SupplierServiceClientMock
+            .Setup(client => client.GetSupplierAsync(
+                supplierId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SupplierReference(supplierId, "Inactive Supplier", IsActive: false));
+        var request = new CreateMaterialRequest
+        {
+            Name = "Inactive supplier material",
+            Code = $"INACTIVE-SUPPLIER-{Guid.NewGuid():N}",
+            StockLevel = 1,
+            PricePerUnit = 10m,
+            SupplierId = supplierId
+        };
+
+        try
+        {
+            var response = await _client.PostAsJsonAsync("/material/v1/materials", request);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var dbContext = _scope.ServiceProvider.GetRequiredService<MaterialDbContext>();
+            Assert.False(await dbContext.Materials.AnyAsync(material => material.Code == request.Code));
+            Assert.False(await dbContext.Suppliers.AnyAsync(supplier => supplier.Id == supplierId));
+        }
+        finally
+        {
+            _factory.SupplierServiceClientMock
+                .Setup(client => client.GetSupplierAsync(
+                    supplierId,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new SupplierReference(supplierId, "Recovered Supplier", IsActive: true));
         }
     }
 
@@ -245,7 +282,51 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
                 .Setup(client => client.GetSupplierAsync(
                     supplierId,
                     It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new SupplierReference(supplierId, "Recovered Supplier"));
+                .ReturnsAsync(new SupplierReference(supplierId, "Recovered Supplier", IsActive: true));
+        }
+    }
+
+    [Fact]
+    public async Task UpdateMaterial_WithInactiveSupplier_ReturnsBadRequestBeforeMutation()
+    {
+        var dbContext = _scope.ServiceProvider.GetRequiredService<MaterialDbContext>();
+        var material = await dbContext.Materials.AsNoTracking().FirstAsync();
+        var originalName = material.Name;
+        var originalSupplierId = material.SupplierId;
+        var supplierId = Guid.NewGuid();
+        _factory.SupplierServiceClientMock
+            .Setup(client => client.GetSupplierAsync(
+                supplierId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SupplierReference(supplierId, "Inactive Supplier", IsActive: false));
+        var request = new UpdateMaterialRequest
+        {
+            Name = "Must not persist inactive supplier",
+            Code = material.Code,
+            Description = material.Description,
+            StockLevel = material.StockLevel,
+            PricePerUnit = material.PricePerUnit,
+            SupplierId = supplierId
+        };
+
+        try
+        {
+            var response = await _client.PutAsJsonAsync($"/material/v1/materials/{material.Id}", request);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            dbContext.ChangeTracker.Clear();
+            var persisted = await dbContext.Materials.AsNoTracking().SingleAsync(item => item.Id == material.Id);
+            Assert.Equal(originalName, persisted.Name);
+            Assert.Equal(originalSupplierId, persisted.SupplierId);
+            Assert.False(await dbContext.Suppliers.AnyAsync(supplier => supplier.Id == supplierId));
+        }
+        finally
+        {
+            _factory.SupplierServiceClientMock
+                .Setup(client => client.GetSupplierAsync(
+                    supplierId,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new SupplierReference(supplierId, "Recovered Supplier", IsActive: true));
         }
     }
 
@@ -258,7 +339,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
             .Setup(client => client.GetSupplierAsync(
                 supplierId,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SupplierReference(supplierId, companyName));
+            .ReturnsAsync(new SupplierReference(supplierId, companyName, IsActive: true));
         var request = new CreateMaterialRequest
         {
             Name = "Projected supplier material",
@@ -293,7 +374,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
             .Setup(client => client.GetSupplierAsync(
                 supplierId,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SupplierReference(supplierId, companyName));
+            .ReturnsAsync(new SupplierReference(supplierId, companyName, IsActive: true));
         var request = new UpdateMaterialRequest
         {
             Name = material.Name,

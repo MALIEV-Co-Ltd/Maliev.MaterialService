@@ -31,7 +31,7 @@ public class SupplierServiceClient : ISupplierServiceClient
         CancellationToken cancellationToken = default)
     {
         using var response = await _httpClient.GetAsync(
-            $"/supplier/v1/suppliers/{supplierId}/validate",
+            $"/supplier/v1/suppliers/{supplierId}/reference",
             cancellationToken);
 
         if (response.StatusCode == HttpStatusCode.NotFound)
@@ -40,10 +40,10 @@ public class SupplierServiceClient : ISupplierServiceClient
         }
 
         response.EnsureSuccessStatusCode();
-        SupplierValidationResponse? supplier;
+        SupplierReferenceWireResponse? supplier;
         try
         {
-            supplier = await response.Content.ReadFromJsonAsync<SupplierValidationResponse>(
+            supplier = await response.Content.ReadFromJsonAsync<SupplierReferenceWireResponse>(
                 cancellationToken);
         }
         catch (Exception exception) when (exception is JsonException or NotSupportedException)
@@ -60,7 +60,7 @@ public class SupplierServiceClient : ISupplierServiceClient
         if (supplier is null ||
             supplier.Id != supplierId ||
             string.IsNullOrWhiteSpace(supplier.CompanyName) ||
-            !supplier.IsActive)
+            !supplier.IsActive.HasValue)
         {
             _logger.LogError(
                 "Supplier Service returned an invalid projection for {SupplierId}",
@@ -71,11 +71,11 @@ public class SupplierServiceClient : ISupplierServiceClient
                 HttpStatusCode.BadGateway);
         }
 
-        return new SupplierReference(supplier.Id, supplier.CompanyName);
+        return new SupplierReference(supplier.Id, supplier.CompanyName, supplier.IsActive.Value);
     }
 
-    private sealed record SupplierValidationResponse(
+    private sealed record SupplierReferenceWireResponse(
         Guid Id,
         string CompanyName,
-        bool IsActive);
+        bool? IsActive);
 }
