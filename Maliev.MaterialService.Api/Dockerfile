@@ -3,7 +3,6 @@
 
 # This stage is used when running from VS in fast mode (Default for Debug configuration)
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
-USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
@@ -11,25 +10,47 @@ EXPOSE 8081
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
+ARG SHARED_LIBRARY_VERSION=1.0.96-alpha
+ARG SERVICE_DEFAULTS_VERSION=1.0.89-alpha
 WORKDIR /src
 COPY ["Maliev.MaterialService.Api/Maliev.MaterialService.Api.csproj", "Maliev.MaterialService.Api/"]
 COPY ["Maliev.MaterialService.Domain/Maliev.MaterialService.Domain.csproj", "Maliev.MaterialService.Domain/"]
 COPY ["Maliev.MaterialService.Application/Maliev.MaterialService.Application.csproj", "Maliev.MaterialService.Application/"]
 COPY ["Maliev.MaterialService.Infrastructure/Maliev.MaterialService.Infrastructure.csproj", "Maliev.MaterialService.Infrastructure/"]
+COPY ["Directory.Build.props", "."]
 COPY ["nuget.config", "."]
 RUN --mount=type=secret,id=nuget_username \
   --mount=type=secret,id=nuget_password \
+  --mount=type=cache,id=material-nuget,target=/root/.nuget/packages \
+  GITHUB_ACTIONS=true \
   NUGET_USERNAME=$(cat /run/secrets/nuget_username) \
   NUGET_PASSWORD=$(cat /run/secrets/nuget_password) \
-  dotnet restore "./Maliev.MaterialService.Api/Maliev.MaterialService.Api.csproj"
+  dotnet restore "./Maliev.MaterialService.Api/Maliev.MaterialService.Api.csproj" \
+    -p:SharedLibraryVersion=$SHARED_LIBRARY_VERSION \
+    -p:ServiceDefaultsVersion=$SERVICE_DEFAULTS_VERSION
 COPY . .
 WORKDIR "/src/Maliev.MaterialService.Api"
-RUN dotnet build "./Maliev.MaterialService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN --mount=type=cache,id=material-nuget,target=/root/.nuget/packages \
+    GITHUB_ACTIONS=true dotnet build "./Maliev.MaterialService.Api.csproj" \
+    -c $BUILD_CONFIGURATION \
+    -o /app/build \
+    --no-restore \
+    -p:SharedLibraryVersion=$SHARED_LIBRARY_VERSION \
+    -p:ServiceDefaultsVersion=$SERVICE_DEFAULTS_VERSION
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Maliev.MaterialService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+ARG SHARED_LIBRARY_VERSION=1.0.96-alpha
+ARG SERVICE_DEFAULTS_VERSION=1.0.89-alpha
+RUN --mount=type=cache,id=material-nuget,target=/root/.nuget/packages \
+    GITHUB_ACTIONS=true dotnet publish "./Maliev.MaterialService.Api.csproj" \
+    -c $BUILD_CONFIGURATION \
+    -o /app/publish \
+    --no-restore \
+    /p:UseAppHost=false \
+    -p:SharedLibraryVersion=$SHARED_LIBRARY_VERSION \
+    -p:ServiceDefaultsVersion=$SERVICE_DEFAULTS_VERSION
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
@@ -47,9 +68,5 @@ COPY --chown=app:app --from=publish /app/publish .
 # Set environment variables
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8080/material/liveness || exit 1
 
 ENTRYPOINT ["dotnet", "Maliev.MaterialService.Api.dll"]
