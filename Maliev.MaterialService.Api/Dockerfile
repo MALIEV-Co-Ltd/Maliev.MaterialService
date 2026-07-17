@@ -21,7 +21,6 @@ COPY ["Directory.Build.props", "."]
 COPY ["nuget.config", "."]
 RUN --mount=type=secret,id=nuget_username \
   --mount=type=secret,id=nuget_password \
-  --mount=type=cache,id=material-nuget,target=/root/.nuget/packages \
   GITHUB_ACTIONS=true \
   NUGET_USERNAME=$(cat /run/secrets/nuget_username) \
   NUGET_PASSWORD=$(cat /run/secrets/nuget_password) \
@@ -30,8 +29,7 @@ RUN --mount=type=secret,id=nuget_username \
     -p:ServiceDefaultsVersion=$SERVICE_DEFAULTS_VERSION
 COPY . .
 WORKDIR "/src/Maliev.MaterialService.Api"
-RUN --mount=type=cache,id=material-nuget,target=/root/.nuget/packages \
-    GITHUB_ACTIONS=true dotnet build "./Maliev.MaterialService.Api.csproj" \
+RUN GITHUB_ACTIONS=true dotnet build "./Maliev.MaterialService.Api.csproj" \
     -c $BUILD_CONFIGURATION \
     -o /app/build \
     --no-restore \
@@ -43,8 +41,7 @@ FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
 ARG SHARED_LIBRARY_VERSION=1.0.96-alpha
 ARG SERVICE_DEFAULTS_VERSION=1.0.89-alpha
-RUN --mount=type=cache,id=material-nuget,target=/root/.nuget/packages \
-    GITHUB_ACTIONS=true dotnet publish "./Maliev.MaterialService.Api.csproj" \
+RUN GITHUB_ACTIONS=true dotnet publish "./Maliev.MaterialService.Api.csproj" \
     -c $BUILD_CONFIGURATION \
     -o /app/publish \
     --no-restore \

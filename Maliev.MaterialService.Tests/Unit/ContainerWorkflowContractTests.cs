@@ -143,6 +143,22 @@ public sealed class ContainerWorkflowContractTests
     }
 
     /// <summary>
+    /// Restored packages must be persisted in the build layer instead of living only in a
+    /// mutable BuildKit cache that can be empty when a cached restore instruction is reused.
+    /// </summary>
+    [Fact]
+    public void DockerPackageRestore_PersistsPackagesAcrossBuildInstructions()
+    {
+        var dockerfile = ReadRepositoryFile("Maliev.MaterialService.Api", "Dockerfile");
+
+        Assert.DoesNotContain(
+            "--mount=type=cache,id=material-nuget,target=/root/.nuget/packages",
+            dockerfile,
+            StringComparison.Ordinal);
+        Assert.Contains("--no-restore", dockerfile, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// SBOM evidence must fail closed when the scanner does not produce the requested file.
     /// </summary>
     [Theory]
