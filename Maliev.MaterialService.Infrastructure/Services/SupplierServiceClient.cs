@@ -21,34 +21,32 @@ public class SupplierServiceClient : ISupplierServiceClient
     {
         _httpClient = httpClient;
         _logger = logger;
-
-        _httpClient.Timeout = TimeSpan.FromSeconds(60);
     }
 
     /// <inheritdoc/>
-    public async Task<bool> ValidateSupplierExistsAsync(Guid supplierId)
+    public async Task<bool> ValidateSupplierExistsAsync(
+        Guid supplierId,
+        CancellationToken cancellationToken = default)
     {
-        try
+        using var response = await _httpClient.GetAsync(
+            $"/supplier/v1/suppliers/{supplierId}",
+            cancellationToken);
+
+        if (response.IsSuccessStatusCode)
         {
-            var response = await _httpClient.GetAsync($"suppliers/{supplierId}");
+            return true;
+        }
 
-            if (response.IsSuccessStatusCode)
-            {
-                return true;
-            }
-
-            if (response.StatusCode == HttpStatusCode.NotFound)
-            {
-                return false;
-            }
-
-            _logger.LogError("Error calling Supplier Service. StatusCode: {StatusCode}", response.StatusCode);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
             return false;
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Exception occurred while calling Supplier Service for ID {SupplierId}", supplierId);
-            return false;
-        }
+
+        _logger.LogError(
+            "Supplier Service lookup failed for {SupplierId} with status {StatusCode}",
+            supplierId,
+            response.StatusCode);
+        response.EnsureSuccessStatusCode();
+        throw new InvalidOperationException("Unreachable after EnsureSuccessStatusCode.");
     }
 }

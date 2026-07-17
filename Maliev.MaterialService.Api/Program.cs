@@ -29,7 +29,8 @@ try
     });
     builder.AddServiceMeters("materials-meter"); // Register service meters for OpenTelemetry business metrics
 
-    builder.AddIAMServiceClient("material");
+    builder.AddAuthServiceTokenExchange("MaterialService");
+    builder.AddAuthServiceIAMClient();
     builder.Services.AddIAMRegistration<MaterialIAMRegistrationService>("material");
 
     // Core application services
@@ -69,7 +70,9 @@ try
             description: "Material inventory management service. Provides CRUD operations for materials with supplier associations, bulk import/export capabilities, supplier validation, reference data for categories and units, and cached responses for high-performance lookups.");
     }
 
-    builder.AddServiceClient<Maliev.MaterialService.Application.Services.ISupplierServiceClient, Maliev.MaterialService.Infrastructure.Services.SupplierServiceClient>("SupplierService");
+    builder.AddServiceClient<ISupplierServiceClient, SupplierServiceClient>("SupplierService")
+        .AddAuthServiceAuthentication()
+        .AddStandardResilienceHandler();
 
     builder.Services.AddScoped<IMaterialService, Maliev.MaterialService.Infrastructure.Services.MaterialService>();
     builder.Services.AddScoped<IBulkMaterialService, Maliev.MaterialService.Infrastructure.Services.BulkMaterialService>();

@@ -4,6 +4,7 @@ using MassTransit;
 using Microsoft.Extensions.Configuration;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -169,6 +170,15 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
             {
                 ["Service:Name"] = "MaterialService",
                 ["Service:Version"] = "1.0.0-test",
+                ["ServiceAuthentication:ClientId"] = "service-material-service",
+                ["ServiceAuthentication:ClientSecret"] = "material-integration-secret-with-at-least-32-bytes",
+                ["Services:AuthService:BaseUrl"] = "https://auth.test",
+                ["Services:IAMService:BaseUrl"] = "https://iam.test",
+                ["Services:SupplierService:BaseUrl"] = "https://supplier.test",
+                ["Jwt:PublicKey"] = Convert.ToBase64String(
+                    Encoding.UTF8.GetBytes(_testRsa.ExportSubjectPublicKeyInfoPem())),
+                ["Jwt:Issuer"] = "https://issuer.test",
+                ["Jwt:Audience"] = "https://audience.test",
                 ["Jwt:SecurityKey"] = "test-secret-key-at-least-32-characters-long",
                 [$"ConnectionStrings:{DbConnectionStringName}"] = _postgresContainer!.GetConnectionString(),
                 ["ConnectionStrings:redis"] = _redisContainer!.GetConnectionString(),

@@ -9,6 +9,9 @@ public interface ISupplierServiceClient
     /// Validates whether a supplier exists in the Supplier Service.
     /// </summary>
     /// <param name="supplierId">The supplier ID to validate.</param>
+    /// <param name="cancellationToken">Cancellation token for the outbound request.</param>
     /// <returns>True if the supplier exists, false otherwise.</returns>
-    Task<bool> ValidateSupplierExistsAsync(Guid supplierId);
+    Task<bool> ValidateSupplierExistsAsync(
+        Guid supplierId,
+        CancellationToken cancellationToken = default);
 }

@@ -9,11 +9,13 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Maliev.MaterialService.Application.DTOs;
 using Maliev.MaterialService.Application.DTOs.Materials;
+using Maliev.MaterialService.Application.Services;
 using Maliev.MaterialService.Infrastructure.Persistence;
 using Maliev.MaterialService.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using Xunit;
 
 namespace Maliev.MaterialService.Tests.Integration;
@@ -160,6 +162,91 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateMaterial_WithUnknownSupplier_ReturnsBadRequestBeforePersistence()
+    {
+        var supplierId = Guid.NewGuid();
+        _factory.SupplierServiceClientMock
+            .Setup(client => client.ValidateSupplierExistsAsync(
+                supplierId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        var request = new CreateMaterialRequest
+        {
+            Name = "Unknown supplier material",
+            Code = $"UNKNOWN-SUPPLIER-{Guid.NewGuid():N}",
+            StockLevel = 1,
+            PricePerUnit = 10m,
+            SupplierId = supplierId
+        };
+
+        try
+        {
+            var response = await _client.PostAsJsonAsync("/material/v1/materials", request);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            _factory.SupplierServiceClientMock.Verify(client => client.ValidateSupplierExistsAsync(
+                supplierId,
+                It.IsAny<CancellationToken>()), Times.Once);
+
+            var dbContext = _scope.ServiceProvider.GetRequiredService<MaterialDbContext>();
+            Assert.False(await dbContext.Materials.AnyAsync(material => material.Code == request.Code));
+        }
+        finally
+        {
+            _factory.SupplierServiceClientMock
+                .Setup(client => client.ValidateSupplierExistsAsync(
+                    supplierId,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+        }
+    }
+
+    [Fact]
+    public async Task UpdateMaterial_WithUnknownSupplier_ReturnsBadRequestBeforeMutation()
+    {
+        var dbContext = _scope.ServiceProvider.GetRequiredService<MaterialDbContext>();
+        var material = await dbContext.Materials.AsNoTracking().FirstAsync();
+        var originalSupplierId = material.SupplierId;
+        var supplierId = Guid.NewGuid();
+        _factory.SupplierServiceClientMock
+            .Setup(client => client.ValidateSupplierExistsAsync(
+                supplierId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        var request = new UpdateMaterialRequest
+        {
+            Name = material.Name,
+            Code = material.Code,
+            Description = material.Description,
+            StockLevel = material.StockLevel,
+            PricePerUnit = material.PricePerUnit,
+            SupplierId = supplierId
+        };
+
+        try
+        {
+            var response = await _client.PutAsJsonAsync($"/material/v1/materials/{material.Id}", request);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            _factory.SupplierServiceClientMock.Verify(client => client.ValidateSupplierExistsAsync(
+                supplierId,
+                It.IsAny<CancellationToken>()), Times.Once);
+
+            dbContext.ChangeTracker.Clear();
+            var persisted = await dbContext.Materials.AsNoTracking().SingleAsync(item => item.Id == material.Id);
+            Assert.Equal(originalSupplierId, persisted.SupplierId);
+        }
+        finally
+        {
+            _factory.SupplierServiceClientMock
+                .Setup(client => client.ValidateSupplierExistsAsync(
+                    supplierId,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+        }
     }
 
     [Fact]

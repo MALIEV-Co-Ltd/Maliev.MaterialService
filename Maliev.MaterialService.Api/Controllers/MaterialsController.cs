@@ -107,14 +107,16 @@ public class MaterialsController : ControllerBase
     [RequirePermission(MaterialPermissions.MaterialsCreate)]
     [ProducesResponseType(typeof(MaterialResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<MaterialResponse>> CreateMaterial([FromBody] CreateMaterialRequest request)
+    public async Task<ActionResult<MaterialResponse>> CreateMaterial(
+        [FromBody] CreateMaterialRequest request,
+        CancellationToken cancellationToken)
     {
         _logger.LogInformation("Creating new material with code: {Code}", request.Code);
 
         try
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "System";
-            var material = await _materialService.CreateMaterialAsync(request, userId);
+            var material = await _materialService.CreateMaterialAsync(request, userId, cancellationToken);
 
             return CreatedAtAction(
                 nameof(GetMaterialById),
@@ -144,14 +146,17 @@ public class MaterialsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<MaterialResponse>> UpdateMaterial(Guid id, [FromBody] UpdateMaterialRequest request)
+    public async Task<ActionResult<MaterialResponse>> UpdateMaterial(
+        Guid id,
+        [FromBody] UpdateMaterialRequest request,
+        CancellationToken cancellationToken)
     {
         _logger.LogInformation("Updating material with ID: {MaterialId}", id);
 
         try
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "System";
-            var material = await _materialService.UpdateMaterialAsync(id, request, userId);
+            var material = await _materialService.UpdateMaterialAsync(id, request, userId, cancellationToken);
 
             if (material == null)
             {
