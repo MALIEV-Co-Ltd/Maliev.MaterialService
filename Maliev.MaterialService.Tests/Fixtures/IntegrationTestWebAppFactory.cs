@@ -61,10 +61,11 @@ public class IntegrationTestWebAppFactory : BaseIntegrationTestFactory<Program, 
     private static Mock<ISupplierServiceClient> CreateSupplierServiceClientMock()
     {
         var mock = new Mock<ISupplierServiceClient>();
-        mock.Setup(client => client.ValidateSupplierExistsAsync(
+        mock.Setup(client => client.GetSupplierAsync(
                 It.IsAny<Guid>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .ReturnsAsync((Guid supplierId, CancellationToken _) =>
+                new SupplierReference(supplierId, $"Supplier {supplierId:N}"));
         return mock;
     }
 }

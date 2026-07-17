@@ -107,6 +107,7 @@ public class MaterialsController : ControllerBase
     [RequirePermission(MaterialPermissions.MaterialsCreate)]
     [ProducesResponseType(typeof(MaterialResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public async Task<ActionResult<MaterialResponse>> CreateMaterial(
         [FromBody] CreateMaterialRequest request,
         CancellationToken cancellationToken)
@@ -128,6 +129,13 @@ public class MaterialsController : ControllerBase
             _logger.LogWarning(ex, "Failed to create material");
             return BadRequest(new { message = ex.Message });
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Supplier validation is unavailable while creating material");
+            return StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                new { message = "Supplier validation is temporarily unavailable." });
+        }
     }
 
     /// <summary>
@@ -146,6 +154,7 @@ public class MaterialsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public async Task<ActionResult<MaterialResponse>> UpdateMaterial(
         Guid id,
         [FromBody] UpdateMaterialRequest request,
@@ -178,6 +187,13 @@ public class MaterialsController : ControllerBase
                 return Conflict(new { message = ex.Message });
             }
             return BadRequest(new { message = ex.Message });
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Supplier validation is unavailable while updating material {MaterialId}", id);
+            return StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                new { message = "Supplier validation is temporarily unavailable." });
         }
     }
 

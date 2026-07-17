@@ -82,7 +82,8 @@ public class MaterialService : IMaterialService
             throw new InvalidOperationException($"Material with code '{request.Code}' already exists.");
         }
 
-        await ValidateSupplierAsync(request.SupplierId, cancellationToken);
+        var supplier = await GetSupplierProjectionAsync(request.SupplierId, cancellationToken);
+        await UpsertSupplierProjectionAsync(supplier, userId, cancellationToken);
 
         var material = request.ToMaterial();
         material.Id = Guid.NewGuid();
@@ -181,6 +182,17 @@ public class MaterialService : IMaterialService
     {
         _logger.LogInformation("Updating material with ID: {MaterialId}", id);
 
+        var materialExists = await _context.Materials
+            .AsNoTracking()
+            .AnyAsync(material => material.Id == id && material.Active, cancellationToken);
+        if (!materialExists)
+        {
+            return null;
+        }
+
+        var supplier = await GetSupplierProjectionAsync(request.SupplierId, cancellationToken);
+        await UpsertSupplierProjectionAsync(supplier, userId, cancellationToken);
+
         var strategy = _context.Database.CreateExecutionStrategy();
 
         return await strategy.ExecuteAsync(async () =>
@@ -201,8 +213,6 @@ public class MaterialService : IMaterialService
                 {
                     return null;
                 }
-
-                await ValidateSupplierAsync(request.SupplierId, cancellationToken);
 
                 material.UpdateMaterial(request);
                 material.UpdatedBy = userId;
@@ -502,22 +512,50 @@ public class MaterialService : IMaterialService
         }
     }
 
-    private async Task ValidateSupplierAsync(
+    private async Task<SupplierReference?> GetSupplierProjectionAsync(
         Guid? supplierId,
         CancellationToken cancellationToken)
     {
         if (!supplierId.HasValue)
         {
-            return;
+            return null;
         }
 
-        var supplierExists = await _supplierServiceClient.ValidateSupplierExistsAsync(
+        var supplier = await _supplierServiceClient.GetSupplierAsync(
             supplierId.Value,
             cancellationToken);
-        if (!supplierExists)
+        if (supplier is null)
         {
             throw new InvalidOperationException($"Supplier with ID '{supplierId.Value}' does not exist.");
         }
+
+        return supplier;
+    }
+
+    private async Task UpsertSupplierProjectionAsync(
+        SupplierReference? supplier,
+        string userId,
+        CancellationToken cancellationToken)
+    {
+        if (supplier is null)
+        {
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        await _context.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+            INSERT INTO suppliers
+                (id, name, contact_info, created_at, created_by, updated_at, updated_by, active)
+            VALUES
+                ({supplier.Id}, {supplier.CompanyName}, {null}, {now}, {userId}, {null}, {null}, {true})
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                updated_at = EXCLUDED.created_at,
+                updated_by = EXCLUDED.created_by,
+                active = TRUE
+            """,
+            cancellationToken);
     }
 
     private async Task InvalidateCacheAsync(Guid? materialId = null)

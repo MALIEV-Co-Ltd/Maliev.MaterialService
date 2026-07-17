@@ -13,29 +13,33 @@ public sealed class SupplierServiceClientTests
     /// A successful supplier lookup uses the versioned protected route.
     /// </summary>
     [Fact]
-    public async Task ValidateSupplierExistsAsync_Success_UsesVersionedRoute()
+    public async Task GetSupplierAsync_Success_UsesVersionedValidationRoute()
     {
         var supplierId = Guid.NewGuid();
-        var handler = new CapturingHandler(HttpStatusCode.OK);
+        var handler = new CapturingHandler(
+            HttpStatusCode.OK,
+            $$"""{"id":"{{supplierId}}","companyName":"Supplier One","isActive":true}""");
         var client = CreateClient(handler);
 
-        var exists = await client.ValidateSupplierExistsAsync(supplierId, CancellationToken.None);
+        var supplier = await client.GetSupplierAsync(supplierId, CancellationToken.None);
 
-        Assert.True(exists);
-        Assert.Equal($"/supplier/v1/suppliers/{supplierId}", handler.RequestUri?.AbsolutePath);
+        Assert.NotNull(supplier);
+        Assert.Equal(supplierId, supplier.Id);
+        Assert.Equal("Supplier One", supplier.CompanyName);
+        Assert.Equal($"/supplier/v1/suppliers/{supplierId}/validate", handler.RequestUri?.AbsolutePath);
     }
 
     /// <summary>
     /// Only an authoritative 404 is translated into a missing supplier result.
     /// </summary>
     [Fact]
-    public async Task ValidateSupplierExistsAsync_NotFound_ReturnsFalse()
+    public async Task GetSupplierAsync_NotFound_ReturnsNull()
     {
         var client = CreateClient(new CapturingHandler(HttpStatusCode.NotFound));
 
-        var exists = await client.ValidateSupplierExistsAsync(Guid.NewGuid(), CancellationToken.None);
+        var supplier = await client.GetSupplierAsync(Guid.NewGuid(), CancellationToken.None);
 
-        Assert.False(exists);
+        Assert.Null(supplier);
     }
 
     /// <summary>
@@ -45,12 +49,12 @@ public sealed class SupplierServiceClientTests
     [InlineData(HttpStatusCode.Unauthorized)]
     [InlineData(HttpStatusCode.Forbidden)]
     [InlineData(HttpStatusCode.ServiceUnavailable)]
-    public async Task ValidateSupplierExistsAsync_DependencyFailure_Throws(HttpStatusCode statusCode)
+    public async Task GetSupplierAsync_DependencyFailure_Throws(HttpStatusCode statusCode)
     {
         var client = CreateClient(new CapturingHandler(statusCode));
 
         var exception = await Assert.ThrowsAsync<HttpRequestException>(
-            () => client.ValidateSupplierExistsAsync(Guid.NewGuid(), CancellationToken.None));
+            () => client.GetSupplierAsync(Guid.NewGuid(), CancellationToken.None));
 
         Assert.Equal(statusCode, exception.StatusCode);
     }
@@ -59,7 +63,7 @@ public sealed class SupplierServiceClientTests
     /// Caller cancellation must reach the outbound Supplier request.
     /// </summary>
     [Fact]
-    public async Task ValidateSupplierExistsAsync_Cancelled_PropagatesCancellation()
+    public async Task GetSupplierAsync_Cancelled_PropagatesCancellation()
     {
         var handler = new CancellationAwareHandler();
         var client = CreateClient(handler);
@@ -67,7 +71,7 @@ public sealed class SupplierServiceClientTests
         cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => client.ValidateSupplierExistsAsync(Guid.NewGuid(), cancellation.Token));
+            () => client.GetSupplierAsync(Guid.NewGuid(), cancellation.Token));
 
         Assert.True(handler.ObservedCancellation);
     }
@@ -80,7 +84,7 @@ public sealed class SupplierServiceClientTests
             },
             NullLogger<SupplierServiceClient>.Instance);
 
-    private sealed class CapturingHandler(HttpStatusCode statusCode) : HttpMessageHandler
+    private sealed class CapturingHandler(HttpStatusCode statusCode, string? body = null) : HttpMessageHandler
     {
         public Uri? RequestUri { get; private set; }
 
@@ -89,7 +93,10 @@ public sealed class SupplierServiceClientTests
             CancellationToken cancellationToken)
         {
             RequestUri = request.RequestUri;
-            return Task.FromResult(new HttpResponseMessage(statusCode));
+            return Task.FromResult(new HttpResponseMessage(statusCode)
+            {
+                Content = body is null ? null : new StringContent(body)
+            });
         }
     }
 

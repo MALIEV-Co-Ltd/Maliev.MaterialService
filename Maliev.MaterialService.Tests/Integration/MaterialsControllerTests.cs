@@ -169,10 +169,10 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
     {
         var supplierId = Guid.NewGuid();
         _factory.SupplierServiceClientMock
-            .Setup(client => client.ValidateSupplierExistsAsync(
+            .Setup(client => client.GetSupplierAsync(
                 supplierId,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+            .ReturnsAsync((SupplierReference?)null);
         var request = new CreateMaterialRequest
         {
             Name = "Unknown supplier material",
@@ -187,7 +187,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
             var response = await _client.PostAsJsonAsync("/material/v1/materials", request);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-            _factory.SupplierServiceClientMock.Verify(client => client.ValidateSupplierExistsAsync(
+            _factory.SupplierServiceClientMock.Verify(client => client.GetSupplierAsync(
                 supplierId,
                 It.IsAny<CancellationToken>()), Times.Once);
 
@@ -197,10 +197,10 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
         finally
         {
             _factory.SupplierServiceClientMock
-                .Setup(client => client.ValidateSupplierExistsAsync(
+                .Setup(client => client.GetSupplierAsync(
                     supplierId,
                     It.IsAny<CancellationToken>()))
-                .ReturnsAsync(true);
+                .ReturnsAsync(new SupplierReference(supplierId, "Recovered Supplier"));
         }
     }
 
@@ -212,10 +212,10 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
         var originalSupplierId = material.SupplierId;
         var supplierId = Guid.NewGuid();
         _factory.SupplierServiceClientMock
-            .Setup(client => client.ValidateSupplierExistsAsync(
+            .Setup(client => client.GetSupplierAsync(
                 supplierId,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+            .ReturnsAsync((SupplierReference?)null);
         var request = new UpdateMaterialRequest
         {
             Name = material.Name,
@@ -231,7 +231,7 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
             var response = await _client.PutAsJsonAsync($"/material/v1/materials/{material.Id}", request);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-            _factory.SupplierServiceClientMock.Verify(client => client.ValidateSupplierExistsAsync(
+            _factory.SupplierServiceClientMock.Verify(client => client.GetSupplierAsync(
                 supplierId,
                 It.IsAny<CancellationToken>()), Times.Once);
 
@@ -242,11 +242,114 @@ public class MaterialsControllerTests : IClassFixture<IntegrationTestWebAppFacto
         finally
         {
             _factory.SupplierServiceClientMock
-                .Setup(client => client.ValidateSupplierExistsAsync(
+                .Setup(client => client.GetSupplierAsync(
                     supplierId,
                     It.IsAny<CancellationToken>()))
-                .ReturnsAsync(true);
+                .ReturnsAsync(new SupplierReference(supplierId, "Recovered Supplier"));
         }
+    }
+
+    [Fact]
+    public async Task CreateMaterial_WithAuthoritativeSupplier_PersistsLocalProjection()
+    {
+        var supplierId = Guid.NewGuid();
+        const string companyName = "Remote Supplier One";
+        _factory.SupplierServiceClientMock
+            .Setup(client => client.GetSupplierAsync(
+                supplierId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SupplierReference(supplierId, companyName));
+        var request = new CreateMaterialRequest
+        {
+            Name = "Projected supplier material",
+            Code = $"PROJ-{Guid.NewGuid():N}",
+            StockLevel = 2,
+            PricePerUnit = 20m,
+            SupplierId = supplierId
+        };
+
+        var response = await _client.PostAsJsonAsync("/material/v1/materials", request);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var dbContext = _scope.ServiceProvider.GetRequiredService<MaterialDbContext>();
+        dbContext.ChangeTracker.Clear();
+        var persisted = await dbContext.Materials
+            .AsNoTracking()
+            .Include(material => material.Supplier)
+            .SingleAsync(material => material.Code == request.Code);
+        Assert.Equal(supplierId, persisted.SupplierId);
+        Assert.NotNull(persisted.Supplier);
+        Assert.Equal(companyName, persisted.Supplier.Name);
+    }
+
+    [Fact]
+    public async Task UpdateMaterial_WithAuthoritativeSupplier_PersistsLocalProjection()
+    {
+        var dbContext = _scope.ServiceProvider.GetRequiredService<MaterialDbContext>();
+        var material = await dbContext.Materials.AsNoTracking().FirstAsync();
+        var supplierId = Guid.NewGuid();
+        const string companyName = "Remote Supplier Two";
+        _factory.SupplierServiceClientMock
+            .Setup(client => client.GetSupplierAsync(
+                supplierId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SupplierReference(supplierId, companyName));
+        var request = new UpdateMaterialRequest
+        {
+            Name = material.Name,
+            Code = material.Code,
+            Description = material.Description,
+            StockLevel = material.StockLevel,
+            PricePerUnit = material.PricePerUnit,
+            SupplierId = supplierId
+        };
+
+        var response = await _client.PutAsJsonAsync($"/material/v1/materials/{material.Id}", request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        dbContext.ChangeTracker.Clear();
+        var persisted = await dbContext.Materials
+            .AsNoTracking()
+            .Include(item => item.Supplier)
+            .SingleAsync(item => item.Id == material.Id);
+        Assert.Equal(supplierId, persisted.SupplierId);
+        Assert.NotNull(persisted.Supplier);
+        Assert.Equal(companyName, persisted.Supplier.Name);
+    }
+
+    [Fact]
+    public async Task UpdateMaterial_WhenSupplierDependencyFails_ReturnsUnavailableWithoutMutation()
+    {
+        var dbContext = _scope.ServiceProvider.GetRequiredService<MaterialDbContext>();
+        var material = await dbContext.Materials.AsNoTracking().FirstAsync();
+        var originalName = material.Name;
+        var originalSupplierId = material.SupplierId;
+        var supplierId = Guid.NewGuid();
+        _factory.SupplierServiceClientMock
+            .Setup(client => client.GetSupplierAsync(
+                supplierId,
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException(
+                "Supplier unavailable",
+                inner: null,
+                HttpStatusCode.ServiceUnavailable));
+        var request = new UpdateMaterialRequest
+        {
+            Name = "Must not persist",
+            Code = material.Code,
+            Description = material.Description,
+            StockLevel = material.StockLevel,
+            PricePerUnit = material.PricePerUnit,
+            SupplierId = supplierId
+        };
+
+        var response = await _client.PutAsJsonAsync($"/material/v1/materials/{material.Id}", request);
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        dbContext.ChangeTracker.Clear();
+        var persisted = await dbContext.Materials.AsNoTracking().SingleAsync(item => item.Id == material.Id);
+        Assert.Equal(originalName, persisted.Name);
+        Assert.Equal(originalSupplierId, persisted.SupplierId);
     }
 
     [Fact]
