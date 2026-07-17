@@ -38,14 +38,21 @@ public class BulkMaterialServiceTests
             }
         };
 
-        _materialServiceMock.Setup(s => s.CreateMaterialAsync(It.IsAny<CreateMaterialRequest>(), It.IsAny<string>()))
-            .ReturnsAsync((CreateMaterialRequest r, string u) => new MaterialResponse { Name = r.Name, Code = r.Code });
+        _materialServiceMock.Setup(s => s.CreateMaterialAsync(
+                It.IsAny<CreateMaterialRequest>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CreateMaterialRequest r, string u, CancellationToken ct) =>
+                new MaterialResponse { Name = r.Name, Code = r.Code });
 
         var result = await _bulkService.BulkImportMaterialsAsync(request, "TestUser");
 
         Assert.Equal(2, result.SuccessCount);
         Assert.Equal(0, result.FailureCount);
-        _materialServiceMock.Verify(s => s.CreateMaterialAsync(It.IsAny<CreateMaterialRequest>(), "TestUser"), Times.Exactly(2));
+        _materialServiceMock.Verify(s => s.CreateMaterialAsync(
+            It.IsAny<CreateMaterialRequest>(),
+            "TestUser",
+            It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     [Fact]
@@ -60,10 +67,16 @@ public class BulkMaterialServiceTests
             }
         };
 
-        _materialServiceMock.Setup(s => s.CreateMaterialAsync(It.Is<CreateMaterialRequest>(r => r.Code == "C1"), It.IsAny<string>()))
+        _materialServiceMock.Setup(s => s.CreateMaterialAsync(
+                It.Is<CreateMaterialRequest>(r => r.Code == "C1"),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MaterialResponse { Name = "Mat1", Code = "C1" });
 
-        _materialServiceMock.Setup(s => s.CreateMaterialAsync(It.Is<CreateMaterialRequest>(r => r.Code == "C2"), It.IsAny<string>()))
+        _materialServiceMock.Setup(s => s.CreateMaterialAsync(
+                It.Is<CreateMaterialRequest>(r => r.Code == "C2"),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Duplicate code"));
 
         var result = await _bulkService.BulkImportMaterialsAsync(request, "TestUser");
@@ -90,7 +103,10 @@ public class BulkMaterialServiceTests
 
         Assert.Equal(1, result.SuccessCount);
         Assert.Equal(0, result.FailureCount);
-        _materialServiceMock.Verify(s => s.CreateMaterialAsync(It.IsAny<CreateMaterialRequest>(), It.IsAny<string>()), Times.Never);
+        _materialServiceMock.Verify(s => s.CreateMaterialAsync(
+            It.IsAny<CreateMaterialRequest>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -109,7 +125,10 @@ public class BulkMaterialServiceTests
 
         Assert.Equal(1, result.SuccessCount);
         Assert.Equal(0, result.FailureCount);
-        _materialServiceMock.Verify(s => s.CreateMaterialAsync(It.IsAny<CreateMaterialRequest>(), It.IsAny<string>()), Times.Never);
+        _materialServiceMock.Verify(s => s.CreateMaterialAsync(
+            It.IsAny<CreateMaterialRequest>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -139,7 +158,10 @@ public class BulkMaterialServiceTests
             }
         };
 
-        _materialServiceMock.Setup(s => s.CreateMaterialAsync(It.IsAny<CreateMaterialRequest>(), It.IsAny<string>()))
+        _materialServiceMock.Setup(s => s.CreateMaterialAsync(
+                It.IsAny<CreateMaterialRequest>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Validation failed"));
 
         var result = await _bulkService.BulkImportMaterialsAsync(request, "TestUser");

@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 using Maliev.MaterialService.Application.Services;
 using Microsoft.Extensions.Logging;
 
@@ -21,34 +23,59 @@ public class SupplierServiceClient : ISupplierServiceClient
     {
         _httpClient = httpClient;
         _logger = logger;
-
-        _httpClient.Timeout = TimeSpan.FromSeconds(60);
     }
 
     /// <inheritdoc/>
-    public async Task<bool> ValidateSupplierExistsAsync(Guid supplierId)
+    public async Task<SupplierReference?> GetSupplierAsync(
+        Guid supplierId,
+        CancellationToken cancellationToken = default)
     {
+        using var response = await _httpClient.GetAsync(
+            $"/supplier/v1/suppliers/{supplierId}/validate",
+            cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        SupplierValidationResponse? supplier;
         try
         {
-            var response = await _httpClient.GetAsync($"suppliers/{supplierId}");
-
-            if (response.IsSuccessStatusCode)
-            {
-                return true;
-            }
-
-            if (response.StatusCode == HttpStatusCode.NotFound)
-            {
-                return false;
-            }
-
-            _logger.LogError("Error calling Supplier Service. StatusCode: {StatusCode}", response.StatusCode);
-            return false;
+            supplier = await response.Content.ReadFromJsonAsync<SupplierValidationResponse>(
+                cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception exception) when (exception is JsonException or NotSupportedException)
         {
-            _logger.LogError(ex, "Exception occurred while calling Supplier Service for ID {SupplierId}", supplierId);
-            return false;
+            _logger.LogError(
+                exception,
+                "Supplier Service returned a malformed projection for {SupplierId}",
+                supplierId);
+            throw new HttpRequestException(
+                "Supplier Service returned an invalid supplier projection.",
+                exception,
+                HttpStatusCode.BadGateway);
         }
+        if (supplier is null ||
+            supplier.Id != supplierId ||
+            string.IsNullOrWhiteSpace(supplier.CompanyName) ||
+            !supplier.IsActive)
+        {
+            _logger.LogError(
+                "Supplier Service returned an invalid projection for {SupplierId}",
+                supplierId);
+            throw new HttpRequestException(
+                "Supplier Service returned an invalid supplier projection.",
+                inner: null,
+                HttpStatusCode.BadGateway);
+        }
+
+        return new SupplierReference(supplier.Id, supplier.CompanyName);
     }
+
+    private sealed record SupplierValidationResponse(
+        Guid Id,
+        string CompanyName,
+        bool IsActive);
 }

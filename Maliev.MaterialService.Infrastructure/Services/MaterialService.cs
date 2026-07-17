@@ -22,6 +22,7 @@ public class MaterialService : IMaterialService
     private readonly MaterialDbContext _context;
     private readonly ICacheService _cacheService;
     private readonly IPublishEndpoint _publishEndpoint;
+    private readonly ISupplierServiceClient _supplierServiceClient;
     private readonly ILogger<MaterialService> _logger;
     private const string CacheKeyPrefix = "material:";
 
@@ -31,21 +32,27 @@ public class MaterialService : IMaterialService
     /// <param name="context">Database context.</param>
     /// <param name="cacheService">Cache service.</param>
     /// <param name="publishEndpoint">MassTransit publish endpoint.</param>
+    /// <param name="supplierServiceClient">Protected SupplierService client.</param>
     /// <param name="logger">Logger instance.</param>
     public MaterialService(
         MaterialDbContext context,
         ICacheService cacheService,
         IPublishEndpoint publishEndpoint,
+        ISupplierServiceClient supplierServiceClient,
         ILogger<MaterialService> logger)
     {
         _context = context;
         _cacheService = cacheService;
         _publishEndpoint = publishEndpoint;
+        _supplierServiceClient = supplierServiceClient;
         _logger = logger;
     }
 
     /// <inheritdoc/>
-    public async Task<MaterialResponse> CreateMaterialAsync(CreateMaterialRequest request, string userId)
+    public async Task<MaterialResponse> CreateMaterialAsync(
+        CreateMaterialRequest request,
+        string userId,
+        CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Creating new material with code: {Code}", request.Code);
 
@@ -68,12 +75,15 @@ public class MaterialService : IMaterialService
 
         var existingMaterial = await _context.Materials
             .AsNoTracking()
-            .FirstOrDefaultAsync(m => m.Code == request.Code);
+            .FirstOrDefaultAsync(m => m.Code == request.Code, cancellationToken);
 
         if (existingMaterial != null)
         {
             throw new InvalidOperationException($"Material with code '{request.Code}' already exists.");
         }
+
+        var supplier = await GetSupplierProjectionAsync(request.SupplierId, cancellationToken);
+        await UpsertSupplierProjectionAsync(supplier, userId, cancellationToken);
 
         var material = request.ToMaterial();
         material.Id = Guid.NewGuid();
@@ -93,7 +103,7 @@ public class MaterialService : IMaterialService
         }
 
         _context.Materials.Add(material);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Material created successfully with ID: {MaterialId}", material.Id);
 
@@ -164,15 +174,30 @@ public class MaterialService : IMaterialService
     }
 
     /// <inheritdoc/>
-    public async Task<MaterialResponse?> UpdateMaterialAsync(Guid id, UpdateMaterialRequest request, string userId)
+    public async Task<MaterialResponse?> UpdateMaterialAsync(
+        Guid id,
+        UpdateMaterialRequest request,
+        string userId,
+        CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Updating material with ID: {MaterialId}", id);
+
+        var materialExists = await _context.Materials
+            .AsNoTracking()
+            .AnyAsync(material => material.Id == id && material.Active, cancellationToken);
+        if (!materialExists)
+        {
+            return null;
+        }
+
+        var supplier = await GetSupplierProjectionAsync(request.SupplierId, cancellationToken);
+        await UpsertSupplierProjectionAsync(supplier, userId, cancellationToken);
 
         var strategy = _context.Database.CreateExecutionStrategy();
 
         return await strategy.ExecuteAsync(async () =>
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
 
             try
             {
@@ -182,7 +207,7 @@ public class MaterialService : IMaterialService
                     .Include(m => m.PostProcessingMethods)
                     .Include(m => m.MechanicalProperties)
                     .AsSplitQuery()
-                    .FirstOrDefaultAsync(m => m.Id == id && m.Active);
+                    .FirstOrDefaultAsync(m => m.Id == id && m.Active, cancellationToken);
 
                 if (material == null)
                 {
@@ -209,7 +234,7 @@ public class MaterialService : IMaterialService
                     });
                 }
 
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(cancellationToken);
 
                 var version = (int)_context.Entry(material).Property<uint>("xmin").CurrentValue;
 
@@ -240,7 +265,7 @@ public class MaterialService : IMaterialService
                 await _publishEndpoint.Publish(
                     MaterialSearchDocumentMapper.ToUpsertEvent(material, DateTimeOffset.UtcNow));
 
-                await transaction.CommitAsync();
+                await transaction.CommitAsync(cancellationToken);
 
                 await InvalidateCacheAsync(id);
 
@@ -253,7 +278,7 @@ public class MaterialService : IMaterialService
                 {
                     try
                     {
-                        await transaction.RollbackAsync();
+                        await transaction.RollbackAsync(cancellationToken);
                     }
                     catch (Exception rbEx)
                     {
@@ -485,6 +510,52 @@ public class MaterialService : IMaterialService
                 material.PostProcessingMethods.Add(method);
             }
         }
+    }
+
+    private async Task<SupplierReference?> GetSupplierProjectionAsync(
+        Guid? supplierId,
+        CancellationToken cancellationToken)
+    {
+        if (!supplierId.HasValue)
+        {
+            return null;
+        }
+
+        var supplier = await _supplierServiceClient.GetSupplierAsync(
+            supplierId.Value,
+            cancellationToken);
+        if (supplier is null)
+        {
+            throw new InvalidOperationException($"Supplier with ID '{supplierId.Value}' does not exist.");
+        }
+
+        return supplier;
+    }
+
+    private async Task UpsertSupplierProjectionAsync(
+        SupplierReference? supplier,
+        string userId,
+        CancellationToken cancellationToken)
+    {
+        if (supplier is null)
+        {
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        await _context.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+            INSERT INTO suppliers
+                (id, name, contact_info, created_at, created_by, updated_at, updated_by, active)
+            VALUES
+                ({supplier.Id}, {supplier.CompanyName}, {null}, {now}, {userId}, {null}, {null}, {true})
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                updated_at = EXCLUDED.created_at,
+                updated_by = EXCLUDED.created_by,
+                active = TRUE
+            """,
+            cancellationToken);
     }
 
     private async Task InvalidateCacheAsync(Guid? materialId = null)

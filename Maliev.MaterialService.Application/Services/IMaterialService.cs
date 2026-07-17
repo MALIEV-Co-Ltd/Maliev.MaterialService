@@ -13,8 +13,12 @@ public interface IMaterialService
     /// </summary>
     /// <param name="request">Material creation request.</param>
     /// <param name="userId">ID of the user creating the material.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The created material.</returns>
-    Task<MaterialResponse> CreateMaterialAsync(CreateMaterialRequest request, string userId);
+    Task<MaterialResponse> CreateMaterialAsync(
+        CreateMaterialRequest request,
+        string userId,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves a material by its ID.
@@ -29,8 +33,13 @@ public interface IMaterialService
     /// <param name="id">Material ID.</param>
     /// <param name="request">Update request.</param>
     /// <param name="userId">ID of the user updating the material.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The updated material if found, null otherwise.</returns>
-    Task<MaterialResponse?> UpdateMaterialAsync(Guid id, UpdateMaterialRequest request, string userId);
+    Task<MaterialResponse?> UpdateMaterialAsync(
+        Guid id,
+        UpdateMaterialRequest request,
+        string userId,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes a material (soft delete).
