@@ -31,7 +31,7 @@ public class SupplierServiceClient : ISupplierServiceClient
         CancellationToken cancellationToken = default)
     {
         using var response = await _httpClient.GetAsync(
-            $"/supplier/v1/suppliers/{supplierId}/validate",
+            $"/supplier/v1/suppliers/{supplierId}/reference",
             cancellationToken);
 
         if (response.StatusCode == HttpStatusCode.NotFound)

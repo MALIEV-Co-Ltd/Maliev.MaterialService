@@ -13,7 +13,7 @@ public sealed class SupplierServiceClientTests
     /// A successful supplier lookup uses the versioned protected route.
     /// </summary>
     [Fact]
-    public async Task GetSupplierAsync_Success_UsesVersionedValidationRoute()
+    public async Task GetSupplierAsync_Success_UsesVersionedReferenceRoute()
     {
         var supplierId = Guid.NewGuid();
         var handler = new CapturingHandler(
@@ -26,7 +26,7 @@ public sealed class SupplierServiceClientTests
         Assert.NotNull(supplier);
         Assert.Equal(supplierId, supplier.Id);
         Assert.Equal("Supplier One", supplier.CompanyName);
-        Assert.Equal($"/supplier/v1/suppliers/{supplierId}/validate", handler.RequestUri?.AbsolutePath);
+        Assert.Equal($"/supplier/v1/suppliers/{supplierId}/reference", handler.RequestUri?.AbsolutePath);
     }
 
     /// <summary>
