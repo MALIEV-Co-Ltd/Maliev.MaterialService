@@ -127,7 +127,7 @@ jobs:
         with:
           name: material-develop-sbom-${{ steps.version.outputs.short_sha }}
           path: trivy-sbom.cdx.json
-          if-no-files-found: erro
+          if-no-files-found: error
           retention-days: 30
 
       - name: Scan published digest for high-severity vulnerabilities

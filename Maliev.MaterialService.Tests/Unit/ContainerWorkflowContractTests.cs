@@ -143,6 +143,20 @@ public sealed class ContainerWorkflowContractTests
     }
 
     /// <summary>
+    /// SBOM evidence must fail closed when the scanner does not produce the requested file.
+    /// </summary>
+    [Theory]
+    [InlineData("pr-validation.yml")]
+    [InlineData("ci-develop.yml")]
+    public void SbomUpload_UsesValidFailClosedMissingFilePolicy(string workflowName)
+    {
+        var workflow = ReadRepositoryFile(".github", "workflows", workflowName);
+
+        Assert.Contains("if-no-files-found: error", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("if-no-files-found: erro\n", workflow, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// Supplies the release workflows to every shared policy assertion.
     /// </summary>
     public static TheoryData<string> GetImageWorkflows()
