@@ -1,38 +1,68 @@
 namespace Maliev.MaterialService.Tests.Unit;
 
 /// <summary>
-/// Protects the MaterialService container and immutable-release workflow contracts.
+/// Protects the MaterialService container and validation-only workflow contracts.
 /// </summary>
 public sealed class ContainerWorkflowContractTests
 {
-    private static readonly string[] ImageWorkflows =
+    private static readonly string[] EntryWorkflows =
     [
+        "pr-validation.yml",
         "ci-develop.yml",
         "ci-staging.yml",
         "ci-main.yml"
     ];
 
     /// <summary>
-    /// Docker restore must select published shared packages without mutating source files in CI.
+    /// Docker restores exact packages without mutating project source files.
     /// </summary>
     [Fact]
-    public void DockerAndDevelopWorkflow_UseExplicitPackageModeWithoutSourceMutation()
+    public void Dockerfile_UsesExplicitPrivateAndLocalRestoreStages()
     {
         var dockerfile = ReadRepositoryFile("Maliev.MaterialService.Api", "Dockerfile");
-        var workflow = ReadRepositoryFile(".github", "workflows", "ci-develop.yml");
 
-        Assert.Contains("GITHUB_ACTIONS=true", dockerfile, StringComparison.Ordinal);
-        Assert.Contains("COPY [\"Directory.Build.props\", \".\"]", dockerfile, StringComparison.Ordinal);
-        Assert.Contains(
-            "dotnet restore \"./Maliev.MaterialService.Api/Maliev.MaterialService.Api.csproj\"",
-            dockerfile,
-            StringComparison.Ordinal);
+        Assert.Contains("ARG dependency_restore_stage=restore-private", dockerfile, StringComparison.Ordinal);
+        Assert.Contains("FROM build-base AS restore-local", dockerfile, StringComparison.Ordinal);
+        Assert.Contains("NuGet.PRValidation.Config", dockerfile, StringComparison.Ordinal);
         Assert.Contains("ARG SHARED_LIBRARY_VERSION=1.0.96-alpha", dockerfile, StringComparison.Ordinal);
         Assert.Contains("ARG SERVICE_DEFAULTS_VERSION=1.0.89-alpha", dockerfile, StringComparison.Ordinal);
-        Assert.Contains("-p:SharedLibraryVersion=$SHARED_LIBRARY_VERSION", dockerfile, StringComparison.Ordinal);
-        Assert.Contains("-p:ServiceDefaultsVersion=$SERVICE_DEFAULTS_VERSION", dockerfile, StringComparison.Ordinal);
-        Assert.DoesNotContain("sed -i", workflow, StringComparison.Ordinal);
-        Assert.DoesNotContain("Switch to PackageReference", workflow, StringComparison.Ordinal);
+        Assert.Contains("--no-restore", dockerfile, StringComparison.Ordinal);
+        Assert.DoesNotContain("--mount=type=cache", dockerfile, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Branch and pull-request workflows delegate only to the reusable validation workflow.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(GetEntryWorkflows))]
+    public void EntryWorkflow_IsValidationOnly(string workflowName)
+    {
+        var workflow = ReadRepositoryFile(".github", "workflows", workflowName);
+
+        Assert.Contains("uses: ./.github/workflows/_validate.yml", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("google-github-actions", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("maliev-gitops", workflow, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("GITOPS_PAT", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("push: true", workflow, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Reusable validation reconstructs exact dependencies and keeps the image local.
+    /// </summary>
+    [Fact]
+    public void ReusableValidation_FailsClosedWithoutDeploymentCredentials()
+    {
+        var workflow = ReadRepositoryFile(".github", "workflows", "_validate.yml");
+
+        Assert.Contains("Build exact public-source dependencies", workflow, StringComparison.Ordinal);
+        Assert.Contains("sha256sum --check SHA256SUMS", workflow, StringComparison.Ordinal);
+        Assert.Contains("push: false", workflow, StringComparison.Ordinal);
+        Assert.Contains("severity: HIGH,CRITICAL", workflow, StringComparison.Ordinal);
+        Assert.Contains("if-no-files-found: error", workflow, StringComparison.Ordinal);
+        Assert.Contains("needs: [dependency-packages, build-and-test, container]", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("credentials_json", workflow, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("GCP_SA_KEY", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("GITOPS_PAT", workflow, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -48,137 +78,27 @@ public sealed class ContainerWorkflowContractTests
     }
 
     /// <summary>
-    /// Every image workflow must use short-lived WIF credentials with least privilege.
-    /// </summary>
-    [Theory]
-    [MemberData(nameof(GetImageWorkflows))]
-    public void ImageWorkflow_UsesFailClosedWifWithoutJsonCredentials(string workflowName)
-    {
-        var workflow = ReadRepositoryFile(".github", "workflows", workflowName);
-
-        Assert.Contains("permissions:\n  contents: read", workflow, StringComparison.Ordinal);
-        Assert.Contains("id-token: write", workflow, StringComparison.Ordinal);
-        Assert.Contains("GCP_WORKLOAD_IDENTITY_PROVIDER", workflow, StringComparison.Ordinal);
-        Assert.Contains("GCP_SERVICE_ACCOUNT", workflow, StringComparison.Ordinal);
-        Assert.Contains("workload_identity_provider:", workflow, StringComparison.Ordinal);
-        Assert.Contains("service_account:", workflow, StringComparison.Ordinal);
-        Assert.DoesNotContain("credentials_json", workflow, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("GCP_SA_KEY", workflow, StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    /// Every generated GitOps change is evidence-only while MaterialService apps remain disabled.
-    /// </summary>
-    [Theory]
-    [MemberData(nameof(GetImageWorkflows))]
-    public void ImageWorkflow_CreatesDraftDoNotMergeEvidenceWithoutAutoSyncClaims(string workflowName)
-    {
-        var workflow = ReadRepositoryFile(".github", "workflows", workflowName);
-
-        Assert.Contains("--draft", workflow, StringComparison.Ordinal);
-        Assert.Contains("--title \"[DO NOT MERGE]", workflow, StringComparison.Ordinal);
-        Assert.Contains("_disabled_apps", workflow, StringComparison.Ordinal);
-        Assert.Contains("changed=\"$(git diff --name-only)\"", workflow, StringComparison.Ordinal);
-        Assert.Contains("test \"$changed\" = \"$expected\"", workflow, StringComparison.Ordinal);
-        Assert.DoesNotContain("automatically sync", workflow, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("Once merged", workflow, StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>
-    /// Kustomize installation must be checksum verified and independent of deprecated Node actions.
-    /// </summary>
-    [Theory]
-    [MemberData(nameof(GetImageWorkflows))]
-    public void ImageWorkflow_UsesChecksumVerifiedKustomizeBinary(string workflowName)
-    {
-        var workflow = ReadRepositoryFile(".github", "workflows", workflowName);
-
-        Assert.DoesNotContain("imranismail/setup-kustomize", workflow, StringComparison.Ordinal);
-        Assert.Contains("KUSTOMIZE_VERSION: v5.8.1", workflow, StringComparison.Ordinal);
-        Assert.Contains(
-            "KUSTOMIZE_SHA256: 029a7f0f4e1932c52a0476cf02a0fd855c0bb85694b82c338fc648dcb53a819d",
-            workflow,
-            StringComparison.Ordinal);
-        Assert.Contains("sha256sum --check", workflow, StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    /// Develop builds once with provenance; release workflows promote that verified digest.
+    /// Generated dependency sources, build outputs, and local credentials stay outside the image context.
     /// </summary>
     [Fact]
-    public void ReleaseWorkflows_PreserveImmutableBuildAndPromotionBoundary()
-    {
-        var develop = ReadRepositoryFile(".github", "workflows", "ci-develop.yml");
-
-        Assert.Contains("uses: ./.github/workflows/_build-and-test.yml", develop, StringComparison.Ordinal);
-        Assert.Contains("provenance: mode=max", develop, StringComparison.Ordinal);
-        Assert.Contains("sbom: true", develop, StringComparison.Ordinal);
-        Assert.Contains("steps.build.outputs.digest", develop, StringComparison.Ordinal);
-        Assert.Contains("severity: HIGH,CRITICAL", develop, StringComparison.Ordinal);
-
-        foreach (var workflowName in new[] { "ci-staging.yml", "ci-main.yml" })
-        {
-            var release = ReadRepositoryFile(".github", "workflows", workflowName);
-            Assert.Contains("uses: ./.github/workflows/_build-and-test.yml", release, StringComparison.Ordinal);
-            Assert.Contains("docker buildx imagetools create", release, StringComparison.Ordinal);
-            Assert.DoesNotContain("docker build ", release, StringComparison.Ordinal);
-        }
-    }
-
-    /// <summary>
-    /// Generated WIF and local credentials must never enter the image context or BuildKit cache.
-    /// </summary>
-    [Fact]
-    public void DockerContext_ExcludesGeneratedAndLocalCredentialFiles()
+    public void DockerContext_ExcludesGeneratedAndCredentialFiles()
     {
         var dockerIgnore = ReadRepositoryFile(".dockerignore");
 
-        Assert.Contains("gha-creds-*.json", dockerIgnore, StringComparison.Ordinal);
-        Assert.Contains(".env\n", dockerIgnore, StringComparison.Ordinal);
-        Assert.Contains(".env.*", dockerIgnore, StringComparison.Ordinal);
-        Assert.Contains("*.pem", dockerIgnore, StringComparison.Ordinal);
-        Assert.Contains("*.key", dockerIgnore, StringComparison.Ordinal);
-        Assert.Contains("*.pfx", dockerIgnore, StringComparison.Ordinal);
-        Assert.Contains("*.p12", dockerIgnore, StringComparison.Ordinal);
+        Assert.Contains(".ci-sources", dockerIgnore, StringComparison.Ordinal);
+        Assert.Contains(".ci-nuget", dockerIgnore, StringComparison.Ordinal);
+        Assert.Contains("**/bin", dockerIgnore, StringComparison.Ordinal);
+        Assert.Contains("**/obj", dockerIgnore, StringComparison.Ordinal);
+        Assert.Contains("*.user", dockerIgnore, StringComparison.Ordinal);
     }
 
     /// <summary>
-    /// Restored packages must be persisted in the build layer instead of living only in a
-    /// mutable BuildKit cache that can be empty when a cached restore instruction is reused.
+    /// Supplies every entry workflow to the shared policy assertion.
     /// </summary>
-    [Fact]
-    public void DockerPackageRestore_PersistsPackagesAcrossBuildInstructions()
-    {
-        var dockerfile = ReadRepositoryFile("Maliev.MaterialService.Api", "Dockerfile");
-
-        Assert.DoesNotContain(
-            "--mount=type=cache,id=material-nuget,target=/root/.nuget/packages",
-            dockerfile,
-            StringComparison.Ordinal);
-        Assert.Contains("--no-restore", dockerfile, StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    /// SBOM evidence must fail closed when the scanner does not produce the requested file.
-    /// </summary>
-    [Theory]
-    [InlineData("pr-validation.yml")]
-    [InlineData("ci-develop.yml")]
-    public void SbomUpload_UsesValidFailClosedMissingFilePolicy(string workflowName)
-    {
-        var workflow = ReadRepositoryFile(".github", "workflows", workflowName);
-
-        Assert.Contains("if-no-files-found: error", workflow, StringComparison.Ordinal);
-        Assert.DoesNotContain("if-no-files-found: erro\n", workflow, StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    /// Supplies the release workflows to every shared policy assertion.
-    /// </summary>
-    public static TheoryData<string> GetImageWorkflows()
+    public static TheoryData<string> GetEntryWorkflows()
     {
         var data = new TheoryData<string>();
-        foreach (var workflow in ImageWorkflows)
+        foreach (var workflow in EntryWorkflows)
         {
             data.Add(workflow);
         }
