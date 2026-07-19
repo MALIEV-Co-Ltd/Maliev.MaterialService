@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Maliev.MaterialService.Tests": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {},
+      "applicationUrl": "https://localhost:61181;http://localhost:61182"
+    }
+  }
+}
