@@ -1,172 +1,159 @@
-using Asp.Versioning;
-using Asp.Versioning.ApiExplorer;
-using Maliev.MaterialService.Api.Services;
-using Maliev.MaterialService.Data;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Diagnostics;
+using Maliev.Aspire.ServiceDefaults;
+using Maliev.MaterialService.Api.Services.Auth;
+using Maliev.MaterialService.Application.Services;
+using Maliev.MaterialService.Infrastructure.Consumers;
+using Maliev.MaterialService.Infrastructure.Data.SeedData;
+using Maliev.MaterialService.Infrastructure.Persistence;
+using Maliev.MaterialService.Infrastructure.Persistence.Interceptors;
+using Maliev.MaterialService.Infrastructure.Services;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
-using System.Reflection;
-using System.Text;
+// Initialize bootstrap logging
+using var loggerFactory = LoggerFactory.Create(logBuilder => logBuilder.AddConsole());
+var bootstrapLogger = loggerFactory.CreateLogger("Program");
 
-var builder = WebApplication.CreateBuilder(args);
-
-// Add AutoMapper
-builder.Services.AddAutoMapper(Assembly.GetExecutingAssembly());
-
-// Add DbContext
-builder.Services.AddDbContext<MaterialContext>(options =>
+try
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("MaterialServiceDbContext"));
-});
+    Log.StartingHost(bootstrapLogger, "Material Service");
 
-// Configure Authentication
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+    var builder = WebApplication.CreateBuilder(args);
+
+    // --- Secrets & Configuration ---
+    builder.AddGoogleSecretManagerVolume(); // Load secrets from /mnt/secrets if available
+
+    // --- Infrastructure & Observability ---
+    builder.AddServiceDefaults(); // OpenTelemetry, health checks, resilience
+    builder.AddStandardMiddleware(options =>
     {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSecurityKey"] ?? throw new InvalidOperationException("JwtSecurityKey not configured"))),
-        };
+        options.EnableRequestLogging = true;
     });
+    builder.AddServiceMeters("materials-meter"); // Register service meters for OpenTelemetry business metrics
 
-// Configure API Versioning Services
-builder.Services.AddApiVersioning(options =>
-{
-    options.ReportApiVersions = true;
-    options.AssumeDefaultVersionWhenUnspecified = true;
-    options.DefaultApiVersion = new ApiVersion(1, 0);
-})
-.AddApiExplorer(options =>
-{
-    options.GroupNameFormat = "'v'VVV";
-    options.SubstituteApiVersionInUrl = true;
-});
+    builder.AddAuthServiceTokenExchange("MaterialService");
+    builder.AddAuthServiceIAMClient();
+    builder.Services.AddIAMRegistration<MaterialIAMRegistrationService>("material");
 
-// Configure Swagger
-builder.Services.AddSwaggerGen(options =>
-{
-    OpenApiSecurityScheme apiKey = new OpenApiSecurityScheme
+    // Core application services
+    builder.Services.AddSingleton<AuthMetrics>();
+    builder.Services.AddSingleton<Maliev.Aspire.ServiceDefaults.Authorization.IAuthMetrics>(sp =>
+        sp.GetRequiredService<AuthMetrics>());
+    builder.Services.AddSingleton<DatabaseMetricsInterceptor>();
+
+    builder.AddMassTransitWithRabbitMq(x =>
     {
-        Description = @"JWT Authorization header using the Bearer scheme. Example: ""Bearer {token}""",
-        In = ParameterLocation.Header,
-        Name = "Authorization",
-        Type = SecuritySchemeType.ApiKey,
-    };
+        x.AddConsumer<SearchReindexRequestedConsumer>();
+    }); // Standard messaging integration
 
-    OpenApiInfo info = new OpenApiInfo
+    // Add PostgreSQL DbContext - test setup handles environment-specific configuration via connection string override
+    builder.AddPostgresDbContext<MaterialDbContext>(connectionName: "MaterialDbContext"); // PostgreSQL with retry logic
+
+    // Redis Distributed Cache (ServiceDefaults) - enforce Redis on all environments
+    builder.AddStandardCache("material:"); // Redis + in-memory fallback, memory-optimized
+    // Register CacheWarmingService
+    builder.Services.AddHostedService<Maliev.MaterialService.Infrastructure.BackgroundServices.CacheWarmingService>();
+
+    // --- API Configuration ---
+    builder.AddStandardCors(); // CORS with fail-fast validation
+    builder.AddDefaultApiVersioning(); // API versioning with URL segment reader
+
+    // JWT Authentication (tests override via PostConfigureAll with dynamic RSA keys)
+    builder.AddJwtAuthentication();
+
+    // Authorization
+    builder.Services.AddHttpContextAccessor();
+
+    // Add OpenAPI (must be in Program.cs for XML comments to work via source generator)
+    if (!builder.Environment.IsProduction())
     {
-        Title = "Material Service",
-        Version = "v1", // Explicitly set to v1
-        Contact = new OpenApiContact
-        {
-            Name = "MALIEV Co., Ltd.",
-            Email = "support@maliev.com",
-            Url = new Uri("https://www.maliev.com"),
-        },
-    };
-
-    options.SwaggerDoc("v1", info); // Define a single SwaggerDoc for v1
-    options.AddSecurityDefinition("Bearer", apiKey);
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer",
-                },
-                Scheme = "oauth2",
-                Name = "Bearer",
-                In = ParameterLocation.Header,
-            },
-            new List<string>()
-        },
-    });
-    options.DescribeAllParametersInCamelCase();
-
-    // Set the comments path for the Swagger JSON and UI.
-    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    options.IncludeXmlComments(xmlPath);
-});
-
-// Configure CORS
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(
-        policy =>
-        {
-            policy.WithOrigins(
-                "http://*.maliev.com",
-                "https://*.maliev.com")
-            .SetIsOriginAllowedToAllowWildcardSubdomains()
-            .AllowAnyHeader()
-            .AllowAnyMethod();
-        });
-});
-
-// Register service layer
-builder.Services.AddScoped<IMaterialServiceService, MaterialServiceService>();
-
-builder.Services.AddControllers();
-
-var app = builder.Build();
-
-// Configure Base Path Middleware
-app.UsePathBase("/materialservice");
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-}
-else
-{
-    app.UseExceptionHandler(errorApp =>
-    {
-        errorApp.Run(async context =>
-        {
-            var exceptionHandlerPathFeature = context.Features.Get<IExceptionHandlerPathFeature>();
-            var exception = exceptionHandlerPathFeature?.Error;
-
-            var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-            logger.LogError(exception, "An unhandled exception has occurred.");
-
-            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            await context.Response.WriteAsJsonAsync(new { error = "An unexpected error occurred." });
-        });
-    });
-    app.UseHsts();
-}
-
-app.UseHttpsRedirection();
-
-app.UseCors();
-
-app.UseAuthentication();
-
-app.UseAuthorization();
-
-app.UseSwagger();
-app.UseSwaggerUI(options =>
-{
-    var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-    foreach (var description in provider.ApiVersionDescriptions)
-    {
-        options.SwaggerEndpoint($"/materialservice/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
+        builder.AddStandardOpenApi(
+            title: "MALIEV Material Service API",
+            description: "Material inventory management service. Provides CRUD operations for materials with supplier associations, bulk import/export capabilities, supplier validation, reference data for categories and units, and cached responses for high-performance lookups.");
     }
-    options.RoutePrefix = "swagger";
-});
 
-app.MapControllers();
+    builder.AddServiceClient<ISupplierServiceClient, SupplierServiceClient>("SupplierService")
+        .AddAuthServiceAuthentication()
+        .AddStandardResilienceHandler();
 
-app.Run();
+    builder.Services.AddScoped<IMaterialService, Maliev.MaterialService.Infrastructure.Services.MaterialService>();
+    builder.Services.AddScoped<IBulkMaterialService, Maliev.MaterialService.Infrastructure.Services.BulkMaterialService>();
+
+    builder.Services.AddPermissionAuthorization();
+
+    builder.AddStandardRateLimiting(); // Memory-optimized for low-spec nodes
+    builder.Services.AddResponseCompression(options =>
+    {
+        options.EnableForHttps = true;
+    });
+
+    builder.Services.AddControllers(options =>
+    {
+        // Register RequirePermissionAttribute if needed globally or just ensure it's handled
+        // Actually, IAsyncAuthorizationFilter should be picked up from attributes.
+    });
+
+    var app = builder.Build();
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+
+    // Run database migrations on startup (skip in Testing environment)
+    await app.MigrateDatabaseAsync<MaterialDbContext>();
+    await app.SeedManufacturingCatalogAsync();
+
+    app.UseStandardMiddleware();
+
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseHttpsRedirection();
+    }
+    app.UseResponseCompression();
+    app.UseCors();
+    app.UseRateLimiter();
+
+    // App Authentication & Authorization
+    app.UseAuthentication();
+    app.UseAuthorization();
+
+    // Map endpoints after middleware
+    app.MapControllers();
+
+    // Map Aspire default endpoints (/health, /alive, /metrics)
+    app.MapDefaultEndpoints(servicePrefix: "material");
+
+    // Map OpenAPI and Scalar documentation (dev/staging only)
+    app.MapApiDocumentation(servicePrefix: "material");
+
+    Log.ServiceStarted(logger, "Material Service");
+    await app.RunAsync();
+}
+catch (Exception ex)
+{
+    Log.HostTerminated(bootstrapLogger, ex, "Material Service");
+    // Force flush to ensure Aspire captures the error before process exits
+    Console.Out.Flush();
+    Console.Error.Flush();
+    throw;
+}
+finally
+{
+    loggerFactory.Dispose();
+}
+
+/// <summary>
+/// Program entry point for Material Service API
+/// </summary>
+public partial class Program
+{
+    internal static partial class Log
+    {
+        [LoggerMessage(Level = LogLevel.Information, Message = "Starting {ServiceName} host")]
+        public static partial void StartingHost(ILogger logger, string serviceName);
+
+        [LoggerMessage(Level = LogLevel.Critical, Message = "{ServiceName} host terminated unexpectedly during startup")]
+        public static partial void HostTerminated(ILogger logger, Exception ex, string serviceName);
+
+        [LoggerMessage(Level = LogLevel.Information, Message = "{ServiceName} started successfully")]
+        public static partial void ServiceStarted(ILogger logger, string serviceName);
+
+        [LoggerMessage(Level = LogLevel.Error, Message = "Database migration failed - application may not function correctly")]
+        public static partial void MigrationFailed(ILogger logger, Exception exception);
+    }
+}

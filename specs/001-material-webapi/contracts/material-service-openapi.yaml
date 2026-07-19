@@ -1,0 +1,720 @@
+openapi: 3.0.0
+info:
+  title: Material Service API
+  description: API for managing material data across Maliev Manufacturing services.
+  version: 1.0.0
+servers:
+  - url: /{servicename}/v1
+    description: Material Service API (Version 1)
+security:
+  - BearerAuth: []
+tags:
+  - name: Materials
+    description: Operations related to material records
+  - name: Bulk Operations
+    description: Material data import and export
+paths:
+  /materials:
+    get:
+      summary: Get a list of materials
+      operationId: getMaterials
+      tags:
+        - Materials
+      parameters:
+        - in: query
+          name: name
+          schema:
+            type: string
+          description: Filter by material name (partial match)
+        - in: query
+          name: code
+          schema:
+            type: string
+          description: Filter by material code (exact match)
+        - in: query
+          name: manufacturingProcess
+          schema:
+            type: string
+          description: Filter by compatible manufacturing process
+        - in: query
+          name: minTensileStrength
+          schema:
+            type: number
+          description: Filter by minimum tensile strength
+        - in: query
+          name: maxTensileStrength
+          schema:
+            type: number
+          description: Filter by maximum tensile strength
+        - in: query
+          name: color
+          schema:
+            type: string
+          description: Filter by available color
+        - in: query
+          name: minPrice
+          schema:
+            type: number
+          description: Filter by minimum price per unit
+        - in: query
+          name: maxPrice
+          schema:
+            type: number
+          description: Filter by maximum price per unit
+        - in: query
+          name: pageNumber
+          schema:
+            type: integer
+            format: int34
+            default: 1
+          description: Page number for pagination
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            format: int34
+            default: 10
+          description: Number of items per page
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            default: name
+          description: Field to sort by (e.g., name, pricePerUnit, stockLevel)
+        - in: query
+          name: sortOrder
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          description: Sort order (asc or desc)
+      responses:
+        '200':
+          description: A paginated list of materials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaterialListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Create a new material
+      operationId: createMaterial
+      tags:
+        - Materials
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMaterialRequest'
+      responses:
+        '201':
+          description: Material created successfully
+          headers:
+            Location:
+              description: URL of the newly created material
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaterialResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Conflict, e.g., material with same code/name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /materials/{id}:
+    get:
+      summary: Get a material by ID
+      operationId: getMaterialById
+      tags:
+        - Materials
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: Unique identifier of the material
+      responses:
+        '200':
+          description: Material details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaterialResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Update an existing material
+      operationId: updateMaterial
+      tags:
+        - Materials
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: Unique identifier of the material
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMaterialRequest'
+      responses:
+        '204':
+          description: Material updated successfully (No Content)
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Conflict, e.g., optimistic concurrency failure (stale version)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Delete a material (soft delete)
+      operationId: deleteMaterial
+      tags:
+        - Materials
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: Unique identifier of the material
+      responses:
+        '204':
+          description: Material deleted successfully (No Content)
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /materials/bulk/import:
+    post:
+      summary: Bulk import material data
+      operationId: bulkImportMaterials
+      tags:
+        - Bulk Operations
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkImportRequest'
+          text/csv:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '202':
+          description: Bulk import initiated (Accepted)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId:
+                    type: string
+                    format: uuid
+                    description: ID of the asynchronous import job
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /materials/bulk/export:
+    get:
+      summary: Bulk export material data
+      operationId: bulkExportMaterials
+      tags:
+        - Bulk Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: format
+          schema:
+            type: string
+            enum: [csv, json]
+            default: json
+          description: Export format
+      responses:
+        '200':
+          description: Material data exported successfully
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MaterialResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    MaterialResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+        code:
+          type: string
+        description:
+          type: string
+          nullable: true
+        manufacturingProcesses:
+          type: array
+          items:
+            type: string
+        availableColors:
+          type: array
+          items:
+            type: string
+        mechanicalProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaterialMechanicalPropertyResponse'
+        postProcessingMethods:
+          type: array
+          items:
+            type: string
+        pricePerUnit:
+          type: number
+          format: float
+        stockLevel:
+          type: integer
+        supplierId:
+          type: string
+          format: uuid
+          nullable: true
+        createdBy:
+          type: string
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedBy:
+          type: string
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        version:
+          type: string
+          description: Base64 encoded byte array for optimistic concurrency
+          readOnly: true
+        active:
+          type: boolean
+          readOnly: true
+      example:
+        id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        name: ABS Plastic
+        code: ABS-001
+        description: Acrylonitrile Butadiene Styrene plastic
+        manufacturingProcesses: ["3D Printing", "Injection Molding"]
+        availableColors: ["Black", "White"]
+        mechanicalProperties:
+          - propertyName: Tensile Strength
+            unit: MPa
+            value: 45
+        postProcessingMethods: ["Sanding"]
+        pricePerUnit: 15.50
+        stockLevel: 1000
+        supplierId: 3fa85f64-5717-4562-b3fc-2c963f66afa7
+        createdBy: user@maliev.com
+        createdAt: '2023-01-01T10:00:00Z'
+        updatedBy: user@maliev.com
+        updatedAt: '2023-01-01T10:00:00Z'
+        version: AAAAAQ==
+        active: true
+    MaterialMechanicalPropertyResponse:
+      type: object
+      properties:
+        propertyName:
+          type: string
+        unit:
+          type: string
+        value:
+          type: number
+          format: float
+    MaterialListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaterialResponse'
+        pageNumber:
+          type: integer
+        pageSize:
+          type: integer
+        totalCount:
+          type: integer
+        totalPages:
+          type: integer
+      example:
+        items:
+          - id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+            name: ABS Plastic
+            code: ABS-001
+            description: Acrylonitrile Butadiene Styrene plastic
+            manufacturingProcesses: ["3D Printing", "Injection Molding"]
+            availableColors: ["Black", "White"]
+            mechanicalProperties:
+              - propertyName: Tensile Strength
+                unit: MPa
+                value: 45
+            postProcessingMethods: ["Sanding"]
+            pricePerUnit: 15.50
+            stockLevel: 1000
+            supplierId: 3fa85f64-5717-4562-b3fc-2c963f66afa7
+            createdBy: user@maliev.com
+            createdAt: '2023-01-01T10:00:00Z'
+            updatedBy: user@maliev.com
+            updatedAt: '2023-01-01T10:00:00Z'
+            version: AAAAAQ==
+            active: true
+        pageNumber: 1
+        pageSize: 10
+        totalCount: 1
+        totalPages: 1
+    CreateMaterialRequest:
+      type: object
+      required:
+        - name
+        - code
+        - pricePerUnit
+        - stockLevel
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        description:
+          type: string
+          nullable: true
+        manufacturingProcesses:
+          type: array
+          items:
+            type: string
+          description: Names of manufacturing processes
+        availableColors:
+          type: array
+          items:
+            type: string
+          description: Names of available colors
+        mechanicalProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaterialMechanicalPropertyRequest'
+        postProcessingMethods:
+          type: array
+          items:
+            type: string
+          description: Names of post-processing methods
+        pricePerUnit:
+          type: number
+          format: float
+        stockLevel:
+          type: integer
+        supplierId:
+          type: string
+          format: uuid
+          nullable: true
+      example:
+        name: ABS Plastic
+        code: ABS-001
+        description: Acrylonitrile Butadiene Styrene plastic
+        manufacturingProcesses: ["3D Printing", "Injection Molding"]
+        availableColors: ["Black", "White"]
+        mechanicalProperties:
+          - propertyName: Tensile Strength
+            value: 45
+        postProcessingMethods: ["Sanding"]
+        pricePerUnit: 15.50
+        stockLevel: 1000
+        supplierId: 3fa85f64-5717-4562-b3fc-2c963f66afa7
+    UpdateMaterialRequest:
+      type: object
+      required:
+        - name
+        - code
+        - pricePerUnit
+        - stockLevel
+        - version
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        description:
+          type: string
+          nullable: true
+        manufacturingProcesses:
+          type: array
+          items:
+            type: string
+          description: Names of manufacturing processes
+        availableColors:
+          type: array
+          items:
+            type: string
+          description: Names of available colors
+        mechanicalProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaterialMechanicalPropertyRequest'
+        postProcessingMethods:
+          type: array
+          items:
+            type: string
+          description: Names of post-processing methods
+        pricePerUnit:
+          type: number
+          format: float
+        stockLevel:
+          type: integer
+        supplierId:
+          type: string
+          format: uuid
+          nullable: true
+        version:
+          type: string
+          description: Base64 encoded byte array for optimistic concurrency
+      example:
+        name: ABS Plastic (Updated)
+        code: ABS-001
+        description: Acrylonitrile Butadiene Styrene plastic with improved properties
+        manufacturingProcesses: ["3D Printing", "Injection Molding"]
+        availableColors: ["Black", "White", "Grey"]
+        mechanicalProperties:
+          - propertyName: Tensile Strength
+            value: 48
+        postProcessingMethods: ["Sanding", "Polishing"]
+        pricePerUnit: 16.00
+        stockLevel: 950
+        supplierId: 3fa85f64-5717-4562-b3fc-2c963f66afa7
+        version: AAAAAg==
+    MaterialMechanicalPropertyRequest:
+      type: object
+      required:
+        - propertyName
+        - value
+      properties:
+        propertyName:
+          type: string
+        value:
+          type: number
+          format: float
+      example:
+        propertyName: Tensile Strength
+        value: 45
+    BulkImportRequest:
+      type: object
+      properties:
+        format:
+          type: string
+          enum: [csv, json]
+          description: Format of the data to import
+        data:
+          type: string
+          description: Base64 encoded CSV or JSON data
+        dryRun:
+          type: boolean
+          default: false
+          description: If true, only validate data without making changes
+      required:
+        - format
+        - data
+      example:
+        format: json
+        data: eyJtYXRlcmlhbHMiOlt7Im5hbWUiOiJUZXN0IE1hdGVyaWFsIiwiY29kZSI6IlRFU1QtMDAxIiwicHJpY2VQZXJVbml0IjoxMC4wMCwic3RvY2tMZXZlbCI6NTAwfV19
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+      example:
+        timestamp: '2023-01-01T12:00:00Z'
+        status: 400
+        error: Bad Request
+        message: Validation failed
+        path: /materials
+        details:
+          - field: name
+            message: Name is required
+          - field: pricePerUnit
+            message: Price per unit must be greater than 0
+    NotFound:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+      example:
+        timestamp: '2023-01-01T12:00:00Z'
+        status: 404
+        error: Not Found
+        message: Material with ID 3fa85f64-5717-4562-b3fc-2c963f66afa8 not found
+        path: /materials/3fa85f64-5717-4562-b3fc-2c963f66afa8
+    Unauthorized:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+      example:
+        timestamp: '2023-01-01T12:00:00Z'
+        status: 401
+        error: Unauthorized
+        message: Authentication required
+        path: /materials
+    Forbidden:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+      example:
+        timestamp: '2023-01-01T12:00:00Z'
+        status: 403
+        error: Forbidden
+        message: Insufficient permissions
+        path: /materials
+    InternalServerError:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+      example:
+        timestamp: '2023-01-01T12:00:00Z'
+        status: 500
+        error: Internal Server Error
+        message: An unexpected error occurred
+        path: /materials

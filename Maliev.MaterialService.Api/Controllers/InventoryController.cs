@@ -1,0 +1,82 @@
+using Asp.Versioning;
+using Maliev.Aspire.ServiceDefaults.Authorization;
+using Maliev.MaterialService.Api.Services.Auth;
+using Maliev.MaterialService.Application.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Maliev.MaterialService.Api.Controllers;
+
+/// <summary>
+/// Controller for inventory-related operations
+/// </summary>
+[ApiController]
+[ApiVersion("1")]
+[Microsoft.AspNetCore.Authorization.Authorize]
+[Route("material/v{version:apiVersion}/inventory")]
+public class InventoryController : ControllerBase
+{
+    private readonly AuthMetrics _metrics;
+    private readonly ILogger<InventoryController> _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InventoryController"/> class.
+    /// </summary>
+    /// <param name="metrics">The auth metrics.</param>
+    /// <param name="logger">The logger.</param>
+    public InventoryController(AuthMetrics metrics, ILogger<InventoryController> logger)
+    {
+        _metrics = metrics;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Get stock level for a material
+    /// </summary>
+    [HttpGet("{materialId:guid}")]
+    [RequirePermission(MaterialPermissions.InventoryView)]
+    public IActionResult GetStockLevel(Guid materialId)
+    {
+        _metrics.RecordSuccess(MaterialPermissions.InventoryView);
+        _logger.LogInformation("Retrieving inventory level for material {MaterialId}", materialId);
+        return Ok(new { materialId, stockLevel = 100 });
+    }
+
+    /// <summary>
+    /// Perform an inventory count for a material
+    /// </summary>
+    [HttpPost("count")]
+    [RequirePermission(MaterialPermissions.InventoryCount)]
+    public IActionResult RecordCount([FromBody] InventoryCountRequest request)
+    {
+        _metrics.RecordSuccess(MaterialPermissions.InventoryCount);
+        _logger.LogInformation("Recording inventory count for material {MaterialId}", request.MaterialId);
+        return Ok(new { message = "Count recorded successfully" });
+    }
+
+    /// <summary>
+    /// Adjust inventory level for a material
+    /// </summary>
+    [HttpPost("adjust")]
+    [RequirePermission(MaterialPermissions.InventoryAdjust, IsCritical = true)]
+    public IActionResult AdjustStock([FromBody] InventoryAdjustmentRequest request)
+    {
+        _metrics.RecordSuccess(MaterialPermissions.InventoryAdjust);
+        _logger.LogInformation("Adjusting inventory for material {MaterialId} by {Amount}", request.MaterialId, request.Adjustment);
+        return Ok(new { message = "Adjustment successful" });
+    }
+}
+
+/// <summary>
+/// Request for inventory count
+/// </summary>
+/// <param name="MaterialId">Material ID</param>
+/// <param name="Count">Count</param>
+public record InventoryCountRequest(Guid MaterialId, int Count);
+
+/// <summary>
+/// Request for inventory adjustment
+/// </summary>
+/// <param name="MaterialId">Material ID</param>
+/// <param name="Adjustment">Adjustment amount</param>
+/// <param name="Reason">Reason for adjustment</param>
+public record InventoryAdjustmentRequest(Guid MaterialId, int Adjustment, string Reason);

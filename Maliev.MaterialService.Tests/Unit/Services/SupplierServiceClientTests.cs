@@ -1,0 +1,202 @@
+using System.Net;
+using Maliev.MaterialService.Infrastructure.Services;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace Maliev.MaterialService.Tests.Unit.Services;
+
+/// <summary>
+/// Verifies the protected SupplierService lookup contract.
+/// </summary>
+public sealed class SupplierServiceClientTests
+{
+    /// <summary>
+    /// A successful supplier lookup uses the versioned protected route.
+    /// </summary>
+    [Fact]
+    public async Task GetSupplierAsync_Success_UsesVersionedReferenceRoute()
+    {
+        var supplierId = Guid.NewGuid();
+        var handler = new CapturingHandler(
+            HttpStatusCode.OK,
+            $$"""{"id":"{{supplierId}}","companyName":"Supplier One","isActive":true}""");
+        var client = CreateClient(handler);
+
+        var supplier = await client.GetSupplierAsync(supplierId, CancellationToken.None);
+
+        Assert.NotNull(supplier);
+        Assert.Equal(supplierId, supplier.Id);
+        Assert.Equal("Supplier One", supplier.CompanyName);
+        Assert.True(supplier.IsActive);
+        Assert.Equal($"/supplier/v1/suppliers/{supplierId}/reference", handler.RequestUri?.AbsolutePath);
+    }
+
+    /// <summary>
+    /// Only an authoritative 404 is translated into a missing supplier result.
+    /// </summary>
+    [Fact]
+    public async Task GetSupplierAsync_NotFound_ReturnsNull()
+    {
+        var client = CreateClient(new CapturingHandler(HttpStatusCode.NotFound));
+
+        var supplier = await client.GetSupplierAsync(Guid.NewGuid(), CancellationToken.None);
+
+        Assert.Null(supplier);
+    }
+
+    /// <summary>
+    /// Inactive suppliers are structurally valid dependency responses and remain business data.
+    /// </summary>
+    [Fact]
+    public async Task GetSupplierAsync_InactiveReference_ReturnsProjection()
+    {
+        var supplierId = Guid.NewGuid();
+        var client = CreateClient(new CapturingHandler(
+            HttpStatusCode.OK,
+            $$"""{"id":"{{supplierId}}","companyName":"Inactive Supplier","isActive":false}"""));
+
+        var supplier = await client.GetSupplierAsync(supplierId, CancellationToken.None);
+
+        Assert.NotNull(supplier);
+        Assert.Equal(supplierId, supplier.Id);
+        Assert.Equal("Inactive Supplier", supplier.CompanyName);
+        Assert.False(supplier.IsActive);
+    }
+
+    /// <summary>
+    /// Authorization and dependency failures must not masquerade as missing suppliers.
+    /// </summary>
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.Forbidden)]
+    [InlineData(HttpStatusCode.ServiceUnavailable)]
+    public async Task GetSupplierAsync_DependencyFailure_Throws(HttpStatusCode statusCode)
+    {
+        var client = CreateClient(new CapturingHandler(statusCode));
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.GetSupplierAsync(Guid.NewGuid(), CancellationToken.None));
+
+        Assert.Equal(statusCode, exception.StatusCode);
+    }
+
+    /// <summary>
+    /// A successful response with an unreadable projection is a dependency failure, not an internal error.
+    /// </summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("{not-json")]
+    public async Task GetSupplierAsync_MalformedSuccess_ThrowsBadGateway(string body)
+    {
+        var client = CreateClient(new CapturingHandler(HttpStatusCode.OK, body));
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.GetSupplierAsync(Guid.NewGuid(), CancellationToken.None));
+
+        Assert.Equal(HttpStatusCode.BadGateway, exception.StatusCode);
+    }
+
+    /// <summary>
+    /// A projection for a different supplier cannot satisfy the requested reference.
+    /// </summary>
+    [Fact]
+    public async Task GetSupplierAsync_WrongSupplierId_ThrowsBadGateway()
+    {
+        var client = CreateClient(new CapturingHandler(
+            HttpStatusCode.OK,
+            $$"""{"id":"{{Guid.NewGuid()}}","companyName":"Wrong Supplier","isActive":true}"""));
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.GetSupplierAsync(Guid.NewGuid(), CancellationToken.None));
+
+        Assert.Equal(HttpStatusCode.BadGateway, exception.StatusCode);
+    }
+
+    /// <summary>
+    /// SupplierService must provide a usable company name for the local projection.
+    /// </summary>
+    [Fact]
+    public async Task GetSupplierAsync_BlankCompanyName_ThrowsBadGateway()
+    {
+        var supplierId = Guid.NewGuid();
+        var client = CreateClient(new CapturingHandler(
+            HttpStatusCode.OK,
+            $$"""{"id":"{{supplierId}}","companyName":" ","isActive":true}"""));
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.GetSupplierAsync(supplierId, CancellationToken.None));
+
+        Assert.Equal(HttpStatusCode.BadGateway, exception.StatusCode);
+    }
+
+    /// <summary>
+    /// The active-state field is required to distinguish malformed data from an inactive supplier.
+    /// </summary>
+    [Fact]
+    public async Task GetSupplierAsync_MissingIsActive_ThrowsBadGateway()
+    {
+        var supplierId = Guid.NewGuid();
+        var client = CreateClient(new CapturingHandler(
+            HttpStatusCode.OK,
+            $$"""{"id":"{{supplierId}}","companyName":"Missing State Supplier"}"""));
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.GetSupplierAsync(supplierId, CancellationToken.None));
+
+        Assert.Equal(HttpStatusCode.BadGateway, exception.StatusCode);
+    }
+
+    /// <summary>
+    /// Caller cancellation must reach the outbound Supplier request.
+    /// </summary>
+    [Fact]
+    public async Task GetSupplierAsync_Cancelled_PropagatesCancellation()
+    {
+        var handler = new CancellationAwareHandler();
+        var client = CreateClient(handler);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => client.GetSupplierAsync(Guid.NewGuid(), cancellation.Token));
+
+        Assert.True(handler.ObservedCancellation);
+    }
+
+    private static SupplierServiceClient CreateClient(HttpMessageHandler handler) =>
+        new(
+            new HttpClient(handler)
+            {
+                BaseAddress = new Uri("https://supplier.test")
+            },
+            NullLogger<SupplierServiceClient>.Instance);
+
+    private sealed class CapturingHandler(HttpStatusCode statusCode, string? body = null) : HttpMessageHandler
+    {
+        public Uri? RequestUri { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RequestUri = request.RequestUri;
+            return Task.FromResult(new HttpResponseMessage(statusCode)
+            {
+                Content = body is null ? null : new StringContent(body)
+            });
+        }
+    }
+
+    private sealed class CancellationAwareHandler : HttpMessageHandler
+    {
+        public bool ObservedCancellation { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            ObservedCancellation = cancellationToken.IsCancellationRequested;
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+        }
+    }
+}
